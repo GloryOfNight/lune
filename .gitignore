@@ -1,0 +1,25 @@
+# CMake
+CMakeLists.txt.user
+CMakeCache.txt
+CMakeFiles
+CMakeScripts
+Testing
+Makefile
+cmake_install.cmake
+install_manifest.txt
+compile_commands.json
+CTestTestfile.cmake
+_deps
+
+# IDE dirs
+.vs/*
+.vscode/*
+.idea/*
+.cache/*
+
+# Build dirs
+build/*
+out/*
+install/*
+src/secrets/youtube-secret.h
+src/secrets/twitch-secret.h
