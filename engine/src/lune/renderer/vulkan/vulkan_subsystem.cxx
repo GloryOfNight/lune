@@ -9,6 +9,13 @@
 
 #define LUNE_USE_VALIDATION
 
+lune::vulkan_subsystem* gVulkanSubsystem{nullptr};
+
+lune::vulkan_subsystem* lune::vulkan_subsystem::get()
+{
+	return gVulkanSubsystem;
+}
+
 bool lune::vulkan_subsystem::allowInitialize()
 {
 	return nullptr != vkGetInstanceProcAddr(VK_NULL_HANDLE, "vkEnumerateInstanceVersion");
@@ -16,6 +23,8 @@ bool lune::vulkan_subsystem::allowInitialize()
 
 void lune::vulkan_subsystem::initialize()
 {
+	gVulkanSubsystem = this;
+
 	mApiVersion = VK_API_VERSION_1_0;
 	LN_LOG(Info, Vulkan, "Initializing subsystem. Vulkan - {0}.{1}.{2}", VK_VERSION_MAJOR(mApiVersion), VK_VERSION_MINOR(mApiVersion), VK_VERSION_PATCH(mApiVersion))
 
@@ -38,20 +47,27 @@ void lune::vulkan_subsystem::initialize()
 
 	createDevice();
 	createQueues();
+	createCommandPools();
 }
 
 void lune::vulkan_subsystem::shutdown()
 {
-	if (_transferQueue)
+	for (auto& view : mViews)
 	{
-		_transferQueueIndex = 0;
-		_transferQueue = vk::Queue();
+		view->destroy();
+	}
+	mViews.clear();
+
+	if (mTransferQueue)
+	{
+		mTransferQueueIndex = 0;
+		mTransferQueue = vk::Queue();
 	}
 
-	if (_graphicsQueue)
+	if (mGraphicsQueue)
 	{
-		_graphicsQueueIndex = 0;
-		_graphicsQueue = vk::Queue();
+		mGraphicsQueueIndex = 0;
+		mGraphicsQueue = vk::Queue();
 	}
 
 	if (mDevice)
@@ -70,6 +86,17 @@ void lune::vulkan_subsystem::shutdown()
 	{
 		mInstance.destroy();
 		mInstance = vk::Instance();
+	}
+
+	gVulkanSubsystem = nullptr;
+}
+
+void lune::vulkan_subsystem::createView(SDL_Window* window)
+{
+	auto newView = lune::vulkan::view::create(window);
+	if (newView)
+	{
+		mViews.emplace_back(std::move(newView))->init();
 	}
 }
 
@@ -170,8 +197,8 @@ void lune::vulkan_subsystem::createDevice()
 
 	const vk::DeviceCreateInfo deviceCreateInfo = vk::DeviceCreateInfo()
 													  .setQueueCreateInfos(queueCreateInfoList)
-													  .setPEnabledLayerNames(requiredExtensions)
-													  .setPEnabledExtensionNames(requiredLayers)
+													  .setPEnabledExtensionNames(requiredExtensions)
+													  .setPEnabledLayerNames(requiredLayers)
 													  .setPEnabledFeatures(&mPhysicalDeviceFeatures);
 
 	mDevice = mPhysicalDevice.createDevice(deviceCreateInfo);
@@ -186,10 +213,23 @@ void lune::vulkan_subsystem::createQueues()
 		const auto queueFlags = queueFamilyProperties[i].queueFlags;
 		if ((queueFlags & vk::QueueFlagBits::eGraphics) && (queueFlags & vk::QueueFlagBits::eTransfer))
 		{
-			_graphicsQueueIndex = i;
-			_transferQueueIndex = i;
+			mGraphicsQueueIndex = i;
+			mTransferQueueIndex = i;
 		}
 	}
-	_graphicsQueue = mDevice.getQueue(_graphicsQueueIndex, 0);
-	_transferQueue = mDevice.getQueue(_transferQueueIndex, 0);
+	mGraphicsQueue = mDevice.getQueue(mGraphicsQueueIndex, 0);
+	mTransferQueue = mDevice.getQueue(mTransferQueueIndex, 0);
+}
+
+void lune::vulkan_subsystem::createCommandPools()
+{
+	const vk::CommandPoolCreateInfo graphicsCreateInfo = vk::CommandPoolCreateInfo()
+															 .setFlags(vk::CommandPoolCreateFlagBits::eResetCommandBuffer)
+															 .setQueueFamilyIndex(mGraphicsQueueIndex);
+	mGraphicsCommandPool = mDevice.createCommandPool(graphicsCreateInfo);
+
+	const vk::CommandPoolCreateInfo transferCreateInfo = vk::CommandPoolCreateInfo()
+															 .setFlags(vk::CommandPoolCreateFlagBits::eResetCommandBuffer | vk::CommandPoolCreateFlagBits::eTransient)
+															 .setQueueFamilyIndex(mTransferQueueIndex);
+	mTransferCommandPool = mDevice.createCommandPool(transferCreateInfo);
 }

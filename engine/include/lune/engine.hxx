@@ -30,6 +30,8 @@ namespace lune
 		template <typename T, typename... Args>
 		bool addSubsystem(Args&&... args);
 
+		void createWindow(const std::string_view name, const uint32 width, const uint32 height, const uint32 flags = 0);
+
 	private:
 		std::vector<std::unique_ptr<subsystem>> mSubsystems;
 

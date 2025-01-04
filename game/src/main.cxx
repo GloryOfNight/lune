@@ -13,6 +13,8 @@ int main(int argc, char** argv)
 	if (!engine.initialize(std::move(args)))
 		return 1;
 
+	engine.createWindow("so8", 800, 600);
+
 	engine.run();
 
 	engine.shutdown();

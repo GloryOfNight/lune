@@ -8,14 +8,18 @@ add_library(${PROJECT_NAME}-static STATIC                       "include/lune/lu
                                                                 "include/lune/subsystem.hxx"
                                                                 "include/lune/log.hxx"
                                                                 "include/lune/renderer/vulkan/vulkan_subsystem.hxx"
+                                                                "include/lune/renderer/vulkan/view.hxx"
                                                                 "src/lune/lune.cxx"
                                                                 "src/lune/engine.cxx"
-                                                                "src/lune/renderer/vulkan/vulkan_subsystem.cxx")
+                                                                "src/lune/renderer/vulkan/vulkan_subsystem.cxx"
+                                                                "src/lune/renderer/vulkan/view.cxx"
+                                                                )
 
 target_include_directories(${PROJECT_NAME}-static PUBLIC        "include")
 
 target_include_directories(${PROJECT_NAME}-static PRIVATE       "include/lune" 
-                                                                "include/lune/renderer/vulkan")
+                                                                "include/lune/renderer/vulkan"
+                                                                )
 
 set_target_properties(${PROJECT_NAME}-static PROPERTIES         C_STANDARD 17
                                                                 CXX_STANDARD 20
