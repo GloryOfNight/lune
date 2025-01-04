@@ -3,12 +3,20 @@ project(lune
         HOMEPAGE_URL ""
         LANGUAGES CXX C)
 
+find_package(Vulkan REQUIRED)
+find_package(SDL3 REQUIRED)
+find_package(SDL3_image REQUIRED)
+
+add_subdirectory(thirdparty)
+
 add_library(${PROJECT_NAME}-static STATIC 
                                         "include/lune.hxx" 
                                         "src/lune.cxx"
                                         )
 
 target_include_directories(${PROJECT_NAME}-static PUBLIC include)
+
+target_link_libraries(${PROJECT_NAME}-static PUBLIC Vulkan::Vulkan SDL3::SDL3-static SDL3_image::SDL3_image-static ImGui::ImGui-static)
 
 find_program(CLANG_TIDY_EXE NAMES "clang-tidy")
 if(CLANG_TIDY_EXE)

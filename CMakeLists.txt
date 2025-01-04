@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.20.0)
+project(lune-project)
 
 # Setup global project options and variables
 include(cmake/ProjectOptions.cmake)
