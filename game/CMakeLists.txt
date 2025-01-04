@@ -5,7 +5,7 @@ project(space-outpost-8
 
 add_executable(${PROJECT_NAME} "src/main.cxx")
 
-target_link_libraries(${PROJECT_NAME} PRIVATE lune-static)
+target_link_libraries(${PROJECT_NAME} PUBLIC lune-static)
 
 find_program(CLANG_TIDY_EXE NAMES "clang-tidy")
 if(CLANG_TIDY_EXE)
