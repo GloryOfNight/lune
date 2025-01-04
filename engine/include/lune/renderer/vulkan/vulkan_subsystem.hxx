@@ -7,7 +7,7 @@
 
 namespace lune
 {
-	class vulkan_subsystem : public subsystem
+	class vulkan_subsystem final : public subsystem
 	{
 	public:
 		vulkan_subsystem() = default;
@@ -22,8 +22,21 @@ namespace lune
 	private:
 		void createInstance();
 
+		void createPhysicalDevice();
+
+		void createDevice();
+
+		void createQueues();
+
 		uint32 mApiVersion{};
 		vk::Instance mInstance{};
+
 		vk::PhysicalDevice mPhysicalDevice{};
+		vk::PhysicalDeviceProperties mPhysicalDeviceProperies{};
+		vk::PhysicalDeviceFeatures mPhysicalDeviceFeatures{};
+
+		vk::Device mDevice{};
+		uint32 _graphicsQueueIndex{}, _transferQueueIndex{};
+		vk::Queue _graphicsQueue{}, _transferQueue{};
 	};
 } // namespace lune
