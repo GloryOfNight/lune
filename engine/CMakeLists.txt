@@ -3,23 +3,42 @@ project(lune
         HOMEPAGE_URL ""
         LANGUAGES CXX C)
 
-find_package(Vulkan REQUIRED)
+add_library(${PROJECT_NAME}-static STATIC                       "include/lune/lune.hxx"
+                                                                "include/lune/engine.hxx"
+                                                                "include/lune/subsystem.hxx"
+                                                                "include/lune/log.hxx"
+                                                                "include/lune/renderer/vulkan/vulkan_subsystem.hxx"
+                                                                "src/lune/lune.cxx"
+                                                                "src/lune/engine.cxx"
+                                                                "src/lune/renderer/vulkan/vulkan_subsystem.cxx")
+
+target_include_directories(${PROJECT_NAME}-static PUBLIC        "include")
+
+target_include_directories(${PROJECT_NAME}-static PRIVATE       "include/lune" 
+                                                                "include/lune/renderer/vulkan")
+
+set_target_properties(${PROJECT_NAME}-static PROPERTIES         C_STANDARD 17
+                                                                CXX_STANDARD 20
+                                                                CXX_STANDARD_REQUIRED ON
+                                                                EXPORT_COMPILE_COMMANDS ON)
+
+# vulkan #
+find_package(Vulkan)
+find_package(VulkanMemoryAllocator CONFIG REQUIRED)
+target_link_libraries(${PROJECT_NAME}-static PRIVATE Vulkan::Vulkan GPUOpen::VulkanMemoryAllocator)
+# vulkan end #
+
+# other packages #
 find_package(SDL3 REQUIRED)
 find_package(SDL3_image REQUIRED)
+find_package(glm REQUIRED)
+target_link_libraries(${PROJECT_NAME}-static PUBLIC glm::glm SDL3::SDL3-static SDL3_image::SDL3_image-static)
+# other packages end #
 
+# build-in thirdparty #
 add_subdirectory(thirdparty)
-
-add_library(${PROJECT_NAME}-static STATIC 
-                                        "include/lune/lune.hxx" 
-                                        "include/lune/engine.hxx"
-                                        "src/lune/lune.cxx"
-                                        "src/lune/engine.cxx"
-                                        )
-
-target_include_directories(${PROJECT_NAME}-static PUBLIC include)
-target_include_directories(${PROJECT_NAME}-static PRIVATE include/lune)
-
-target_link_libraries(${PROJECT_NAME}-static PUBLIC Vulkan::Vulkan SDL3::SDL3-static SDL3_image::SDL3_image-static ImGui::ImGui-static)
+target_link_libraries(${PROJECT_NAME}-static PUBLIC ImGui::ImGui-static)
+# build-in thirdparty end #
 
 find_program(CLANG_TIDY_EXE NAMES "clang-tidy")
 if(CLANG_TIDY_EXE)

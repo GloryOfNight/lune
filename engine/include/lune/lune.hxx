@@ -20,13 +20,28 @@ using char32 = char32_t;
 
 namespace lune
 {
-	static uint32 GetEngineVersion()
+	static uint32 getEngineVersion()
 	{
-        uint32_t major{0}, minor{1}, patch{0};
+		uint32_t major{0}, minor{0}, patch{1};
 		return (((uint32_t)(major)) << 22U) | (((uint32_t)(minor)) << 12U) | ((uint32_t)(patch));
 	}
 
-	static const char* GetEngineName()
+	static uint32 getEngineVersionMajor()
+	{
+		return (getEngineVersion() >> 22U) & 0x7FU;
+	}
+
+	static uint32 getEngineVersionMinor()
+	{
+		return (getEngineVersion() >> 12U) & 0x3FFU;
+	}
+
+	static uint32 getEngineVersionPatch()
+	{
+		return getEngineVersion() & 0xFFFU;
+	}
+
+	static const char* getEngineName()
 	{
 		return "Lune";
 	}

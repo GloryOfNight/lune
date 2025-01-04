@@ -2,6 +2,10 @@
 
 #include "SDL3/SDL.h"
 #include "SDL3/SDL_vulkan.h"
+#include "renderer/vulkan/vulkan_subsystem.hxx"
+
+#include "log.hxx"
+#include "lune.hxx"
 
 static lune::engine* gEngine{nullptr};
 
@@ -21,13 +25,41 @@ bool lune::engine::initialize(std::vector<std::string> args)
 	if (!SDL_Vulkan_LoadLibrary(NULL))
 		return false;
 
+	LN_LOG(Info, Engine, "Engine initilized. {0} - {1}.{2}.{3}", getEngineName(), getEngineVersionMajor(), getEngineVersionMinor(), getEngineVersionPatch());
+
 	mArgs = std::move(args);
+
+	addSubsystem<vulkan_subsystem>();
+
+    for (auto it = mSubsystems.begin(); it != mSubsystems.end(); it++)
+    {
+		if (it->get()->allowInitialize())
+		{
+			it->get()->initialize();
+		}
+		else 
+		{
+			auto eraseIt = it;
+			--it;
+			mSubsystems.erase(eraseIt);
+		}
+	}
 
 	return true;
 }
 
+bool lune::engine::wasInitialized() const
+{
+	return gEngine == this;
+}
+
 void lune::engine::shutdown()
 {
+	for (auto& engineSubsystem : mSubsystems)
+	{
+		engineSubsystem->shutdown();
+	}
+
 	SDL_Quit();
 }
 
