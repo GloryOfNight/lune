@@ -2,6 +2,7 @@
 
 #include "vulkan/vulkan.hpp"
 
+#include "lune.hxx"
 #include "shader.hxx"
 
 namespace lune::vulkan
@@ -22,12 +23,19 @@ namespace lune::vulkan
 		vk::Pipeline getPipeline() const { return mPipeline; }
 
 	private:
-		void createPipeline();
+		void createDescriptorPool();
+
 		void createPipelineLayout();
+		void createPipeline();
 
 		std::shared_ptr<shader> mVertShader{};
 		std::shared_ptr<shader> mFragShader{};
 
+		std::vector<vk::DescriptorSetLayout> mDescriptorSetLayouts{};
+		vk::DescriptorPool mDescriptorPool{};
+		uint32 mDescriptorPoolMaxSets{2};
+
+		vk::PipelineLayout mPipelineLayout{};
 		vk::Pipeline mPipeline{};
 	};
 } // namespace lune::vulkan
