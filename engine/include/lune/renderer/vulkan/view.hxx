@@ -1,6 +1,7 @@
 #pragma once
 
 #include "depth_image.hxx"
+#include "msaa_image.hxx"
 
 #include <memory>
 #include <vector>
@@ -24,13 +25,7 @@ namespace lune::vulkan
 		void recreateSwapchain();
 		void destroy();
 
-		bool updateExtent(vk::PhysicalDevice physicalDevice);
-
-		//void setViewMatrix(const de::math::mat4& viewMatrix);
-		//const de::math::mat4& getViewMatrix() const { return _viewMatrix; };
-
-		//const settings& getSettings() const { return _settings; }
-		//void applySettings(settings&& newSettings);
+		bool updateExtent();
 
 		uint32_t acquireNextImageIndex();
 
@@ -44,7 +39,9 @@ namespace lune::vulkan
 
 		uint32_t getImageCount() const;
 
-		inline vk::Format getFormat() const { return vk::Format::eB8G8R8A8Srgb; }
+		vk::Format getFormat() const { return vk::Format::eB8G8R8A8Srgb; }
+
+		vk::SampleCountFlagBits getSampleCount() const { return vk::SampleCountFlagBits::e1; }
 
 	private:
 		void createSwapchain();
@@ -66,6 +63,8 @@ namespace lune::vulkan
 		SDL_Window* mWindow{nullptr};
 
 		std::unique_ptr<depth_image> mDepthImage;
+
+		std::unique_ptr<msaa_image> mMsaaImage;
 
 		vk::SurfaceKHR mSurface;
 

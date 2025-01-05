@@ -36,6 +36,7 @@ void lune::vulkan::depth_image::init(class view* view)
 {
 	mFormat = findSupportedDepthFormat(gVulkanContext.physicalDevice);
 	mExtent = view->getCurrentExtent();
+	mSampleCount = view->getSampleCount();
 
 	createImage();
 
@@ -74,11 +75,11 @@ void lune::vulkan::depth_image::createImage()
 
 void lune::vulkan::depth_image::allocateMemory()
 {
-	vk::MemoryRequirements memoryRequirements = gVulkanContext.device.getImageMemoryRequirements(mImage);
+	const vk::MemoryRequirements memoryRequirements = gVulkanContext.device.getImageMemoryRequirements(mImage);
 
 	const VmaAllocationCreateInfo allocationCreateInfo = {};
 	VmaAllocationInfo allocationInfo = {};
-	vmaAllocateMemory(gVulkanContext.vmaAllocator, reinterpret_cast<VkMemoryRequirements*>(&memoryRequirements), &allocationCreateInfo, &mVmaAllocation, &allocationInfo);
+	vmaAllocateMemory(gVulkanContext.vmaAllocator, reinterpret_cast<const VkMemoryRequirements*>(&memoryRequirements), &allocationCreateInfo, &mVmaAllocation, &allocationInfo);
 
 	vmaBindImageMemory(gVulkanContext.vmaAllocator, mVmaAllocation, mImage);
 }

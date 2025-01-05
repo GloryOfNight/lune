@@ -62,8 +62,11 @@ void lune::vulkan::view::init()
 	mDepthImage = depth_image::create();
 	mDepthImage->init(this);
 
-	//_depthImage.create(viewIndex);
-	//_msaaImage.create(viewIndex);
+	if (getSampleCount() != vk::SampleCountFlagBits::e1)
+	{
+		mMsaaImage = msaa_image::create();
+		mMsaaImage->init(this);
+	}
 
 	createRenderPass();
 	createFramebuffers();
@@ -83,8 +86,17 @@ void lune::vulkan::view::recreateSwapchain()
 
 	createRenderPass();
 
-	//_depthImage.recreate();
-	//_msaaImage.recreate();
+	if (mDepthImage)
+	{
+		mDepthImage->destroy();
+		mDepthImage->init(this);
+	}
+
+	if (mMsaaImage)
+	{
+		mMsaaImage->destroy();
+		mMsaaImage->init(this);
+	}
 
 	createFramebuffers();
 }
@@ -102,18 +114,20 @@ void lune::vulkan::view::destroy()
 	gVulkanContext.device.destroySemaphore(mSemaphoreImageAvailable);
 	gVulkanContext.device.destroySemaphore(mSemaphoreRenderFinished);
 
-	mDepthImage->destroy();
+	if (mDepthImage)
+		mDepthImage->destroy();
 
-	//_msaaImage.destroy();
+	if (mMsaaImage)
+		mMsaaImage->destroy();
 
 	gVulkanContext.instance.destroy(mSurface);
 
 	new (this) view(); // reset the object
 }
 
-bool lune::vulkan::view::updateExtent(vk::PhysicalDevice physicalDevice)
+bool lune::vulkan::view::updateExtent()
 {
-	const vk::Extent2D newExtent = physicalDevice.getSurfaceCapabilitiesKHR(mSurface).currentExtent;
+	const vk::Extent2D newExtent = gVulkanContext.physicalDevice.getSurfaceCapabilitiesKHR(mSurface).currentExtent;
 	if (mCurrentExtent != newExtent)
 	{
 		mCurrentExtent = newExtent;
@@ -347,8 +361,7 @@ void lune::vulkan::view::createImageViews()
 
 void lune::vulkan::view::createRenderPass()
 {
-	const vk::SampleCountFlagBits sampleCount = vk::SampleCountFlagBits::e1;
-	const bool isMultisamplingSupported = false;
+	const bool msaaEnabled = getSampleCount() != vk::SampleCountFlagBits::e1;
 
 	std::vector<vk::AttachmentDescription> attachmentsDescriptions;
 
@@ -357,18 +370,18 @@ void lune::vulkan::view::createRenderPass()
 
 	attachmentsDescriptions.emplace_back() // color
 		.setFormat(getFormat())
-		.setSamples(sampleCount)
+		.setSamples(getSampleCount())
 		.setLoadOp(vk::AttachmentLoadOp::eClear)
-		.setStoreOp(isMultisamplingSupported ? vk::AttachmentStoreOp::eDontCare : vk::AttachmentStoreOp::eStore)
+		.setStoreOp(msaaEnabled ? vk::AttachmentStoreOp::eDontCare : vk::AttachmentStoreOp::eStore)
 		.setStencilLoadOp(vk::AttachmentLoadOp::eDontCare)
 		.setStencilStoreOp(vk::AttachmentStoreOp::eDontCare)
 		.setInitialLayout(vk::ImageLayout::eUndefined)
-		.setFinalLayout(isMultisamplingSupported ? vk::ImageLayout::eColorAttachmentOptimal : vk::ImageLayout::ePresentSrcKHR);
+		.setFinalLayout(msaaEnabled ? vk::ImageLayout::eColorAttachmentOptimal : vk::ImageLayout::ePresentSrcKHR);
 	attachmentReferences.push_back(vk::AttachmentReference(0, vk::ImageLayout::eColorAttachmentOptimal));
 
 	attachmentsDescriptions.emplace_back() // depth
 		.setFormat(mDepthImage->getFormat())
-		.setSamples(sampleCount)
+		.setSamples(getSampleCount())
 		.setLoadOp(vk::AttachmentLoadOp::eClear)
 		.setStoreOp(vk::AttachmentStoreOp::eDontCare)
 		.setStencilLoadOp(vk::AttachmentLoadOp::eDontCare)
@@ -377,19 +390,19 @@ void lune::vulkan::view::createRenderPass()
 		.setFinalLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
 	attachmentReferences.push_back(vk::AttachmentReference(1, vk::ImageLayout::eDepthStencilAttachmentOptimal));
 
-	// if (isMultisamplingSupported)
-	// {
-	// 	attachmentsDescriptions.emplace_back() // color msaa
-	// 		.setFormat(getFormat())
-	// 		.setSamples(vk::SampleCountFlagBits::e1)
-	// 		.setLoadOp(vk::AttachmentLoadOp::eDontCare)
-	// 		.setStoreOp(vk::AttachmentStoreOp::eDontCare)
-	// 		.setStencilLoadOp(vk::AttachmentLoadOp::eDontCare)
-	// 		.setStencilStoreOp(vk::AttachmentStoreOp::eDontCare)
-	// 		.setInitialLayout(vk::ImageLayout::eUndefined)
-	// 		.setFinalLayout(vk::ImageLayout::ePresentSrcKHR);
-	// 	resolveAttachmentReferences.push_back(vk::AttachmentReference(2, vk::ImageLayout::eColorAttachmentOptimal));
-	// }
+	if (msaaEnabled)
+	{
+		attachmentsDescriptions.emplace_back() // color msaa
+			.setFormat(getFormat())
+			.setSamples(vk::SampleCountFlagBits::e1)
+			.setLoadOp(vk::AttachmentLoadOp::eDontCare)
+			.setStoreOp(vk::AttachmentStoreOp::eDontCare)
+			.setStencilLoadOp(vk::AttachmentLoadOp::eDontCare)
+			.setStencilStoreOp(vk::AttachmentStoreOp::eDontCare)
+			.setInitialLayout(vk::ImageLayout::eUndefined)
+			.setFinalLayout(vk::ImageLayout::ePresentSrcKHR);
+		resolveAttachmentReferences.push_back(vk::AttachmentReference(2, vk::ImageLayout::eColorAttachmentOptimal));
+	}
 
 	const vk::SubpassDescription subpassDescription =
 		vk::SubpassDescription()
