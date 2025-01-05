@@ -10,9 +10,9 @@ std::unique_ptr<lune::vulkan::msaa_image> lune::vulkan::msaa_image::create()
 
 void lune::vulkan::msaa_image::init(view* view)
 {
-	mFormat = getVulkanConfig().mColorFormat;
+	mFormat = getVulkanConfig().colorFormat;
 	mExtent = view->getCurrentExtent();
-	mSampleCount = getVulkanConfig().mSampleCount;
+	mSampleCount = getVulkanConfig().sampleCount;
 }
 
 void lune::vulkan::msaa_image::destroy()

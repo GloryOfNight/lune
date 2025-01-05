@@ -22,14 +22,16 @@ namespace lune
 		vk::CommandPool graphicsCommandPool{};
 		vk::CommandPool transferCommandPool{};
 
+		vk::RenderPass renderPass{};
+
 		VmaAllocator vmaAllocator{};
 	};
 
 	struct vulkan_config final
 	{
-		vk::Format mColorFormat{};
-		vk::Format mDepthFormat{};
-		vk::SampleCountFlagBits mSampleCount{};
+		vk::Format colorFormat{};
+		vk::Format depthFormat{};
+		vk::SampleCountFlagBits sampleCount{};
 	};
 
 	extern "C++" vulkan_context& getVulkanContext();

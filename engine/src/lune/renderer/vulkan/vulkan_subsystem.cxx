@@ -82,9 +82,9 @@ void lune::vulkan_subsystem::initialize()
 		return;
 	}
 
-	getVulkanConfig().mColorFormat = vk::Format::eB8G8R8A8Srgb;
-	getVulkanConfig().mDepthFormat = findSupportedDepthFormat(getVulkanContext().physicalDevice);
-	getVulkanConfig().mSampleCount = vk::SampleCountFlagBits::e1;
+	getVulkanConfig().colorFormat = vk::Format::eB8G8R8A8Srgb;
+	getVulkanConfig().depthFormat = findSupportedDepthFormat(getVulkanContext().physicalDevice);
+	getVulkanConfig().sampleCount = vk::SampleCountFlagBits::e1;
 
 	const auto mPhysicalDeviceProperies = getVulkanContext().physicalDevice.getProperties();
 
@@ -94,6 +94,8 @@ void lune::vulkan_subsystem::initialize()
 	LN_LOG(Info, Vulkan, "	API: {0}.{1}.{2}", VK_VERSION_MAJOR(deviceApiVersion), VK_VERSION_MINOR(deviceApiVersion), VK_VERSION_PATCH(deviceApiVersion))
 
 	vulkan::createDevice(getVulkanContext());
+
+	vulkan::createRenderPass(getVulkanContext());
 	vulkan::createQueues(getVulkanContext());
 	vulkan::createGraphicsCommandPool(getVulkanContext());
 	vulkan::createTransferCommandPool(getVulkanContext());
@@ -109,29 +111,22 @@ void lune::vulkan_subsystem::shutdown()
 	mViews.clear();
 
 	if (getVulkanContext().graphicsCommandPool)
-	{
 		getVulkanContext().device.destroyCommandPool(getVulkanContext().graphicsCommandPool);
-	}
 
 	if (getVulkanContext().transferCommandPool)
-	{
 		getVulkanContext().device.destroyCommandPool(getVulkanContext().transferCommandPool);
-	}
+
+	if (getVulkanContext().renderPass)
+		getVulkanContext().device.destroyRenderPass(getVulkanContext().renderPass);
 
 	if (getVulkanContext().vmaAllocator)
-	{
 		vmaDestroyAllocator(getVulkanContext().vmaAllocator);
-	}
 
 	if (getVulkanContext().device)
-	{
 		getVulkanContext().device.destroy();
-	}
 
 	if (getVulkanContext().instance)
-	{
 		getVulkanContext().instance.destroy();
-	}
 
 	getVulkanContext() = vulkan_context{};
 	gVulkanSubsystem = nullptr;
@@ -269,6 +264,76 @@ void lune::vulkan::createTransferCommandPool(vulkan_context& context)
 															 .setFlags(vk::CommandPoolCreateFlagBits::eResetCommandBuffer | vk::CommandPoolCreateFlagBits::eTransient)
 															 .setQueueFamilyIndex(context.transferQueueIndex);
 	context.transferCommandPool = context.device.createCommandPool(transferCreateInfo);
+}
+
+void lune::vulkan::createRenderPass(vulkan_context& context)
+{
+	const bool msaaEnabled = getVulkanConfig().sampleCount != vk::SampleCountFlagBits::e1;
+
+	std::vector<vk::AttachmentDescription> attachmentsDescriptions;
+
+	std::vector<vk::AttachmentReference> attachmentReferences;
+	std::vector<vk::AttachmentReference> resolveAttachmentReferences;
+
+	attachmentsDescriptions.emplace_back() // color
+		.setFormat(getVulkanConfig().colorFormat)
+		.setSamples(getVulkanConfig().sampleCount)
+		.setLoadOp(vk::AttachmentLoadOp::eClear)
+		.setStoreOp(msaaEnabled ? vk::AttachmentStoreOp::eDontCare : vk::AttachmentStoreOp::eStore)
+		.setStencilLoadOp(vk::AttachmentLoadOp::eDontCare)
+		.setStencilStoreOp(vk::AttachmentStoreOp::eDontCare)
+		.setInitialLayout(vk::ImageLayout::eUndefined)
+		.setFinalLayout(msaaEnabled ? vk::ImageLayout::eColorAttachmentOptimal : vk::ImageLayout::ePresentSrcKHR);
+	attachmentReferences.push_back(vk::AttachmentReference(0, vk::ImageLayout::eColorAttachmentOptimal));
+
+	attachmentsDescriptions.emplace_back() // depth
+		.setFormat(getVulkanConfig().depthFormat)
+		.setSamples(getVulkanConfig().sampleCount)
+		.setLoadOp(vk::AttachmentLoadOp::eClear)
+		.setStoreOp(vk::AttachmentStoreOp::eDontCare)
+		.setStencilLoadOp(vk::AttachmentLoadOp::eDontCare)
+		.setStencilStoreOp(vk::AttachmentStoreOp::eDontCare)
+		.setInitialLayout(vk::ImageLayout::eUndefined)
+		.setFinalLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
+	attachmentReferences.push_back(vk::AttachmentReference(1, vk::ImageLayout::eDepthStencilAttachmentOptimal));
+
+	if (msaaEnabled)
+	{
+		attachmentsDescriptions.emplace_back() // color msaa
+			.setFormat(getVulkanConfig().colorFormat)
+			.setSamples(vk::SampleCountFlagBits::e1)
+			.setLoadOp(vk::AttachmentLoadOp::eDontCare)
+			.setStoreOp(vk::AttachmentStoreOp::eDontCare)
+			.setStencilLoadOp(vk::AttachmentLoadOp::eDontCare)
+			.setStencilStoreOp(vk::AttachmentStoreOp::eDontCare)
+			.setInitialLayout(vk::ImageLayout::eUndefined)
+			.setFinalLayout(vk::ImageLayout::ePresentSrcKHR);
+		resolveAttachmentReferences.push_back(vk::AttachmentReference(2, vk::ImageLayout::eColorAttachmentOptimal));
+	}
+
+	const vk::SubpassDescription subpassDescription =
+		vk::SubpassDescription()
+			.setPipelineBindPoint(vk::PipelineBindPoint::eGraphics)
+			.setColorAttachments({1, &attachmentReferences[0]})
+			.setPDepthStencilAttachment(&attachmentReferences[1])
+			.setPResolveAttachments(resolveAttachmentReferences.data());
+
+	const vk::SubpassDependency subpassDependecy =
+		vk::SubpassDependency()
+			.setSrcSubpass(VK_SUBPASS_EXTERNAL)
+			.setDstSubpass(0)
+			.setSrcStageMask(vk::PipelineStageFlagBits::eColorAttachmentOutput | vk::PipelineStageFlagBits::eEarlyFragmentTests)
+			.setDstStageMask(vk::PipelineStageFlagBits::eColorAttachmentOutput | vk::PipelineStageFlagBits::eEarlyFragmentTests)
+			.setSrcAccessMask(vk::AccessFlagBits(0))
+			.setDstAccessMask(vk::AccessFlagBits::eColorAttachmentWrite | vk::AccessFlagBits::eDepthStencilAttachmentWrite);
+
+	const vk::RenderPassCreateInfo renderPassCreateInfo =
+		vk::RenderPassCreateInfo()
+			.setAttachments(attachmentsDescriptions)
+			.setSubpasses({1, &subpassDescription})
+			.setDependencies({1, &subpassDependecy});
+
+	getVulkanContext().renderPass = getVulkanContext().device.createRenderPass(renderPassCreateInfo);
 }
 
 void lune::vulkan::createVmaAllocator(vulkan_context& context)

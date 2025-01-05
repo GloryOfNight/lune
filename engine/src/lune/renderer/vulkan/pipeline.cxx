@@ -103,13 +103,23 @@ void lune::vulkan::pipeline::init(std::shared_ptr<shader> vertShader, std::share
 		return;
 	}
 
-    createDescriptorPool();
-    createPipelineLayout();
+	createDescriptorPool();
+	createPipelineLayout();
 	createPipeline();
 }
 
 void lune::vulkan::pipeline::destroy()
 {
+	getVulkanContext().device.destroyPipeline(mPipeline);
+	getVulkanContext().device.destroyPipelineLayout(mPipelineLayout);
+	getVulkanContext().device.destroyDescriptorPool(mDescriptorPool);
+
+	for (const auto& layout : mDescriptorSetLayouts)
+	{
+		getVulkanContext().device.destroyDescriptorSetLayout(layout);
+	}
+
+	new (this) pipeline();
 }
 
 void lune::vulkan::pipeline::createDescriptorPool()
@@ -221,7 +231,7 @@ void lune::vulkan::pipeline::createPipeline()
 
 	const auto multisamplingState = vk::PipelineMultisampleStateCreateInfo()
 										.setSampleShadingEnable(VK_FALSE)
-										//.setRasterizationSamples(vk::SampleCountFlagBits::e1) // TODO: MSAA
+										.setRasterizationSamples(getVulkanConfig().sampleCount)
 										.setMinSampleShading(1.0F)
 										.setPSampleMask(nullptr)
 										.setAlphaToCoverageEnable(VK_TRUE)
@@ -255,7 +265,7 @@ void lune::vulkan::pipeline::createPipeline()
 										.setPMultisampleState(&multisamplingState)
 										.setPDepthStencilState(&depthStencilState)
 										.setLayout(mPipelineLayout)
-										//.setRenderPass() // ??????????????
+										.setRenderPass(getVulkanContext().renderPass)
 										.setSubpass(0);
 
 	const auto createResult = getVulkanContext().device.createGraphicsPipeline(nullptr, pipelineCreateInfo);

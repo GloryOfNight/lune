@@ -20,6 +20,8 @@ namespace lune
 
 		static void createTransferCommandPool(vulkan_context& context);
 
+		static void createRenderPass(vulkan_context& context);
+
 		static void createVmaAllocator(vulkan_context& context);
 	} // namespace vulkan
 

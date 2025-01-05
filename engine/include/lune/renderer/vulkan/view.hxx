@@ -33,7 +33,6 @@ namespace lune::vulkan
 		void endCommandBuffer(vk::CommandBuffer commandBuffer);
 		void submitCommandBuffer(uint32_t imageIndex, vk::CommandBuffer commandBuffer);
 
-		vk::RenderPass getRenderPass() const { return mRenderPass; };
 		vk::Extent2D getCurrentExtent() const { return mCurrentExtent; };
 		vk::SurfaceKHR getSurface() const { return mSurface; }
 
@@ -45,8 +44,6 @@ namespace lune::vulkan
 		void cleanupSwapchain(vk::SwapchainKHR swapchain);
 
 		void createImageViews();
-
-		void createRenderPass();
 
 		void createFramebuffers();
 
@@ -70,8 +67,6 @@ namespace lune::vulkan
 
 		std::vector<vk::ImageView> mSwapchainImageViews;
 		std::vector<vk::CommandBuffer> mImageCommandBuffers;
-
-		vk::RenderPass mRenderPass;
 
 		std::vector<vk::Framebuffer> mFramebuffers;
 

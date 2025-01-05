@@ -1,8 +1,6 @@
 #pragma once
 
-#include "vulkan/vulkan.hpp"
-
-#include "lune.hxx"
+#include "vulkan_core.hxx"
 #include "shader.hxx"
 
 namespace lune::vulkan

@@ -11,9 +11,9 @@ std::unique_ptr<lune::vulkan::depth_image> lune::vulkan::depth_image::create()
 
 void lune::vulkan::depth_image::init(class view* view)
 {
-	mFormat = getVulkanConfig().mDepthFormat;
+	mFormat = getVulkanConfig().depthFormat;
 	mExtent = view->getCurrentExtent();
-	mSampleCount = getVulkanConfig().mSampleCount;
+	mSampleCount = getVulkanConfig().sampleCount;
 
 	createImage();
 
