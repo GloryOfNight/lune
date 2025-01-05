@@ -59,19 +59,11 @@ namespace lune::vulkan
 
 		void createFramebuffers();
 
-		void createImageCommandBuffers(vk::CommandPool transferCommandPool);
+		void createImageCommandBuffers();
 
 		void createFences();
 
 		void createSemaphores();
-
-		// not owned
-		vk::Instance mInstance{};
-
-		vk::PhysicalDevice mPhysicalDevice{};
-
-		vk::Device mDevice{};
-		// not owned end
 
 		SDL_Window* mWindow{nullptr};
 

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdint.h>
+#include <string>
 #include <uchar.h>
 
 using int8 = int8_t;
@@ -20,25 +21,26 @@ using char32 = char32_t;
 
 namespace lune
 {
-	static uint32 getEngineVersion()
+	static constexpr uint32 makeVersion(uint32 major, uint32 minor, uint32 patch)
 	{
-		uint32_t major{0}, minor{0}, patch{1};
 		return (((uint32_t)(major)) << 22U) | (((uint32_t)(minor)) << 12U) | ((uint32_t)(patch));
 	}
 
-	static uint32 getEngineVersionMajor()
+	static void getVersion(uint32 version, uint32& major, uint32& minor, uint32& patch)
 	{
-		return (getEngineVersion() >> 22U) & 0x7FU;
+		major = (version >> 22U) & 0x7FU;
+		minor = (version >> 12U) & 0x3FFU;
+		patch = version & 0xFFFU;
 	}
 
-	static uint32 getEngineVersionMinor()
-	{
-		return (getEngineVersion() >> 12U) & 0x3FFU;
-	}
+	extern "C++" uint32& getApplicationVersion();
 
-	static uint32 getEngineVersionPatch()
+	extern "C++" std::string& getApplicationName();
+
+	static uint32 getEngineVersion()
 	{
-		return getEngineVersion() & 0xFFFU;
+		static constexpr uint32 version = makeVersion(0, 0, 1);
+		return version;
 	}
 
 	static const char* getEngineName()

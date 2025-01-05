@@ -8,10 +8,43 @@
 
 namespace lune
 {
+	struct vulkan_context final
+	{
+		vk::Instance instance{};
+		vk::PhysicalDevice physicalDevice{};
+		vk::Device device{};
+		vk::Queue graphicsQueue{};
+		vk::Queue transferQueue{};
+
+		uint32 graphicsQueueIndex{};
+		uint32 transferQueueIndex{};
+
+		vk::CommandPool graphicsCommandPool{};
+		vk::CommandPool transferCommandPool{};
+	};
+
+	namespace vulkan
+	{
+		static void createInstance(const vk::ApplicationInfo& applicationInfo, const std::vector<const char*>& instanceExtensions, const std::vector<const char*>& instanceLayers, vulkan_context& context);
+
+		static void findPhysicalDevice(vulkan_context& context);
+
+		static void createDevice(vulkan_context& context);
+
+		static void createQueues(vulkan_context& context);
+
+		static void createGraphicsCommandPool(vulkan_context& context);
+
+		static void createTransferCommandPool(vulkan_context& context);
+	} // namespace vulkan
+
+	static vulkan_context gVulkanContext{};
+
 	class vulkan_subsystem final : public subsystem
 	{
 	public:
 		static vulkan_subsystem* get();
+		static vulkan_subsystem* getChecked(); // std::abort if not initialized
 
 		vulkan_subsystem() = default;
 		vulkan_subsystem(const subsystem&) = delete;
@@ -24,41 +57,8 @@ namespace lune
 
 		void createView(SDL_Window* window);
 
-		vk::Instance getInstance() const { return mInstance; }
-		vk::PhysicalDevice getPhysicalDevice() const { return mPhysicalDevice; }
-		vk::Device getDevice() const { return mDevice; }
-		vk::Queue getGraphicsQueue() const { return mGraphicsQueue; }
-		vk::Queue getTransferQueue() const { return mTransferQueue; }
-		std::vector<uint32> getQueueFamilyIndices() const { return mGraphicsQueueIndex == mTransferQueueIndex // if graphics and transfer queues are the same return only one index
-																	   ? std::vector<uint32>{mGraphicsQueueIndex}
-																	   : std::vector<uint32>{mGraphicsQueueIndex, mTransferQueueIndex}; }
-
-		vk::CommandPool getGraphicsCommandPool() const { return mGraphicsCommandPool; }
-		vk::CommandPool getTransferCommandPool() const { return mTransferCommandPool; }
-
 	private:
-		void createInstance();
-
-		void createPhysicalDevice();
-
-		void createDevice();
-
-		void createQueues();
-
-		void createCommandPools();
-
 		uint32 mApiVersion{};
-		vk::Instance mInstance{};
-
-		vk::PhysicalDevice mPhysicalDevice{};
-		vk::PhysicalDeviceProperties mPhysicalDeviceProperies{};
-		vk::PhysicalDeviceFeatures mPhysicalDeviceFeatures{};
-
-		vk::Device mDevice{};
-		uint32 mGraphicsQueueIndex{}, mTransferQueueIndex{};
-		vk::Queue mGraphicsQueue{}, mTransferQueue{};
-
-		vk::CommandPool mGraphicsCommandPool{}, mTransferCommandPool{};
 
 		std::vector<std::unique_ptr<vulkan::view>> mViews{};
 	};

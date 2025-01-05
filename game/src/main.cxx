@@ -9,6 +9,9 @@ int main(int argc, char** argv)
 {
 	std::vector<std::string> args(argv, argv + argc);
 
+	ln::getApplicationName() = "so8";
+	ln::getApplicationVersion() = ln::makeVersion(1, 0, 0);
+
 	ln::engine engine = ln::engine();
 	if (!engine.initialize(std::move(args)))
 		return 1;

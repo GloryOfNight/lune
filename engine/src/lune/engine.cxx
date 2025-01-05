@@ -25,7 +25,12 @@ bool lune::engine::initialize(std::vector<std::string> args)
 	if (!SDL_Vulkan_LoadLibrary(NULL))
 		return false;
 
-	LN_LOG(Info, Engine, "Engine initilized. {0} - {1}.{2}.{3}", getEngineName(), getEngineVersionMajor(), getEngineVersionMinor(), getEngineVersionPatch());
+	uint32 major{}, minor{}, patch{};
+	lune::getVersion(lune::getApplicationVersion(), major, minor, patch);
+	LN_LOG(Info, Engine, "Application: \'{0}\', version {1}.{2}.{3}", lune::getApplicationName(), major, minor, patch);
+
+	lune::getVersion(lune::getEngineVersion(), major, minor, patch);
+	LN_LOG(Info, Engine, "Engine: \'{0}\', version {1}.{2}.{3}", lune::getEngineName(), major, minor, patch);
 
 	mArgs = std::move(args);
 

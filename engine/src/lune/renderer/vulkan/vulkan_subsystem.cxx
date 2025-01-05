@@ -4,6 +4,7 @@
 #include "vulkan/vulkan.hpp"
 
 #include "log.hxx"
+#include "lune.hxx"
 
 #include <vector>
 
@@ -13,6 +14,15 @@ lune::vulkan_subsystem* gVulkanSubsystem{nullptr};
 
 lune::vulkan_subsystem* lune::vulkan_subsystem::get()
 {
+	return gVulkanSubsystem;
+}
+
+lune::vulkan_subsystem* lune::vulkan_subsystem::getChecked()
+{
+	if (nullptr == gVulkanSubsystem) [[unlikely]]
+	{
+		std::abort();
+	}
 	return gVulkanSubsystem;
 }
 
@@ -26,28 +36,41 @@ void lune::vulkan_subsystem::initialize()
 	gVulkanSubsystem = this;
 
 	mApiVersion = VK_API_VERSION_1_0;
-	LN_LOG(Info, Vulkan, "Initializing subsystem. Vulkan - {0}.{1}.{2}", VK_VERSION_MAJOR(mApiVersion), VK_VERSION_MINOR(mApiVersion), VK_VERSION_PATCH(mApiVersion))
+	LN_LOG(Info, Vulkan, "Vulkan version {0}.{1}.{2}", VK_VERSION_MAJOR(mApiVersion), VK_VERSION_MINOR(mApiVersion), VK_VERSION_PATCH(mApiVersion))
 
-	createInstance();
-	createPhysicalDevice();
+	const vk::ApplicationInfo applicationInfo = vk::ApplicationInfo()
+													.setPApplicationName(lune::getApplicationName().c_str())
+													.setApplicationVersion(lune::getApplicationVersion())
+													.setPEngineName(lune::getEngineName())
+													.setEngineVersion(lune::getEngineVersion())
+													.setApiVersion(mApiVersion);
 
-	if (nullptr == mPhysicalDevice)
+	uint32_t instanceExtensionsCount{};
+	char const* const* instanceExtensionsSdl = SDL_Vulkan_GetInstanceExtensions(&instanceExtensionsCount);
+
+	std::vector<const char*> instanceExtensions(instanceExtensionsSdl, instanceExtensionsSdl + instanceExtensionsCount);
+	std::vector<const char*> instanceLayers = {"VK_LAYER_KHRONOS_validation"};
+
+	vulkan::createInstance(applicationInfo, instanceExtensions, instanceLayers, gVulkanContext);
+	vulkan::findPhysicalDevice(gVulkanContext);
+
+	if (nullptr == gVulkanContext.physicalDevice)
 	{
 		LN_LOG(Fatal, Vulkan, "Failed to find suitable device for Vulkan");
 		return;
 	}
 
-	mPhysicalDeviceProperies = mPhysicalDevice.getProperties();
-	mPhysicalDeviceFeatures = mPhysicalDevice.getFeatures();
+	const auto mPhysicalDeviceProperies = gVulkanContext.physicalDevice.getProperties();
 
 	const uint32 deviceApiVersion = mPhysicalDeviceProperies.apiVersion;
 	LN_LOG(Info, Vulkan, "Selected device:", mPhysicalDeviceProperies.deviceName.data(), mPhysicalDeviceProperies.deviceID);
 	LN_LOG(Info, Vulkan, "	GPU: {0} (id: {1})", mPhysicalDeviceProperies.deviceName.data(), mPhysicalDeviceProperies.deviceID);
 	LN_LOG(Info, Vulkan, "	API: {0}.{1}.{2}", VK_VERSION_MAJOR(deviceApiVersion), VK_VERSION_MINOR(deviceApiVersion), VK_VERSION_PATCH(deviceApiVersion))
 
-	createDevice();
-	createQueues();
-	createCommandPools();
+	vulkan::createDevice(gVulkanContext);
+	vulkan::createQueues(gVulkanContext);
+	vulkan::createGraphicsCommandPool(gVulkanContext);
+	vulkan::createTransferCommandPool(gVulkanContext);
 }
 
 void lune::vulkan_subsystem::shutdown()
@@ -58,36 +81,27 @@ void lune::vulkan_subsystem::shutdown()
 	}
 	mViews.clear();
 
-	if (mTransferQueue)
+	if (gVulkanContext.graphicsCommandPool)
 	{
-		mTransferQueueIndex = 0;
-		mTransferQueue = vk::Queue();
+		gVulkanContext.device.destroyCommandPool(gVulkanContext.graphicsCommandPool);
 	}
 
-	if (mGraphicsQueue)
+	if (gVulkanContext.transferCommandPool)
 	{
-		mGraphicsQueueIndex = 0;
-		mGraphicsQueue = vk::Queue();
+		gVulkanContext.device.destroyCommandPool(gVulkanContext.transferCommandPool);
 	}
 
-	if (mDevice)
+	if (gVulkanContext.device)
 	{
-		mDevice.destroy();
-		mDevice = vk::Device();
+		gVulkanContext.device.destroy();
 	}
 
-	if (mPhysicalDevice)
+	if (gVulkanContext.instance)
 	{
-		mPhysicalDeviceProperies = vk::PhysicalDeviceProperties();
-		mPhysicalDeviceFeatures = vk::PhysicalDeviceFeatures();
-		mPhysicalDevice = vk::PhysicalDevice();
-	}
-	if (mInstance)
-	{
-		mInstance.destroy();
-		mInstance = vk::Instance();
+		gVulkanContext.instance.destroy();
 	}
 
+	gVulkanContext = vulkan_context{};
 	gVulkanSubsystem = nullptr;
 }
 
@@ -100,43 +114,22 @@ void lune::vulkan_subsystem::createView(SDL_Window* window)
 	}
 }
 
-void lune::vulkan_subsystem::createInstance()
+void lune::vulkan::createInstance(const vk::ApplicationInfo& applicationInfo, const std::vector<const char*>& instanceExtensions, const std::vector<const char*>& instanceLayers, vulkan_context& context)
 {
-	uint32_t instanceExtensionsCount{};
-	char const* const* instanceExtensionsSdl = SDL_Vulkan_GetInstanceExtensions(&instanceExtensionsCount);
-
-	std::vector<const char*> instanceExtensions{};
-	for (int32_t i = 0; i < instanceExtensionsCount; ++i)
-	{
-		instanceExtensions.push_back(instanceExtensionsSdl[i]);
-	}
-
-	const auto allInstanceLayers = vk::enumerateInstanceLayerProperties();
-
-	std::vector<const char*> instanceLayers{};
-	for (const auto& layerProperty : allInstanceLayers)
-	{
-		const auto push_layer_if_available_lam = [&instanceLayers, &layerProperty](const std::string_view layer) -> void
-		{
-			if (layerProperty.layerName == layer)
-				instanceLayers.push_back(layer.data());
-		};
-
-#ifdef LUNE_USE_VALIDATION
-		push_layer_if_available_lam("VK_LAYER_KHRONOS_validation");
-#endif
-	}
-
-	const vk::ApplicationInfo applicationInfo("", 0, "", 0, mApiVersion);
-	const vk::InstanceCreateInfo instanceCreateInfo({}, &applicationInfo, instanceLayers, instanceExtensions);
-	mInstance = vk::createInstance(instanceCreateInfo);
+	const vk::InstanceCreateInfo instanceCreateInfo = vk::InstanceCreateInfo()
+														  .setPApplicationInfo(&applicationInfo)
+														  .setPEnabledExtensionNames(instanceExtensions)
+														  .setPEnabledLayerNames(instanceLayers);
+	context.instance = vk::createInstance(instanceCreateInfo);
 }
 
-void lune::vulkan_subsystem::createPhysicalDevice()
+void lune::vulkan::findPhysicalDevice(vulkan_context& context)
 {
-	const auto physicalDevices = mInstance.enumeratePhysicalDevices();
+	const auto physicalDevices = context.instance.enumeratePhysicalDevices();
 
 	LN_LOG(Info, Vulkan, "Avaiable physical devices:");
+
+	vk::PhysicalDevice selectedDevice{};
 
 	for (size_t i = 0; i < physicalDevices.size(); ++i)
 	{
@@ -151,17 +144,19 @@ void lune::vulkan_subsystem::createPhysicalDevice()
 			continue;
 		}
 
-		mPhysicalDevice = physicalDevice;
+		selectedDevice = physicalDevice;
 		if (vk::PhysicalDeviceType::eDiscreteGpu == physicalDeviceProperties.deviceType)
 		{
 			break;
 		}
 	}
+	context.physicalDevice = selectedDevice;
 }
 
-void lune::vulkan_subsystem::createDevice()
+void lune::vulkan::createDevice(vulkan_context& context)
 {
-	const auto queueFamilyProperties = mPhysicalDevice.getQueueFamilyProperties();
+	const auto queueFamilyProperties = context.physicalDevice.getQueueFamilyProperties();
+	const auto enabledFeatures = context.physicalDevice.getFeatures();
 
 	std::vector<vk::DeviceQueueCreateInfo> queueCreateInfoList;
 	queueCreateInfoList.reserve(queueFamilyProperties.size());
@@ -175,7 +170,7 @@ void lune::vulkan_subsystem::createDevice()
 			.setQueuePriorities(priorities);
 	}
 
-	const std::vector<vk::ExtensionProperties> availableExtensions = mPhysicalDevice.enumerateDeviceExtensionProperties();
+	const std::vector<vk::ExtensionProperties> availableExtensions = context.physicalDevice.enumerateDeviceExtensionProperties();
 	const std::vector<const char*> requiredExtensions{"VK_KHR_swapchain"};
 
 	for (const auto& requiredExtension : requiredExtensions)
@@ -199,37 +194,41 @@ void lune::vulkan_subsystem::createDevice()
 													  .setQueueCreateInfos(queueCreateInfoList)
 													  .setPEnabledExtensionNames(requiredExtensions)
 													  .setPEnabledLayerNames(requiredLayers)
-													  .setPEnabledFeatures(&mPhysicalDeviceFeatures);
+													  .setPEnabledFeatures(&enabledFeatures);
 
-	mDevice = mPhysicalDevice.createDevice(deviceCreateInfo);
+	context.device = context.physicalDevice.createDevice(deviceCreateInfo);
 }
 
-void lune::vulkan_subsystem::createQueues()
+void lune::vulkan::createQueues(vulkan_context& context)
 {
-	const auto queueFamilyProperties = mPhysicalDevice.getQueueFamilyProperties();
+	const auto queueFamilyProperties = context.physicalDevice.getQueueFamilyProperties();
 	const size_t queueFamilyPropertiesSize = queueFamilyProperties.size();
 	for (size_t i = 0; i < queueFamilyPropertiesSize; ++i)
 	{
 		const auto queueFlags = queueFamilyProperties[i].queueFlags;
 		if ((queueFlags & vk::QueueFlagBits::eGraphics) && (queueFlags & vk::QueueFlagBits::eTransfer))
 		{
-			mGraphicsQueueIndex = i;
-			mTransferQueueIndex = i;
+			context.graphicsQueueIndex = i;
+			context.transferQueueIndex = i;
 		}
 	}
-	mGraphicsQueue = mDevice.getQueue(mGraphicsQueueIndex, 0);
-	mTransferQueue = mDevice.getQueue(mTransferQueueIndex, 0);
+
+	context.graphicsQueue = context.device.getQueue(context.graphicsQueueIndex, 0);
+	context.transferQueue = context.device.getQueue(context.transferQueueIndex, 0);
 }
 
-void lune::vulkan_subsystem::createCommandPools()
+void lune::vulkan::createGraphicsCommandPool(vulkan_context& context)
 {
 	const vk::CommandPoolCreateInfo graphicsCreateInfo = vk::CommandPoolCreateInfo()
 															 .setFlags(vk::CommandPoolCreateFlagBits::eResetCommandBuffer)
-															 .setQueueFamilyIndex(mGraphicsQueueIndex);
-	mGraphicsCommandPool = mDevice.createCommandPool(graphicsCreateInfo);
+															 .setQueueFamilyIndex(context.graphicsQueueIndex);
+	context.graphicsCommandPool = context.device.createCommandPool(graphicsCreateInfo);
+}
 
+void lune::vulkan::createTransferCommandPool(vulkan_context& context)
+{
 	const vk::CommandPoolCreateInfo transferCreateInfo = vk::CommandPoolCreateInfo()
 															 .setFlags(vk::CommandPoolCreateFlagBits::eResetCommandBuffer | vk::CommandPoolCreateFlagBits::eTransient)
-															 .setQueueFamilyIndex(mTransferQueueIndex);
-	mTransferCommandPool = mDevice.createCommandPool(transferCreateInfo);
+															 .setQueueFamilyIndex(context.transferQueueIndex);
+	context.transferCommandPool = context.device.createCommandPool(transferCreateInfo);
 }

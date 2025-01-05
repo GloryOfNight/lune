@@ -36,14 +36,8 @@ vk::PresentModeKHR findPresentMode(vk::PhysicalDevice physicalDevice, vk::Surfac
 
 std::unique_ptr<lune::vulkan::view> lune::vulkan::view::create(SDL_Window* window)
 {
-	auto subsystem = vulkan_subsystem::get();
-
-	auto instance = vulkan_subsystem::get()->getInstance();
-	auto physicalDevice = vulkan_subsystem::get()->getPhysicalDevice();
-	auto device = vulkan_subsystem::get()->getDevice();
-
 	VkSurfaceKHR surface{};
-	SDL_Vulkan_CreateSurface(window, instance, nullptr, &surface);
+	SDL_Vulkan_CreateSurface(window, gVulkanContext.instance, nullptr, &surface);
 
 	if (surface == VK_NULL_HANDLE)
 	{
@@ -51,9 +45,6 @@ std::unique_ptr<lune::vulkan::view> lune::vulkan::view::create(SDL_Window* windo
 	}
 
 	auto newView = std::make_unique<view>();
-	newView->mInstance = instance;
-	newView->mPhysicalDevice = physicalDevice;
-	newView->mDevice = device;
 	newView->mWindow = window;
 	newView->mSurface = surface;
 
@@ -66,7 +57,7 @@ void lune::vulkan::view::init()
 
 	createImageViews();
 
-	createImageCommandBuffers(vulkan_subsystem::get()->getTransferCommandPool());
+	createImageCommandBuffers();
 
 	//_depthImage.create(viewIndex);
 	//_msaaImage.create(viewIndex);
@@ -97,21 +88,21 @@ void lune::vulkan::view::recreateSwapchain()
 
 void lune::vulkan::view::destroy()
 {
-	[[maybe_unused]] const auto waitResult = mDevice.waitForFences(mSubmitQueueFences, true, UINT32_MAX);
+	[[maybe_unused]] const auto waitResult = gVulkanContext.device.waitForFences(mSubmitQueueFences, true, UINT32_MAX);
 	for (auto& fence : mSubmitQueueFences)
 	{
-		mDevice.destroyFence(fence);
+		gVulkanContext.device.destroyFence(fence);
 	}
 
 	cleanupSwapchain(mSwapchain);
 
-	mDevice.destroySemaphore(mSemaphoreImageAvailable);
-	mDevice.destroySemaphore(mSemaphoreRenderFinished);
+	gVulkanContext.device.destroySemaphore(mSemaphoreImageAvailable);
+	gVulkanContext.device.destroySemaphore(mSemaphoreRenderFinished);
 
 	//_depthImage.destroy();
 	//_msaaImage.destroy();
 
-	mInstance.destroy(mSurface);
+	gVulkanContext.instance.destroy(mSurface);
 
 	new (this) view(); // reset the object
 }
@@ -153,7 +144,7 @@ uint32_t lune::vulkan::view::acquireNextImageIndex()
 	vk::ResultValue<uint32_t> aquireNextImageResult = vk::ResultValue<uint32_t>(vk::Result{}, UINT32_MAX);
 	try
 	{
-		aquireNextImageResult = mDevice.acquireNextImageKHR(mSwapchain, UINT32_MAX, mSemaphoreImageAvailable, nullptr);
+		aquireNextImageResult = gVulkanContext.device.acquireNextImageKHR(mSwapchain, UINT32_MAX, mSemaphoreImageAvailable, nullptr);
 	}
 	catch (vk::OutOfDateKHRError outOfDateKHRError)
 	{
@@ -176,11 +167,11 @@ uint32_t lune::vulkan::view::acquireNextImageIndex()
 vk::CommandBuffer lune::vulkan::view::beginCommandBuffer(uint32_t imageIndex)
 {
 	const std::array<vk::Fence, 1> waitFences{mSubmitQueueFences[imageIndex]};
-	const vk::Result waitFencesResult = mDevice.waitForFences(waitFences, true, UINT32_MAX);
+	const vk::Result waitFencesResult = gVulkanContext.device.waitForFences(waitFences, true, UINT32_MAX);
 	if (waitFencesResult == vk::Result::eTimeout)
 		return nullptr;
 
-	mDevice.resetFences(waitFences);
+	gVulkanContext.device.resetFences(waitFences);
 
 	vk::CommandBuffer commandBuffer = mImageCommandBuffers[imageIndex];
 
@@ -211,8 +202,6 @@ void lune::vulkan::view::endCommandBuffer(vk::CommandBuffer commandBuffer)
 
 void lune::vulkan::view::submitCommandBuffer(uint32_t imageIndex, vk::CommandBuffer commandBuffer)
 {
-	auto graphicsQueue = vulkan_subsystem::get()->getGraphicsQueue();
-
 	const std::array<vk::Semaphore, 1> submitWaitSemaphores = {mSemaphoreImageAvailable};
 	const std::array<vk::Semaphore, 1> submitSignalSemaphores = {mSemaphoreRenderFinished};
 	const std::array<vk::PipelineStageFlags, 1> submitWaitDstStages = {vk::PipelineStageFlagBits::eColorAttachmentOutput};
@@ -225,7 +214,7 @@ void lune::vulkan::view::submitCommandBuffer(uint32_t imageIndex, vk::CommandBuf
 			.setWaitDstStageMask(submitWaitDstStages)
 			.setCommandBuffers(submitCommandBuffers);
 
-	graphicsQueue.submit(submitInfo, mSubmitQueueFences[imageIndex]);
+	gVulkanContext.graphicsQueue.submit(submitInfo, mSubmitQueueFences[imageIndex]);
 
 	const vk::PresentInfoKHR presentInfo =
 		vk::PresentInfoKHR()
@@ -235,7 +224,7 @@ void lune::vulkan::view::submitCommandBuffer(uint32_t imageIndex, vk::CommandBuf
 
 	try
 	{
-		const vk::Result presentResult = graphicsQueue.presentKHR(presentInfo);
+		const vk::Result presentResult = gVulkanContext.graphicsQueue.presentKHR(presentInfo);
 
 		if (vk::Result::eSuboptimalKHR == presentResult)
 		{
@@ -261,22 +250,31 @@ uint32_t lune::vulkan::view::getImageCount() const
 
 void lune::vulkan::view::createSwapchain()
 {
-	const vk::SurfaceCapabilitiesKHR surfaceCapabilities = mPhysicalDevice.getSurfaceCapabilitiesKHR(mSurface);
+	const vk::SurfaceCapabilitiesKHR surfaceCapabilities = gVulkanContext.physicalDevice.getSurfaceCapabilitiesKHR(mSurface);
 	mCurrentExtent = surfaceCapabilities.currentExtent;
 
-	const auto surfaceFormat = findSurfaceFormat(mPhysicalDevice, mSurface, getFormat());
+	const auto surfaceFormat = findSurfaceFormat(gVulkanContext.physicalDevice, mSurface, getFormat());
 	if (surfaceFormat == vk::SurfaceFormatKHR())
 	{
 		LN_LOG(Fatal, Vulkan::View, "Failed to find preferred surface format!");
 		return;
 	}
 
-	const auto presentMode = findPresentMode(mPhysicalDevice, mSurface);
+	const auto presentMode = findPresentMode(gVulkanContext.physicalDevice, mSurface);
 	if (presentMode == vk::PresentModeKHR())
 		LN_LOG(Error, Vulkan::View, "Failed to to find preffered present mode!");
 
 	const auto sharingMode{getSharingMode()};
-	const auto queueFamilyIndexes{vulkan_subsystem::get()->getQueueFamilyIndices()};
+
+	std::vector<uint32> queueFamilyIndexes{};
+	if (gVulkanContext.graphicsQueueIndex != gVulkanContext.transferQueueIndex)
+	{
+		queueFamilyIndexes = std::vector<uint32>{gVulkanContext.graphicsQueueIndex, gVulkanContext.transferQueueIndex};
+	}
+	else 
+	{
+		queueFamilyIndexes = std::vector<uint32>{gVulkanContext.graphicsQueueIndex};
+	}
 
 	const uint32_t minImageCount = surfaceCapabilities.maxImageCount >= 3 ? 3 : surfaceCapabilities.minImageCount;
 
@@ -297,7 +295,7 @@ void lune::vulkan::view::createSwapchain()
 			.setClipped(VK_TRUE)
 			.setOldSwapchain(mSwapchain);
 
-	mSwapchain = mDevice.createSwapchainKHR(swapchainCreateInfo);
+	mSwapchain = gVulkanContext.device.createSwapchainKHR(swapchainCreateInfo);
 	if (swapchainCreateInfo.oldSwapchain)
 	{
 		cleanupSwapchain(swapchainCreateInfo.oldSwapchain);
@@ -306,28 +304,28 @@ void lune::vulkan::view::createSwapchain()
 
 void lune::vulkan::view::cleanupSwapchain(vk::SwapchainKHR swapchain)
 {
-	mDevice.waitIdle();
+	gVulkanContext.device.waitIdle();
 
-	mDevice.destroyRenderPass(mRenderPass);
+	gVulkanContext.device.destroyRenderPass(mRenderPass);
 
 	for (auto frameBuffer : mFramebuffers)
 	{
-		mDevice.destroyFramebuffer(frameBuffer);
+		gVulkanContext.device.destroyFramebuffer(frameBuffer);
 	}
 	mFramebuffers.clear();
 
 	for (auto imageView : mSwapchainImageViews)
 	{
-		mDevice.destroyImageView(imageView);
+		gVulkanContext.device.destroyImageView(imageView);
 	}
 	mSwapchainImageViews.clear();
 
-	mDevice.destroySwapchainKHR(swapchain);
+	gVulkanContext.device.destroySwapchainKHR(swapchain);
 }
 
 void lune::vulkan::view::createImageViews()
 {
-	const auto swapchainImages = mDevice.getSwapchainImagesKHR(mSwapchain);
+	const auto swapchainImages = gVulkanContext.device.getSwapchainImagesKHR(mSwapchain);
 	const size_t imageCount = swapchainImages.size();
 
 	mSwapchainImageViews.resize(imageCount);
@@ -356,7 +354,7 @@ void lune::vulkan::view::createImageViews()
 				.setComponents(imageViewComponents)
 				.setSubresourceRange(imageSubresourceRange);
 
-		mSwapchainImageViews[i] = mDevice.createImageView(imageViewCreateInfo);
+		mSwapchainImageViews[i] = gVulkanContext.device.createImageView(imageViewCreateInfo);
 	}
 }
 
@@ -428,7 +426,7 @@ void lune::vulkan::view::createRenderPass()
 			.setSubpasses({1, &subpassDescription})
 			.setDependencies({1, &subpassDependecy});
 
-	mRenderPass = mDevice.createRenderPass(renderPassCreateInfo);
+	mRenderPass = gVulkanContext.device.createRenderPass(renderPassCreateInfo);
 }
 
 void lune::vulkan::view::createFramebuffers()
@@ -452,18 +450,18 @@ void lune::vulkan::view::createFramebuffers()
 				.setHeight(mCurrentExtent.height)
 				.setLayers(1);
 
-		mFramebuffers[i] = mDevice.createFramebuffer(framebufferCreateInfo);
+		mFramebuffers[i] = gVulkanContext.device.createFramebuffer(framebufferCreateInfo);
 	}
 }
 
-void lune::vulkan::view::createImageCommandBuffers(vk::CommandPool transferCommandPool)
+void lune::vulkan::view::createImageCommandBuffers()
 {
 	const vk::CommandBufferAllocateInfo commandBufferAllocateInfo =
 		vk::CommandBufferAllocateInfo()
 			.setLevel(vk::CommandBufferLevel::ePrimary)
 			.setCommandBufferCount(getImageCount())
-			.setCommandPool(transferCommandPool);
-	mImageCommandBuffers = mDevice.allocateCommandBuffers(commandBufferAllocateInfo);
+			.setCommandPool(gVulkanContext.transferCommandPool);
+	mImageCommandBuffers = gVulkanContext.device.allocateCommandBuffers(commandBufferAllocateInfo);
 }
 
 void lune::vulkan::view::createFences()
@@ -472,12 +470,12 @@ void lune::vulkan::view::createFences()
 	for (auto& fence : mSubmitQueueFences)
 	{
 		const vk::FenceCreateInfo fenceCreateInfo(vk::FenceCreateFlagBits::eSignaled);
-		fence = mDevice.createFence(fenceCreateInfo);
+		fence = gVulkanContext.device.createFence(fenceCreateInfo);
 	}
 }
 
 void lune::vulkan::view::createSemaphores()
 {
-	mSemaphoreImageAvailable = mDevice.createSemaphore(vk::SemaphoreCreateInfo());
-	mSemaphoreRenderFinished = mDevice.createSemaphore(vk::SemaphoreCreateInfo());
+	mSemaphoreImageAvailable = gVulkanContext.device.createSemaphore(vk::SemaphoreCreateInfo());
+	mSemaphoreRenderFinished = gVulkanContext.device.createSemaphore(vk::SemaphoreCreateInfo());
 }
