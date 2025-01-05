@@ -88,7 +88,7 @@ void lune::engine::createWindow(const std::string_view name, const uint32 width,
 	auto subsystem = vulkan_subsystem::get();
 	if (subsystem)
 	{
-		auto newWindow = SDL_CreateWindow(name.data(), width, height, SDL_WINDOW_VULKAN | flags);
+		auto newWindow = SDL_CreateWindow(name.data(), width, height, SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE | flags);
 		subsystem->createView(newWindow);
 	}
 }

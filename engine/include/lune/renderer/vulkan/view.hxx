@@ -1,5 +1,7 @@
 #pragma once
 
+#include "depth_image.hxx"
+
 #include <memory>
 #include <vector>
 #include <vulkan/vulkan.hpp>
@@ -22,8 +24,6 @@ namespace lune::vulkan
 		void recreateSwapchain();
 		void destroy();
 
-		bool isInitialized() const { return mSurface != vk::SurfaceKHR(); }
-
 		bool updateExtent(vk::PhysicalDevice physicalDevice);
 
 		//void setViewMatrix(const de::math::mat4& viewMatrix);
@@ -41,8 +41,6 @@ namespace lune::vulkan
 		vk::RenderPass getRenderPass() const { return mRenderPass; };
 		vk::Extent2D getCurrentExtent() const { return mCurrentExtent; };
 		vk::SurfaceKHR getSurface() const { return mSurface; }
-
-		vk::SharingMode getSharingMode() const;
 
 		uint32_t getImageCount() const;
 
@@ -66,6 +64,8 @@ namespace lune::vulkan
 		void createSemaphores();
 
 		SDL_Window* mWindow{nullptr};
+
+		std::unique_ptr<depth_image> mDepthImage;
 
 		vk::SurfaceKHR mSurface;
 

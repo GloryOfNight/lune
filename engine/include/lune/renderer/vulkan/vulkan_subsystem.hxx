@@ -6,6 +6,8 @@
 #include "subsystem.hxx"
 #include "view.hxx"
 
+#include "vk_mem_alloc.h"
+
 namespace lune
 {
 	struct vulkan_context final
@@ -18,9 +20,12 @@ namespace lune
 
 		uint32 graphicsQueueIndex{};
 		uint32 transferQueueIndex{};
+		std::vector<uint32> queueFamilyIndices{};
 
 		vk::CommandPool graphicsCommandPool{};
 		vk::CommandPool transferCommandPool{};
+
+		VmaAllocator vmaAllocator{};
 	};
 
 	namespace vulkan
@@ -36,6 +41,8 @@ namespace lune
 		static void createGraphicsCommandPool(vulkan_context& context);
 
 		static void createTransferCommandPool(vulkan_context& context);
+
+		static void createVmaAllocator(vulkan_context& context);
 	} // namespace vulkan
 
 	static vulkan_context gVulkanContext{};

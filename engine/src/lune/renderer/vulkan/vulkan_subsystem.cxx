@@ -35,7 +35,7 @@ void lune::vulkan_subsystem::initialize()
 {
 	gVulkanSubsystem = this;
 
-	mApiVersion = VK_API_VERSION_1_0;
+	mApiVersion = VK_API_VERSION_1_3;
 	LN_LOG(Info, Vulkan, "Vulkan version {0}.{1}.{2}", VK_VERSION_MAJOR(mApiVersion), VK_VERSION_MINOR(mApiVersion), VK_VERSION_PATCH(mApiVersion))
 
 	const vk::ApplicationInfo applicationInfo = vk::ApplicationInfo()
@@ -71,6 +71,7 @@ void lune::vulkan_subsystem::initialize()
 	vulkan::createQueues(gVulkanContext);
 	vulkan::createGraphicsCommandPool(gVulkanContext);
 	vulkan::createTransferCommandPool(gVulkanContext);
+	vulkan::createVmaAllocator(gVulkanContext);
 }
 
 void lune::vulkan_subsystem::shutdown()
@@ -213,6 +214,12 @@ void lune::vulkan::createQueues(vulkan_context& context)
 		}
 	}
 
+	context.queueFamilyIndices.push_back(context.graphicsQueueIndex);
+	if (context.graphicsQueueIndex != context.transferQueueIndex)
+	{
+		context.queueFamilyIndices.push_back(context.transferQueueIndex);
+	}
+
 	context.graphicsQueue = context.device.getQueue(context.graphicsQueueIndex, 0);
 	context.transferQueue = context.device.getQueue(context.transferQueueIndex, 0);
 }
@@ -231,4 +238,16 @@ void lune::vulkan::createTransferCommandPool(vulkan_context& context)
 															 .setFlags(vk::CommandPoolCreateFlagBits::eResetCommandBuffer | vk::CommandPoolCreateFlagBits::eTransient)
 															 .setQueueFamilyIndex(context.transferQueueIndex);
 	context.transferCommandPool = context.device.createCommandPool(transferCreateInfo);
+}
+
+void lune::vulkan::createVmaAllocator(vulkan_context& context)
+{
+	VmaAllocatorCreateInfo allocatorCreateInfo = {};
+	allocatorCreateInfo.flags = VMA_ALLOCATOR_CREATE_EXT_MEMORY_BUDGET_BIT;
+	allocatorCreateInfo.vulkanApiVersion = VK_API_VERSION_1_3;
+	allocatorCreateInfo.instance = context.instance;
+	allocatorCreateInfo.physicalDevice = context.physicalDevice;
+	allocatorCreateInfo.device = context.device;
+
+	vmaCreateAllocator(&allocatorCreateInfo, &context.vmaAllocator);
 }

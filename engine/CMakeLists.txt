@@ -9,10 +9,13 @@ add_library(${PROJECT_NAME}-static STATIC                       "include/lune/lu
                                                                 "include/lune/log.hxx"
                                                                 "include/lune/renderer/vulkan/vulkan_subsystem.hxx"
                                                                 "include/lune/renderer/vulkan/view.hxx"
+                                                                "include/lune/renderer/vulkan/depth_image.hxx"
                                                                 "src/lune/lune.cxx"
                                                                 "src/lune/engine.cxx"
                                                                 "src/lune/renderer/vulkan/vulkan_subsystem.cxx"
                                                                 "src/lune/renderer/vulkan/view.cxx"
+                                                                "src/lune/renderer/vulkan/depth_image.cxx"
+                                                                "src/lune/renderer/vulkan/vmaMemAlloc.cxx"
                                                                 )
 
 target_include_directories(${PROJECT_NAME}-static PUBLIC        "include")

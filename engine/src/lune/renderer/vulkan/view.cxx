@@ -59,6 +59,9 @@ void lune::vulkan::view::init()
 
 	createImageCommandBuffers();
 
+	mDepthImage = depth_image::create();
+	mDepthImage->init(this);
+
 	//_depthImage.create(viewIndex);
 	//_msaaImage.create(viewIndex);
 
@@ -99,7 +102,8 @@ void lune::vulkan::view::destroy()
 	gVulkanContext.device.destroySemaphore(mSemaphoreImageAvailable);
 	gVulkanContext.device.destroySemaphore(mSemaphoreRenderFinished);
 
-	//_depthImage.destroy();
+	mDepthImage->destroy();
+
 	//_msaaImage.destroy();
 
 	gVulkanContext.instance.destroy(mSurface);
@@ -238,11 +242,6 @@ void lune::vulkan::view::submitCommandBuffer(uint32_t imageIndex, vk::CommandBuf
 	}
 }
 
-vk::SharingMode lune::vulkan::view::getSharingMode() const
-{
-	return vk::SharingMode::eExclusive;
-}
-
 uint32_t lune::vulkan::view::getImageCount() const
 {
 	return mSwapchainImageViews.size();
@@ -264,18 +263,6 @@ void lune::vulkan::view::createSwapchain()
 	if (presentMode == vk::PresentModeKHR())
 		LN_LOG(Error, Vulkan::View, "Failed to to find preffered present mode!");
 
-	const auto sharingMode{getSharingMode()};
-
-	std::vector<uint32> queueFamilyIndexes{};
-	if (gVulkanContext.graphicsQueueIndex != gVulkanContext.transferQueueIndex)
-	{
-		queueFamilyIndexes = std::vector<uint32>{gVulkanContext.graphicsQueueIndex, gVulkanContext.transferQueueIndex};
-	}
-	else 
-	{
-		queueFamilyIndexes = std::vector<uint32>{gVulkanContext.graphicsQueueIndex};
-	}
-
 	const uint32_t minImageCount = surfaceCapabilities.maxImageCount >= 3 ? 3 : surfaceCapabilities.minImageCount;
 
 	const vk::SwapchainCreateInfoKHR swapchainCreateInfo =
@@ -287,8 +274,8 @@ void lune::vulkan::view::createSwapchain()
 			.setImageExtent(mCurrentExtent)
 			.setImageArrayLayers(1)
 			.setImageUsage(vk::ImageUsageFlagBits::eColorAttachment)
-			.setImageSharingMode(static_cast<vk::SharingMode>(sharingMode))
-			.setQueueFamilyIndices(queueFamilyIndexes)
+			.setImageSharingMode(vk::SharingMode::eExclusive)
+			.setQueueFamilyIndices(gVulkanContext.queueFamilyIndices)
 			.setPreTransform(surfaceCapabilities.currentTransform)
 			.setCompositeAlpha(vk::CompositeAlphaFlagBitsKHR::eOpaque)
 			.setPresentMode(presentMode)
@@ -379,16 +366,16 @@ void lune::vulkan::view::createRenderPass()
 		.setFinalLayout(isMultisamplingSupported ? vk::ImageLayout::eColorAttachmentOptimal : vk::ImageLayout::ePresentSrcKHR);
 	attachmentReferences.push_back(vk::AttachmentReference(0, vk::ImageLayout::eColorAttachmentOptimal));
 
-	// attachmentsDescriptions.emplace_back() // depth
-	// 	.setFormat(_depthImage.getFormat())
-	// 	.setSamples(sampleCount)
-	// 	.setLoadOp(vk::AttachmentLoadOp::eClear)
-	// 	.setStoreOp(vk::AttachmentStoreOp::eDontCare)
-	// 	.setStencilLoadOp(vk::AttachmentLoadOp::eDontCare)
-	// 	.setStencilStoreOp(vk::AttachmentStoreOp::eDontCare)
-	// 	.setInitialLayout(vk::ImageLayout::eUndefined)
-	// 	.setFinalLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
-	// attachmentReferences.push_back(vk::AttachmentReference(1, vk::ImageLayout::eDepthStencilAttachmentOptimal));
+	attachmentsDescriptions.emplace_back() // depth
+		.setFormat(mDepthImage->getFormat())
+		.setSamples(sampleCount)
+		.setLoadOp(vk::AttachmentLoadOp::eClear)
+		.setStoreOp(vk::AttachmentStoreOp::eDontCare)
+		.setStencilLoadOp(vk::AttachmentLoadOp::eDontCare)
+		.setStencilStoreOp(vk::AttachmentStoreOp::eDontCare)
+		.setInitialLayout(vk::ImageLayout::eUndefined)
+		.setFinalLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
+	attachmentReferences.push_back(vk::AttachmentReference(1, vk::ImageLayout::eDepthStencilAttachmentOptimal));
 
 	// if (isMultisamplingSupported)
 	// {
@@ -408,7 +395,7 @@ void lune::vulkan::view::createRenderPass()
 		vk::SubpassDescription()
 			.setPipelineBindPoint(vk::PipelineBindPoint::eGraphics)
 			.setColorAttachments({1, &attachmentReferences[0]})
-			//.setPDepthStencilAttachment(&attachmentReferences[1])
+			.setPDepthStencilAttachment(&attachmentReferences[1])
 			.setPResolveAttachments(resolveAttachmentReferences.data());
 
 	const vk::SubpassDependency subpassDependecy =
@@ -440,7 +427,7 @@ void lune::vulkan::view::createFramebuffers()
 		attachments.reserve(3);
 
 		attachments.push_back(mSwapchainImageViews[i]);
-		//attachments.push_back(_depthImage.getImageView());
+		attachments.push_back(mDepthImage->getImageView());
 
 		const vk::FramebufferCreateInfo framebufferCreateInfo =
 			vk::FramebufferCreateInfo()
