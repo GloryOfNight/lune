@@ -24,7 +24,7 @@ set_target_properties(${PROJECT_NAME}-static PROPERTIES         C_STANDARD 17
 # vulkan #
 find_package(Vulkan)
 find_package(VulkanMemoryAllocator CONFIG REQUIRED)
-target_link_libraries(${PROJECT_NAME}-static PRIVATE Vulkan::Vulkan GPUOpen::VulkanMemoryAllocator)
+target_link_libraries(${PROJECT_NAME}-static PRIVATE spirv-reflect-static Vulkan::Vulkan GPUOpen::VulkanMemoryAllocator)
 # vulkan end #
 
 # other packages #
