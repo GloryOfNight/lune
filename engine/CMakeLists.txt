@@ -3,26 +3,16 @@ project(lune
         HOMEPAGE_URL ""
         LANGUAGES CXX C)
 
-add_library(${PROJECT_NAME}-static STATIC                       "include/lune/lune.hxx"
-                                                                "include/lune/engine.hxx"
-                                                                "include/lune/subsystem.hxx"
-                                                                "include/lune/log.hxx"
-                                                                "include/lune/renderer/vulkan/vulkan_subsystem.hxx"
-                                                                "include/lune/renderer/vulkan/view.hxx"
-                                                                "include/lune/renderer/vulkan/depth_image.hxx"
-                                                                "include/lune/renderer/vulkan/msaa_image.hxx"
-                                                                "src/lune/lune.cxx"
-                                                                "src/lune/engine.cxx"
-                                                                "src/lune/renderer/vulkan/vulkan_subsystem.cxx"
-                                                                "src/lune/renderer/vulkan/view.cxx"
-                                                                "src/lune/renderer/vulkan/depth_image.cxx"
-                                                                "src/lune/renderer/vulkan/msaa_image.cxx"
-                                                                "src/lune/renderer/vulkan/vmaMemAlloc.cxx"
-                                                                )
+file(GLOB_RECURSE LUNE_HEADER_FILES ${CMAKE_CURRENT_SOURCE_DIR}/include/lune/*.hxx)
+file(GLOB_RECURSE LUNE_SOURCE_FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/lune/*.cxx)
+
+add_library(${PROJECT_NAME}-static STATIC ${LUNE_HEADER_FILES} ${LUNE_SOURCE_FILES})
 
 target_include_directories(${PROJECT_NAME}-static PUBLIC        "include")
 
 target_include_directories(${PROJECT_NAME}-static PRIVATE       "include/lune" 
+                                                                "include/lune/game_framework/ecs"
+                                                                "include/lune/game_framework/"
                                                                 "include/lune/renderer/vulkan"
                                                                 )
 
