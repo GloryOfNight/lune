@@ -131,7 +131,7 @@ void lune::vulkan::pipeline::createDescriptorPool()
 		const auto layoutCreateInfo = vk::DescriptorSetLayoutCreateInfo()
 										  .setBindings(bindings);
 
-		mDescriptorSetLayouts.push_back(gVulkanContext.device.createDescriptorSetLayout(layoutCreateInfo));
+		mDescriptorSetLayouts.push_back(getVulkanContext().device.createDescriptorSetLayout(layoutCreateInfo));
 
 		for (const auto& binding : bindings)
 		{
@@ -141,7 +141,7 @@ void lune::vulkan::pipeline::createDescriptorPool()
 		}
 	}
 
-	mDescriptorPool = gVulkanContext.device.createDescriptorPool(vk::DescriptorPoolCreateInfo()
+	mDescriptorPool = getVulkanContext().device.createDescriptorPool(vk::DescriptorPoolCreateInfo()
 			.setFlags(vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet)
 			.setPoolSizes(poolSizes)
 			.setMaxSets(mDescriptorSetLayouts.size() * mDescriptorPoolMaxSets));
@@ -164,7 +164,7 @@ void lune::vulkan::pipeline::createPipelineLayout()
 			.setSetLayouts(mDescriptorSetLayouts)
 			.setPushConstantRanges(pushConstantRanges);
 
-	mPipelineLayout = gVulkanContext.device.createPipelineLayout(pipelineLayoutCreateInfo);
+	mPipelineLayout = getVulkanContext().device.createPipelineLayout(pipelineLayoutCreateInfo);
 }
 
 void lune::vulkan::pipeline::createPipeline()
@@ -258,7 +258,7 @@ void lune::vulkan::pipeline::createPipeline()
 										//.setRenderPass() // ??????????????
 										.setSubpass(0);
 
-	const auto createResult = gVulkanContext.device.createGraphicsPipeline(nullptr, pipelineCreateInfo);
+	const auto createResult = getVulkanContext().device.createGraphicsPipeline(nullptr, pipelineCreateInfo);
 	if (createResult.result != vk::Result::eSuccess)
 	{
 		LN_LOG(Fatal, Vulkan::Pipeline, "Failed to create pipeline: {}", vk::to_string(createResult.result));

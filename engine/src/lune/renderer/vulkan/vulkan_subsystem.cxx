@@ -1,7 +1,6 @@
 #include "vulkan_subsystem.hxx"
 
 #include "SDL3/SDL_vulkan.h"
-#include "vulkan/vulkan.hpp"
 
 #include "log.hxx"
 #include "lune.hxx"
@@ -9,6 +8,29 @@
 #include <vector>
 
 #define LUNE_USE_VALIDATION
+
+vk::Format findSupportedDepthFormat(const vk::PhysicalDevice physicalDevice) noexcept
+{
+	constexpr auto formatCandidates = std::array{vk::Format::eD32Sfloat, vk::Format::eD32SfloatS8Uint, vk::Format::eD24UnormS8Uint};
+	const auto imageTiling = vk::ImageTiling::eOptimal;
+	const auto formatFeatureFlags = vk::FormatFeatureFlagBits::eDepthStencilAttachment;
+
+	for (const auto format : formatCandidates)
+	{
+		const auto formatProperties = physicalDevice.getFormatProperties(format);
+		if (imageTiling == vk::ImageTiling::eLinear &&
+			(formatProperties.linearTilingFeatures & formatFeatureFlags) == formatFeatureFlags)
+		{
+			return format;
+		}
+		else if (imageTiling == vk::ImageTiling::eOptimal &&
+				 (formatProperties.optimalTilingFeatures & formatFeatureFlags) == formatFeatureFlags)
+		{
+			return format;
+		}
+	}
+	return vk::Format::eUndefined;
+}
 
 lune::vulkan_subsystem* gVulkanSubsystem{nullptr};
 
@@ -51,27 +73,31 @@ void lune::vulkan_subsystem::initialize()
 	std::vector<const char*> instanceExtensions(instanceExtensionsSdl, instanceExtensionsSdl + instanceExtensionsCount);
 	std::vector<const char*> instanceLayers = {"VK_LAYER_KHRONOS_validation"};
 
-	vulkan::createInstance(applicationInfo, instanceExtensions, instanceLayers, gVulkanContext);
-	vulkan::findPhysicalDevice(gVulkanContext);
+	vulkan::createInstance(applicationInfo, instanceExtensions, instanceLayers, getVulkanContext());
+	vulkan::findPhysicalDevice(getVulkanContext());
 
-	if (nullptr == gVulkanContext.physicalDevice)
+	if (nullptr == getVulkanContext().physicalDevice)
 	{
 		LN_LOG(Fatal, Vulkan, "Failed to find suitable device for Vulkan");
 		return;
 	}
 
-	const auto mPhysicalDeviceProperies = gVulkanContext.physicalDevice.getProperties();
+	getVulkanConfig().mColorFormat = vk::Format::eB8G8R8A8Srgb;
+	getVulkanConfig().mDepthFormat = findSupportedDepthFormat(getVulkanContext().physicalDevice);
+	getVulkanConfig().mSampleCount = vk::SampleCountFlagBits::e1;
+
+	const auto mPhysicalDeviceProperies = getVulkanContext().physicalDevice.getProperties();
 
 	const uint32 deviceApiVersion = mPhysicalDeviceProperies.apiVersion;
 	LN_LOG(Info, Vulkan, "Selected device:", mPhysicalDeviceProperies.deviceName.data(), mPhysicalDeviceProperies.deviceID);
 	LN_LOG(Info, Vulkan, "	GPU: {0} (id: {1})", mPhysicalDeviceProperies.deviceName.data(), mPhysicalDeviceProperies.deviceID);
 	LN_LOG(Info, Vulkan, "	API: {0}.{1}.{2}", VK_VERSION_MAJOR(deviceApiVersion), VK_VERSION_MINOR(deviceApiVersion), VK_VERSION_PATCH(deviceApiVersion))
 
-	vulkan::createDevice(gVulkanContext);
-	vulkan::createQueues(gVulkanContext);
-	vulkan::createGraphicsCommandPool(gVulkanContext);
-	vulkan::createTransferCommandPool(gVulkanContext);
-	vulkan::createVmaAllocator(gVulkanContext);
+	vulkan::createDevice(getVulkanContext());
+	vulkan::createQueues(getVulkanContext());
+	vulkan::createGraphicsCommandPool(getVulkanContext());
+	vulkan::createTransferCommandPool(getVulkanContext());
+	vulkan::createVmaAllocator(getVulkanContext());
 }
 
 void lune::vulkan_subsystem::shutdown()
@@ -82,27 +108,32 @@ void lune::vulkan_subsystem::shutdown()
 	}
 	mViews.clear();
 
-	if (gVulkanContext.graphicsCommandPool)
+	if (getVulkanContext().graphicsCommandPool)
 	{
-		gVulkanContext.device.destroyCommandPool(gVulkanContext.graphicsCommandPool);
+		getVulkanContext().device.destroyCommandPool(getVulkanContext().graphicsCommandPool);
 	}
 
-	if (gVulkanContext.transferCommandPool)
+	if (getVulkanContext().transferCommandPool)
 	{
-		gVulkanContext.device.destroyCommandPool(gVulkanContext.transferCommandPool);
+		getVulkanContext().device.destroyCommandPool(getVulkanContext().transferCommandPool);
 	}
 
-	if (gVulkanContext.device)
+	if (getVulkanContext().vmaAllocator)
 	{
-		gVulkanContext.device.destroy();
+		vmaDestroyAllocator(getVulkanContext().vmaAllocator);
 	}
 
-	if (gVulkanContext.instance)
+	if (getVulkanContext().device)
 	{
-		gVulkanContext.instance.destroy();
+		getVulkanContext().device.destroy();
 	}
 
-	gVulkanContext = vulkan_context{};
+	if (getVulkanContext().instance)
+	{
+		getVulkanContext().instance.destroy();
+	}
+
+	getVulkanContext() = vulkan_context{};
 	gVulkanSubsystem = nullptr;
 }
 

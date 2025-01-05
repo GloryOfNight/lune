@@ -1,33 +1,11 @@
 #pragma once
 
-#include "vulkan/vulkan.hpp"
-
-#include "lune.hxx"
 #include "subsystem.hxx"
 #include "view.hxx"
-
-#include "vk_mem_alloc.h"
+#include "vulkan_core.hxx"
 
 namespace lune
 {
-	struct vulkan_context final
-	{
-		vk::Instance instance{};
-		vk::PhysicalDevice physicalDevice{};
-		vk::Device device{};
-		vk::Queue graphicsQueue{};
-		vk::Queue transferQueue{};
-
-		uint32 graphicsQueueIndex{};
-		uint32 transferQueueIndex{};
-		std::vector<uint32> queueFamilyIndices{};
-
-		vk::CommandPool graphicsCommandPool{};
-		vk::CommandPool transferCommandPool{};
-
-		VmaAllocator vmaAllocator{};
-	};
-
 	namespace vulkan
 	{
 		static void createInstance(const vk::ApplicationInfo& applicationInfo, const std::vector<const char*>& instanceExtensions, const std::vector<const char*>& instanceLayers, vulkan_context& context);
@@ -45,13 +23,11 @@ namespace lune
 		static void createVmaAllocator(vulkan_context& context);
 	} // namespace vulkan
 
-	static vulkan_context gVulkanContext{};
-
 	class vulkan_subsystem final : public subsystem
 	{
 	public:
 		static vulkan_subsystem* get();
-		static vulkan_subsystem* getChecked(); // std::abort if not initialized
+		static vulkan_subsystem* getChecked();
 
 		vulkan_subsystem() = default;
 		vulkan_subsystem(const subsystem&) = delete;

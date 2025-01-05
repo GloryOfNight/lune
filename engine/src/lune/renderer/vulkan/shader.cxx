@@ -39,7 +39,7 @@ void lune::vulkan::shader::init(const std::string_view spvPath)
 	}
 
 	const auto shaderModuleCreateInfo = vk::ShaderModuleCreateInfo({}, spvCode.size(), reinterpret_cast<const uint32_t*>(spvCode.data()));
-	mShaderModule = gVulkanContext.device.createShaderModule(shaderModuleCreateInfo);
+	mShaderModule = getVulkanContext().device.createShaderModule(shaderModuleCreateInfo);
     if (!mShaderModule)
     {
         LN_LOG(Fatal, Vulkan::Shader, "Failed to create shader module: {}", spvPath);
@@ -58,7 +58,7 @@ void lune::vulkan::shader::destroy()
 {
 	if (mShaderModule)
 	{
-		gVulkanContext.device.destroyShaderModule(mShaderModule);
+		getVulkanContext().device.destroyShaderModule(mShaderModule);
 	}
 	new (this) shader();
 }

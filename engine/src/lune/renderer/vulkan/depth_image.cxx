@@ -4,29 +4,6 @@
 #include "view.hxx"
 #include "vulkan_subsystem.hxx"
 
-vk::Format findSupportedDepthFormat(const vk::PhysicalDevice physicalDevice) noexcept
-{
-	constexpr auto formatCandidates = std::array{vk::Format::eD32Sfloat, vk::Format::eD32SfloatS8Uint, vk::Format::eD24UnormS8Uint};
-	const auto imageTiling = vk::ImageTiling::eOptimal;
-	const auto formatFeatureFlags = vk::FormatFeatureFlagBits::eDepthStencilAttachment;
-
-	for (const auto format : formatCandidates)
-	{
-		const auto formatProperties = physicalDevice.getFormatProperties(format);
-		if (imageTiling == vk::ImageTiling::eLinear &&
-			(formatProperties.linearTilingFeatures & formatFeatureFlags) == formatFeatureFlags)
-		{
-			return format;
-		}
-		else if (imageTiling == vk::ImageTiling::eOptimal &&
-				 (formatProperties.optimalTilingFeatures & formatFeatureFlags) == formatFeatureFlags)
-		{
-			return format;
-		}
-	}
-	return vk::Format::eUndefined;
-}
-
 std::unique_ptr<lune::vulkan::depth_image> lune::vulkan::depth_image::create()
 {
 	return std::make_unique<depth_image>();
@@ -34,9 +11,9 @@ std::unique_ptr<lune::vulkan::depth_image> lune::vulkan::depth_image::create()
 
 void lune::vulkan::depth_image::init(class view* view)
 {
-	mFormat = findSupportedDepthFormat(gVulkanContext.physicalDevice);
+	mFormat = getVulkanConfig().mDepthFormat;
 	mExtent = view->getCurrentExtent();
-	mSampleCount = view->getSampleCount();
+	mSampleCount = getVulkanConfig().mSampleCount;
 
 	createImage();
 
@@ -49,8 +26,8 @@ void lune::vulkan::depth_image::init(class view* view)
 
 void lune::vulkan::depth_image::destroy()
 {
-	gVulkanContext.device.destroyImageView(mImageView);
-	vmaDestroyImage(gVulkanContext.vmaAllocator, mImage, mVmaAllocation);
+	getVulkanContext().device.destroyImageView(mImageView);
+	vmaDestroyImage(getVulkanContext().vmaAllocator, mImage, mVmaAllocation);
 	new (this) depth_image(); // reset the object
 }
 
@@ -60,28 +37,28 @@ void lune::vulkan::depth_image::createImage()
 		vk::ImageCreateInfo()
 			.setImageType(vk::ImageType::e2D)
 			.setFormat(mFormat)
-			.setExtent(vk::Extent3D(mExtent))
+			.setExtent(vk::Extent3D(mExtent, 1))
 			.setMipLevels(1)
 			.setArrayLayers(1)
 			.setSamples(mSampleCount)
 			.setTiling(vk::ImageTiling::eOptimal)
 			.setUsage(vk::ImageUsageFlagBits::eDepthStencilAttachment)
 			.setInitialLayout(vk::ImageLayout::eUndefined)
-			.setQueueFamilyIndices(gVulkanContext.queueFamilyIndices)
+			.setQueueFamilyIndices(getVulkanContext().queueFamilyIndices)
 			.setSharingMode(vk::SharingMode::eExclusive);
 
-	mImage = gVulkanContext.device.createImage(imageCreateInfo);
+	mImage = getVulkanContext().device.createImage(imageCreateInfo);
 }
 
 void lune::vulkan::depth_image::allocateMemory()
 {
-	const vk::MemoryRequirements memoryRequirements = gVulkanContext.device.getImageMemoryRequirements(mImage);
+	const vk::MemoryRequirements memoryRequirements = getVulkanContext().device.getImageMemoryRequirements(mImage);
 
 	const VmaAllocationCreateInfo allocationCreateInfo = {};
 	VmaAllocationInfo allocationInfo = {};
-	vmaAllocateMemory(gVulkanContext.vmaAllocator, reinterpret_cast<const VkMemoryRequirements*>(&memoryRequirements), &allocationCreateInfo, &mVmaAllocation, &allocationInfo);
+	vmaAllocateMemory(getVulkanContext().vmaAllocator, reinterpret_cast<const VkMemoryRequirements*>(&memoryRequirements), &allocationCreateInfo, &mVmaAllocation, &allocationInfo);
 
-	vmaBindImageMemory(gVulkanContext.vmaAllocator, mVmaAllocation, mImage);
+	vmaBindImageMemory(getVulkanContext().vmaAllocator, mVmaAllocation, mImage);
 }
 
 void lune::vulkan::depth_image::createImageView()
@@ -94,7 +71,7 @@ void lune::vulkan::depth_image::createImageView()
 			.setComponents(vk::ComponentMapping())
 			.setSubresourceRange(vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eDepth, 0, 1, 0, 1));
 
-	mImageView = gVulkanContext.device.createImageView(imageViewCreateInfo);
+	mImageView = getVulkanContext().device.createImageView(imageViewCreateInfo);
 }
 
 void lune::vulkan::depth_image::transitionImageLayout(vk::ImageLayout oldLayout, vk::ImageLayout newLayout)
@@ -103,9 +80,9 @@ void lune::vulkan::depth_image::transitionImageLayout(vk::ImageLayout oldLayout,
 		vk::CommandBufferAllocateInfo()
 			.setLevel(vk::CommandBufferLevel::ePrimary)
 			.setCommandBufferCount(1)
-			.setCommandPool(gVulkanContext.transferCommandPool);
+			.setCommandPool(getVulkanContext().transferCommandPool);
 
-	vk::CommandBuffer commandBuffer = gVulkanContext.device.allocateCommandBuffers(commandBufferAllocateInfo)[0];
+	vk::CommandBuffer commandBuffer = getVulkanContext().device.allocateCommandBuffers(commandBufferAllocateInfo)[0];
 
 	const vk::CommandBufferBeginInfo commandBufferBeginInfo =
 		vk::CommandBufferBeginInfo(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
@@ -133,5 +110,5 @@ void lune::vulkan::depth_image::transitionImageLayout(vk::ImageLayout oldLayout,
 		vk::SubmitInfo()
 			.setCommandBuffers({commandBuffer});
 
-	gVulkanContext.transferQueue.submit(submitInfo, nullptr);
+	getVulkanContext().transferQueue.submit(submitInfo, nullptr);
 }

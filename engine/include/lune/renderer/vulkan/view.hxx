@@ -39,10 +39,6 @@ namespace lune::vulkan
 
 		uint32_t getImageCount() const;
 
-		vk::Format getFormat() const { return vk::Format::eB8G8R8A8Srgb; }
-
-		vk::SampleCountFlagBits getSampleCount() const { return vk::SampleCountFlagBits::e1; }
-
 	private:
 		void createSwapchain();
 
