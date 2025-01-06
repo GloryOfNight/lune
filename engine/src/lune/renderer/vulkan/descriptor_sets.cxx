@@ -103,11 +103,13 @@ void lune::vulkan::descriptor_sets::createDescriptorPool()
 void lune::vulkan::descriptor_sets::allocateDescriptorSets()
 {
 	const auto& Layouts = mPipeline->getDescriptorLayouts();
+	for (uint32 i = 0; i < mMaxSets; ++i)
+	{
+		vk::DescriptorSetAllocateInfo allocInfo = vk::DescriptorSetAllocateInfo()
+													  .setDescriptorPool(mDescriptorPool)
+													  .setSetLayouts(Layouts);
 
-	vk::DescriptorSetAllocateInfo allocInfo = vk::DescriptorSetAllocateInfo()
-												  .setDescriptorPool(mDescriptorPool)
-												  .setDescriptorSetCount(mMaxSets)
-												  .setSetLayouts(Layouts);
-
-	mDescriptorSets = getVulkanContext().device.allocateDescriptorSets(allocInfo);
+		auto newSets = getVulkanContext().device.allocateDescriptorSets(allocInfo);
+		std::move(newSets.begin(), newSets.end(), std::back_inserter(mDescriptorSets));
+	}
 }

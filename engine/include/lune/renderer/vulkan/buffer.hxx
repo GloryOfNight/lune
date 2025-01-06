@@ -14,7 +14,7 @@ namespace lune::vulkan
 		buffer(buffer&&) = delete;
 		~buffer() = default;
 
-		std::unique_ptr<buffer> create();
+		static std::unique_ptr<buffer> create();
 
 		void init(vk::BufferUsageFlags usage, vk::DeviceSize size);
 		void destroy();

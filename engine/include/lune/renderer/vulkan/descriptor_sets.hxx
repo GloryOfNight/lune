@@ -18,7 +18,7 @@ namespace lune::vulkan
 		descriptor_sets(descriptor_sets&&) = default;
 		~descriptor_sets() = default;
 
-		std::unique_ptr<descriptor_sets> create();
+		static std::unique_ptr<descriptor_sets> create();
 
 		void init(std::shared_ptr<pipeline> pipeline, uint32 maxSets);
 		void destroy();

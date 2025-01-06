@@ -25,10 +25,10 @@ namespace lune::vulkan
 		vk::Format getFormat() const { return mFormat; }
 		vk::Image getImage() const { return mImage; }
 		vk::ImageView getImageView() const { return mImageView; }
+		vk::Sampler getSampler() const { return mSampler; }
 
 	private:
 		void createImage();
-		void allocateMemory();
 		void createImageView();
 		void createSampler();
 

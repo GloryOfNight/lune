@@ -20,6 +20,11 @@ vk::Format sdlFormatToVulkan(SDL_PixelFormat format)
 	}
 }
 
+std::unique_ptr<lune::vulkan::texture_image> lune::vulkan::texture_image::create()
+{
+	return std::make_unique<texture_image>();
+}
+
 void lune::vulkan::texture_image::init(const SDL_Surface& surface)
 {
 	mFormat = sdlFormatToVulkan(surface.format);
@@ -33,11 +38,10 @@ void lune::vulkan::texture_image::init(const SDL_Surface& surface)
 	mSampleCount = vk::SampleCountFlagBits::e1;
 
 	createImage();
-	allocateMemory();
 	createImageView();
 	createSampler();
 
-    copyPixelsToImage(surface);
+	copyPixelsToImage(surface);
 }
 
 void lune::vulkan::texture_image::destroy()
@@ -53,7 +57,7 @@ void lune::vulkan::texture_image::createImage()
 		vk::ImageCreateInfo()
 			.setImageType(vk::ImageType::e2D)
 			.setFormat(mFormat)
-			.setExtent(vk::Extent3D(mExtent))
+			.setExtent(vk::Extent3D(mExtent, 1))
 			.setMipLevels(1)
 			.setArrayLayers(1)
 			.setSamples(mSampleCount)
@@ -63,21 +67,12 @@ void lune::vulkan::texture_image::createImage()
 			.setQueueFamilyIndices(getVulkanContext().queueFamilyIndices)
 			.setSharingMode(vk::SharingMode::eExclusive);
 
-	mImage = getVulkanContext().device.createImage(imageCreateInfo);
-}
-
-void lune::vulkan::texture_image::allocateMemory()
-{
-	const vk::MemoryRequirements memoryRequirements = getVulkanContext().device.getImageMemoryRequirements(mImage);
-
 	VmaAllocationCreateInfo allocationCreateInfo{};
 	allocationCreateInfo.usage = VMA_MEMORY_USAGE_AUTO;
 	allocationCreateInfo.flags = VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
 
 	VmaAllocationInfo allocationInfo = {};
-	vmaAllocateMemory(getVulkanContext().vmaAllocator, reinterpret_cast<const VkMemoryRequirements*>(&memoryRequirements), &allocationCreateInfo, &mVmaAllocation, &allocationInfo);
-
-	vmaBindImageMemory(getVulkanContext().vmaAllocator, mVmaAllocation, mImage);
+	vmaCreateImage(getVulkanContext().vmaAllocator, reinterpret_cast<const VkImageCreateInfo*>(&imageCreateInfo), &allocationCreateInfo, reinterpret_cast<VkImage*>(&mImage), &mVmaAllocation, &allocationInfo);
 }
 
 void lune::vulkan::texture_image::createImageView()
@@ -148,25 +143,26 @@ void lune::vulkan::texture_image::copyPixelsToImage(const SDL_Surface& surface)
 	{ // Copy pixels to staging buffer
 		const auto pixels = static_cast<const uint8_t*>(surface.pixels);
 		void* data;
-		vmaMapMemory(getVulkanContext().vmaAllocator, mVmaAllocation, &data);
+		vmaMapMemory(getVulkanContext().vmaAllocator, stagingAllocation, &data);
 		std::memcpy(data, pixels, size);
-		vmaUnmapMemory(getVulkanContext().vmaAllocator, mVmaAllocation);
+		vmaUnmapMemory(getVulkanContext().vmaAllocator, stagingAllocation);
 	}
 
+	const vk::CommandBufferAllocateInfo commandBufferAllocateInfo =
+		vk::CommandBufferAllocateInfo()
+			.setCommandPool(getVulkanContext().transferCommandPool)
+			.setLevel(vk::CommandBufferLevel::ePrimary)
+			.setCommandBufferCount(1);
+
+	const vk::CommandBuffer commandBuffer = getVulkanContext().device.allocateCommandBuffers(commandBufferAllocateInfo)[0];
+
+	const vk::CommandBufferBeginInfo commandBufferBeginInfo =
+		vk::CommandBufferBeginInfo()
+			.setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
+
+	commandBuffer.begin(commandBufferBeginInfo);
+
 	{ // Copy staging buffer to image
-		const vk::CommandBufferAllocateInfo commandBufferAllocateInfo =
-			vk::CommandBufferAllocateInfo()
-				.setCommandPool(getVulkanContext().transferCommandPool)
-				.setLevel(vk::CommandBufferLevel::ePrimary)
-				.setCommandBufferCount(1);
-
-		const vk::CommandBuffer commandBuffer = getVulkanContext().device.allocateCommandBuffers(commandBufferAllocateInfo)[0];
-
-		const vk::CommandBufferBeginInfo commandBufferBeginInfo =
-			vk::CommandBufferBeginInfo()
-				.setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
-
-		commandBuffer.begin(commandBufferBeginInfo);
 
 		const vk::ImageSubresourceRange subresourceRange =
 			vk::ImageSubresourceRange()
@@ -220,20 +216,6 @@ void lune::vulkan::texture_image::copyPixelsToImage(const SDL_Surface& surface)
 				.setDstQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED)
 				.setImage(mImage)
 				.setSubresourceRange(subresourceRange);
-
-		const vk::CommandBufferAllocateInfo commandBufferAllocateInfo =
-			vk::CommandBufferAllocateInfo()
-				.setCommandPool(getVulkanContext().transferCommandPool)
-				.setLevel(vk::CommandBufferLevel::ePrimary)
-				.setCommandBufferCount(1);
-
-		const vk::CommandBuffer commandBuffer = getVulkanContext().device.allocateCommandBuffers(commandBufferAllocateInfo)[0];
-
-		const vk::CommandBufferBeginInfo commandBufferBeginInfo =
-			vk::CommandBufferBeginInfo()
-				.setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
-
-		commandBuffer.begin(commandBufferBeginInfo);
 
 		commandBuffer.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eFragmentShader, {}, {}, {}, imageMemoryBarrier);
 

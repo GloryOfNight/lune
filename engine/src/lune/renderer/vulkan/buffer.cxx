@@ -16,6 +16,7 @@ void lune::vulkan::buffer::init(vk::BufferUsageFlags usage, vk::DeviceSize size)
 
 	VmaAllocationCreateInfo vmaCreateInfo{};
 	vmaCreateInfo.usage = VMA_MEMORY_USAGE_AUTO;
+    vmaCreateInfo.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
 
 	VkBuffer buffer = mBuffer; // compatability with C
 
@@ -32,8 +33,8 @@ void lune::vulkan::buffer::destroy()
 
 void lune::vulkan::buffer::write(const void* data, size_t offset, size_t size)
 {
-	void* pBuffer{};
-	vmaMapMemory(getVulkanContext().vmaAllocator, mVmaAllocation, &pBuffer);
+	uint8* pBuffer{};
+	vmaMapMemory(getVulkanContext().vmaAllocator, mVmaAllocation, reinterpret_cast<void**>(&pBuffer));
 
 	memcpy(pBuffer + offset, data, size);
 

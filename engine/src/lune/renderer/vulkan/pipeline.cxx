@@ -87,7 +87,7 @@ std::vector<vk::PushConstantRange> reflPushConstantRanges(const SpvReflectShader
 	return result;
 }
 
-std::unique_ptr<lune::vulkan::pipeline> lune::vulkan::pipeline::create()
+std::shared_ptr<lune::vulkan::pipeline> lune::vulkan::pipeline::create()
 {
 	return std::make_unique<pipeline>();
 }
@@ -103,6 +103,7 @@ void lune::vulkan::pipeline::init(std::shared_ptr<shader> vertShader, std::share
 		return;
 	}
 
+	createDescriptorLayoutsAndPoolSizes();
 	createPipelineLayout();
 	createPipeline();
 }

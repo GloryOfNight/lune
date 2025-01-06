@@ -13,7 +13,7 @@ namespace lune::vulkan
 		pipeline(pipeline&&) = default;
 		~pipeline() = default;
 
-		static std::unique_ptr<pipeline> create();
+		static std::shared_ptr<pipeline> create();
 
 		void init(std::shared_ptr<shader> vertShader, std::shared_ptr<shader> fragShader);
 		void destroy();
