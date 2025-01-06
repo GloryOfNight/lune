@@ -1,7 +1,7 @@
 #pragma once
 
-#include "vulkan_core.hxx"
 #include "shader.hxx"
+#include "vulkan_core.hxx"
 
 namespace lune::vulkan
 {
@@ -18,11 +18,17 @@ namespace lune::vulkan
 		void init(std::shared_ptr<shader> vertShader, std::shared_ptr<shader> fragShader);
 		void destroy();
 
+		std::shared_ptr<shader> getVertShader() const { return mVertShader; }
+		std::shared_ptr<shader> getFragShader() const { return mFragShader; }
+
+		const std::vector<vk::DescriptorSetLayout>& getDescriptorLayouts() const { return mDescriptorSetLayouts; }
+		const std::vector<vk::DescriptorPoolSize>& getDescriptorPoolSizes() const { return mPoolSizes; }
+
+		vk::PipelineLayout getPipelineLayout() const { return mPipelineLayout; }
 		vk::Pipeline getPipeline() const { return mPipeline; }
 
 	private:
-		void createDescriptorPool();
-
+		void createDescriptorLayoutsAndPoolSizes();
 		void createPipelineLayout();
 		void createPipeline();
 
@@ -30,8 +36,7 @@ namespace lune::vulkan
 		std::shared_ptr<shader> mFragShader{};
 
 		std::vector<vk::DescriptorSetLayout> mDescriptorSetLayouts{};
-		vk::DescriptorPool mDescriptorPool{};
-		uint32 mDescriptorPoolMaxSets{2};
+		std::vector<vk::DescriptorPoolSize> mPoolSizes{};
 
 		vk::PipelineLayout mPipelineLayout{};
 		vk::Pipeline mPipeline{};

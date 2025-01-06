@@ -103,7 +103,6 @@ void lune::vulkan::pipeline::init(std::shared_ptr<shader> vertShader, std::share
 		return;
 	}
 
-	createDescriptorPool();
 	createPipelineLayout();
 	createPipeline();
 }
@@ -112,7 +111,6 @@ void lune::vulkan::pipeline::destroy()
 {
 	getVulkanContext().device.destroyPipeline(mPipeline);
 	getVulkanContext().device.destroyPipelineLayout(mPipelineLayout);
-	getVulkanContext().device.destroyDescriptorPool(mDescriptorPool);
 
 	for (const auto& layout : mDescriptorSetLayouts)
 	{
@@ -122,7 +120,7 @@ void lune::vulkan::pipeline::destroy()
 	new (this) pipeline();
 }
 
-void lune::vulkan::pipeline::createDescriptorPool()
+void lune::vulkan::pipeline::createDescriptorLayoutsAndPoolSizes()
 {
 	std::vector<std::vector<vk::DescriptorSetLayoutBinding>> totalBindings{};
 	{
@@ -134,8 +132,6 @@ void lune::vulkan::pipeline::createDescriptorPool()
 		std::move(shaderBinds.begin(), shaderBinds.end(), std::back_inserter(totalBindings));
 	}
 
-	std::vector<vk::DescriptorPoolSize> poolSizes{};
-
 	for (const auto& bindings : totalBindings)
 	{
 		const auto layoutCreateInfo = vk::DescriptorSetLayoutCreateInfo()
@@ -145,16 +141,11 @@ void lune::vulkan::pipeline::createDescriptorPool()
 
 		for (const auto& binding : bindings)
 		{
-			poolSizes.push_back(vk::DescriptorPoolSize()
+			mPoolSizes.push_back(vk::DescriptorPoolSize()
 					.setType(binding.descriptorType)
-					.setDescriptorCount(binding.descriptorCount * mDescriptorPoolMaxSets));
+					.setDescriptorCount(binding.descriptorCount)); // might be missing * 2!
 		}
 	}
-
-	mDescriptorPool = getVulkanContext().device.createDescriptorPool(vk::DescriptorPoolCreateInfo()
-			.setFlags(vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet)
-			.setPoolSizes(poolSizes)
-			.setMaxSets(mDescriptorSetLayouts.size() * mDescriptorPoolMaxSets));
 }
 
 void lune::vulkan::pipeline::createPipelineLayout()

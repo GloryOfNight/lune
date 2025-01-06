@@ -1,5 +1,9 @@
 #pragma once
 
+// this object defines and initializes Vulkan renderer
+// if Vulkan is not available, the engine will not try to initialize it therefore it will not be available
+// also subsystem maybe be not available on some configurations
+
 #include "subsystem.hxx"
 #include "view.hxx"
 #include "vulkan_core.hxx"
