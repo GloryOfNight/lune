@@ -88,6 +88,12 @@ void lune::vulkan::descriptor_sets::updateSets(uint32 index)
 	getVulkanContext().device.updateDescriptorSets(writes, {});
 }
 
+void lune::vulkan::descriptor_sets::cmdBind(vk::CommandBuffer commandBuffer, uint32 offsetSets)
+{
+	uint32 count = mPipeline->getDescriptorLayouts().size();
+	commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, mPipeline->getPipelineLayout(), 0, count, mDescriptorSets.data() + offsetSets, 0, nullptr);
+}
+
 void lune::vulkan::descriptor_sets::createDescriptorPool()
 {
 	const auto& Sizes = mPipeline->getDescriptorPoolSizes();

@@ -25,7 +25,6 @@ vk::PresentModeKHR findPresentMode(vk::PhysicalDevice physicalDevice, vk::Surfac
 		std::array
 		{
 			vk::PresentModeKHR::eMailbox,
-			vk::PresentModeKHR::eFifoRelaxed,
 			vk::PresentModeKHR::eFifo
 		};
 	// clang-format on
@@ -133,41 +132,12 @@ bool lune::vulkan::view::updateExtent()
 	return false;
 }
 
-uint32_t lune::vulkan::view::acquireNextImageIndex()
+bool lune::vulkan::view::beginNextFrame()
 {
-	vk::ResultValue<uint32_t> aquireNextImageResult = vk::ResultValue<uint32_t>(vk::Result{}, UINT32_MAX);
-	try
-	{
-		aquireNextImageResult = getVulkanContext().device.acquireNextImageKHR(mSwapchain, UINT32_MAX, mSemaphoreImageAvailable, nullptr);
-	}
-	catch (vk::OutOfDateKHRError outOfDateKHRError)
-	{
-		return UINT32_MAX;
-	}
+	if (!acquireNextImageIndex())
+		return false;
 
-	const uint32_t imageIndex = aquireNextImageResult.value;
-
-	if (vk::Result::eSuccess != aquireNextImageResult.result && vk::Result::eSuboptimalKHR != aquireNextImageResult.result)
-	{
-		if (vk::Result::eErrorOutOfDateKHR == aquireNextImageResult.result)
-		{
-			recreateSwapchain();
-		}
-		return UINT32_MAX;
-	}
-	return aquireNextImageResult.value;
-}
-
-vk::CommandBuffer lune::vulkan::view::beginCommandBuffer(uint32_t imageIndex)
-{
-	const std::array<vk::Fence, 1> waitFences{mSubmitQueueFences[imageIndex]};
-	const vk::Result waitFencesResult = getVulkanContext().device.waitForFences(waitFences, true, UINT32_MAX);
-	if (waitFencesResult == vk::Result::eTimeout)
-		return nullptr;
-
-	getVulkanContext().device.resetFences(waitFences);
-
-	vk::CommandBuffer commandBuffer = mImageCommandBuffers[imageIndex];
+	vk::CommandBuffer commandBuffer = mImageCommandBuffers[mImageIndex];
 
 	const vk::CommandBufferBeginInfo commandBufferBeginInfo(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
 	commandBuffer.begin(commandBufferBeginInfo);
@@ -179,23 +149,29 @@ vk::CommandBuffer lune::vulkan::view::beginCommandBuffer(uint32_t imageIndex)
 	const vk::RenderPassBeginInfo renderPassBeginInfo =
 		vk::RenderPassBeginInfo()
 			.setRenderPass(getVulkanContext().renderPass)
-			.setFramebuffer(mFramebuffers[imageIndex])
+			.setFramebuffer(mFramebuffers[mImageIndex])
 			.setRenderArea(vk::Rect2D(vk::Offset2D(0, 0), mCurrentExtent))
 			.setClearValues(clearValues);
 
 	commandBuffer.beginRenderPass(renderPassBeginInfo, vk::SubpassContents::eInline);
 
-	return commandBuffer;
+	commandBuffer.setViewport(0, vk::Viewport(0.f, 0.f, static_cast<float>(mCurrentExtent.width), static_cast<float>(mCurrentExtent.height), 0.f, 1.f));
+	commandBuffer.setScissor(0, vk::Rect2D(vk::Offset2D(0, 0), mCurrentExtent));
+
+	return true;
 }
 
-void lune::vulkan::view::endCommandBuffer(vk::CommandBuffer commandBuffer)
+void lune::vulkan::view::sumbit()
 {
+	auto commandBuffer = getCurrentImageCmdBuffer();
+	if (!commandBuffer) [[unlikely]]
+	{
+		LN_LOG(Error, Vulkan::View, "Submit called while no frame avaible!")
+		return;
+	}
 	commandBuffer.endRenderPass();
 	commandBuffer.end();
-}
 
-void lune::vulkan::view::submitCommandBuffer(uint32_t imageIndex, vk::CommandBuffer commandBuffer)
-{
 	const std::array<vk::Semaphore, 1> submitWaitSemaphores = {mSemaphoreImageAvailable};
 	const std::array<vk::Semaphore, 1> submitSignalSemaphores = {mSemaphoreRenderFinished};
 	const std::array<vk::PipelineStageFlags, 1> submitWaitDstStages = {vk::PipelineStageFlagBits::eColorAttachmentOutput};
@@ -208,13 +184,13 @@ void lune::vulkan::view::submitCommandBuffer(uint32_t imageIndex, vk::CommandBuf
 			.setWaitDstStageMask(submitWaitDstStages)
 			.setCommandBuffers(submitCommandBuffers);
 
-	getVulkanContext().graphicsQueue.submit(submitInfo, mSubmitQueueFences[imageIndex]);
+	getVulkanContext().graphicsQueue.submit(submitInfo, mSubmitQueueFences[mImageIndex]);
 
 	const vk::PresentInfoKHR presentInfo =
 		vk::PresentInfoKHR()
 			.setWaitSemaphores(submitSignalSemaphores)
 			.setSwapchains({1, &mSwapchain})
-			.setImageIndices({1, &imageIndex});
+			.setImageIndices({1, &mImageIndex});
 
 	try
 	{
@@ -227,14 +203,29 @@ void lune::vulkan::view::submitCommandBuffer(uint32_t imageIndex, vk::CommandBuf
 	}
 	catch (vk::OutOfDateKHRError error)
 	{
-		std::this_thread::sleep_for(std::chrono::milliseconds(16));
 		LN_LOG(Warning, Vulkan::View, "OutOfDateKHRError");
 	}
+
+	const std::array<vk::Fence, 1> waitFences{mSubmitQueueFences[mImageIndex]};
+	const vk::Result waitFencesResult = getVulkanContext().device.waitForFences(waitFences, true, UINT32_MAX);
+	getVulkanContext().device.resetFences(waitFences);
+
+	mImageIndex = UINT32_MAX;
 }
 
-uint32_t lune::vulkan::view::getImageCount() const
+bool lune::vulkan::view::acquireNextImageIndex()
 {
-	return mSwapchainImageViews.size();
+	constexpr uint64 timeout = 3 * 1000 * 1000; // ms to us to ns
+	const VkResult aquireRes = vkAcquireNextImageKHR(getVulkanContext().device, mSwapchain, timeout, mSemaphoreImageAvailable, VK_NULL_HANDLE, &mImageIndex);
+
+	if (aquireRes == VK_SUCCESS || aquireRes == VK_SUBOPTIMAL_KHR) [[likely]]
+		return true;
+
+	if (aquireRes == VK_ERROR_OUT_OF_DATE_KHR)
+	{
+		recreateSwapchain();
+	}
+	return false;
 }
 
 void lune::vulkan::view::createSwapchain()
@@ -373,7 +364,7 @@ void lune::vulkan::view::createFences()
 	mSubmitQueueFences.resize(getImageCount());
 	for (auto& fence : mSubmitQueueFences)
 	{
-		const vk::FenceCreateInfo fenceCreateInfo(vk::FenceCreateFlagBits::eSignaled);
+		const vk::FenceCreateInfo fenceCreateInfo{};
 		fence = getVulkanContext().device.createFence(fenceCreateInfo);
 	}
 }

@@ -8,6 +8,8 @@
 #include "view.hxx"
 #include "vulkan_core.hxx"
 
+#include <utility>
+
 namespace lune
 {
 	namespace vulkan
@@ -44,11 +46,17 @@ namespace lune
 		virtual void initialize() override;
 		virtual void shutdown() override;
 
-		void createView(SDL_Window* window);
+		uint32 createView(SDL_Window* window);
+
+		bool beginNextFrame(uint32 viewId);
+		std::pair<uint32, vk::CommandBuffer> getFrameInfo(uint32 viewId);
+		void sumbitFrame(uint32 viewId);
 
 	private:
+		vulkan::view* findView(uint32 Id);
+
 		uint32 mApiVersion{};
 
-		std::vector<std::unique_ptr<vulkan::view>> mViews{};
+		std::vector<std::pair<uint32, std::unique_ptr<vulkan::view>>> mViews{};
 	};
 } // namespace lune

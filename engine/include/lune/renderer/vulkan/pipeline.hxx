@@ -27,6 +27,8 @@ namespace lune::vulkan
 		vk::PipelineLayout getPipelineLayout() const { return mPipelineLayout; }
 		vk::Pipeline getPipeline() const { return mPipeline; }
 
+		void cmdBind(vk::CommandBuffer commandBuffer);
+
 	private:
 		void createDescriptorLayoutsAndPoolSizes();
 		void createPipelineLayout();

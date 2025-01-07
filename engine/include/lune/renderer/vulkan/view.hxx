@@ -27,16 +27,22 @@ namespace lune::vulkan
 
 		bool updateExtent();
 
-		uint32_t acquireNextImageIndex();
-
-		vk::CommandBuffer beginCommandBuffer(uint32_t imageIndex);
-		void endCommandBuffer(vk::CommandBuffer commandBuffer);
-		void submitCommandBuffer(uint32_t imageIndex, vk::CommandBuffer commandBuffer);
+		bool beginNextFrame();
+		void sumbit();
 
 		vk::Extent2D getCurrentExtent() const { return mCurrentExtent; };
 		vk::SurfaceKHR getSurface() const { return mSurface; }
+		uint32 getImageCount() const { return mSwapchainImageViews.size(); }
+		uint32 getImageIndex() const { return mImageIndex; }
 
-		uint32_t getImageCount() const;
+		vk::CommandBuffer getCurrentImageCmdBuffer()
+		{
+			if (mImageIndex != UINT32_MAX) [[likely]]
+
+				return mImageCommandBuffers[mImageIndex];
+			else
+				return vk::CommandBuffer();
+		}
 
 	private:
 		void createSwapchain();
@@ -53,7 +59,11 @@ namespace lune::vulkan
 
 		void createSemaphores();
 
+		bool acquireNextImageIndex();
+
 		SDL_Window* mWindow{nullptr};
+
+		uint32 mImageIndex{};
 
 		std::unique_ptr<depth_image> mDepthImage;
 

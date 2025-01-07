@@ -18,10 +18,8 @@ void lune::vulkan::buffer::init(vk::BufferUsageFlags usage, vk::DeviceSize size)
 	vmaCreateInfo.usage = VMA_MEMORY_USAGE_AUTO;
     vmaCreateInfo.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
 
-	VkBuffer buffer = mBuffer; // compatability with C
-
 	VmaAllocationInfo info{};
-	vmaCreateBuffer(getVulkanContext().vmaAllocator, reinterpret_cast<const VkBufferCreateInfo*>(&bufferCreateInfo), &vmaCreateInfo, &buffer, &mVmaAllocation, &info);
+	vmaCreateBuffer(getVulkanContext().vmaAllocator, reinterpret_cast<const VkBufferCreateInfo*>(&bufferCreateInfo), &vmaCreateInfo, reinterpret_cast<VkBuffer*>(&mBuffer), &mVmaAllocation, &info);
 }
 
 void lune::vulkan::buffer::destroy()

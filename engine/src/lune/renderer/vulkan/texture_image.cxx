@@ -7,14 +7,12 @@ vk::Format sdlFormatToVulkan(SDL_PixelFormat format)
 {
 	switch (format)
 	{
-	case SDL_PIXELFORMAT_ARGB8888:
+	case SDL_PIXELFORMAT_RGBA32:
 		return vk::Format::eR8G8B8A8Srgb;
-	case SDL_PIXELFORMAT_ABGR8888:
-		return vk::Format::eB8G8R8A8Srgb;
-	case SDL_PIXELFORMAT_RGBA8888:
-		return vk::Format::eR8G8B8A8Srgb;
+	case SDL_PIXELFORMAT_RGB24:
+		return vk::Format::eR8G8B8Srgb;
 	case SDL_PIXELFORMAT_BGRA8888:
-		return vk::Format::eB8G8R8A8Srgb;
+		return vk::Format::eB8G8R8A8Unorm;
 	default:
 		return vk::Format::eUndefined;
 	}
@@ -120,7 +118,7 @@ void lune::vulkan::texture_image::createSampler()
 
 void lune::vulkan::texture_image::copyPixelsToImage(const SDL_Surface& surface)
 {
-	const auto size = surface.w * surface.h * 4;
+	const auto size = surface.h * surface.pitch;
 
 	VkBuffer stagingBuffer;
 	VmaAllocation stagingAllocation;

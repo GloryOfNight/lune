@@ -19,6 +19,7 @@ std::pair<std::vector<vk::VertexInputAttributeDescription>, std::vector<vk::Vert
 											.setBinding(0)
 											.setLocation(inputVar->location)
 											.setFormat(static_cast<vk::Format>(inputVar->format));
+		sizes[inputVar->location] = (inputVar->numeric.scalar.width / 8) * inputVar->numeric.vector.component_count;
 	}
 
 	vertBindings[0] = vk::VertexInputBindingDescription()
@@ -119,6 +120,11 @@ void lune::vulkan::pipeline::destroy()
 	}
 
 	new (this) pipeline();
+}
+
+void lune::vulkan::pipeline::cmdBind(vk::CommandBuffer commandBuffer)
+{
+	commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, mPipeline);
 }
 
 void lune::vulkan::pipeline::createDescriptorLayoutsAndPoolSizes()
