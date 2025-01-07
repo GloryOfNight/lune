@@ -80,6 +80,18 @@ void lune::engine::run()
 				return;
 			}
 		}
+
+		auto vkSubsystem = vulkan_subsystem::get();
+
+		for (uint32 view : mViews)
+		{
+			if (vkSubsystem->beginNextFrame(view))
+			{
+				auto [imageIndex, commandBuffer] = vkSubsystem->getFrameInfo(view);
+
+				vkSubsystem->sumbitFrame(view);
+			}
+		}
 	}
 }
 
@@ -89,6 +101,9 @@ void lune::engine::createWindow(const std::string_view name, const uint32 width,
 	if (subsystem)
 	{
 		auto newWindow = SDL_CreateWindow(name.data(), width, height, SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE | flags);
-		subsystem->createView(newWindow);
+
+		const uint32 newViewId = subsystem->createView(newWindow);
+		if (newViewId != UINT32_MAX)
+			mViews.emplace_back(newViewId);
 	}
 }

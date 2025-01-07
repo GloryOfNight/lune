@@ -35,6 +35,8 @@ namespace lune
 	private:
 		std::vector<std::unique_ptr<subsystem>> mSubsystems;
 
+		std::vector<uint32> mViews{};
+
 		std::vector<std::string> mArgs{};
 	};
 
