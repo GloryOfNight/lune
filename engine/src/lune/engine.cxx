@@ -107,3 +107,11 @@ void lune::engine::createWindow(const std::string_view name, const uint32 width,
 			mViews.emplace_back(newViewId);
 	}
 }
+
+uint64 lune::engine::addScene(std::unique_ptr<scene> s)
+{
+	static uint64 sIdCounter = 0;
+	if (s) [[likely]]
+		return mScenes.emplace_back(std::pair<uint64, std::unique_ptr<scene>>{++sIdCounter, std::move(s)}).first;
+	return uint64();
+}

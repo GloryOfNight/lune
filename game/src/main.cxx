@@ -5,6 +5,37 @@
 #include <string>
 #include <vector>
 
+struct game_componentA : public lune::component
+{
+	uint64 gameA;
+};
+
+struct game_componentB : public lune::component
+{
+	uint64 gameB;
+};
+
+class game_entity : public lune::entity
+{
+public:
+	game_entity()
+	{
+		addComponent<game_componentA>();
+		attachComponent(std::make_unique<game_componentB>());
+	}
+
+	virtual void update(double DeltaTime) override {}
+};
+
+class game_scene : public lune::scene
+{
+public:
+	game_scene()
+	{
+		addEntity<game_entity>();
+	}
+};
+
 int main(int argc, char** argv)
 {
 	std::vector<std::string> args(argv, argv + argc);

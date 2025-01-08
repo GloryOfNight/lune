@@ -1,5 +1,7 @@
 #pragma once
 
+#include "game_framework/scene.hxx"
+
 #include "lune.hxx"
 #include "subsystem.hxx"
 
@@ -32,7 +34,11 @@ namespace lune
 
 		void createWindow(const std::string_view name, const uint32 width, const uint32 height, const uint32 flags = 0);
 
+		uint64 addScene(std::unique_ptr<scene> s);
+
 	private:
+		std::vector<std::pair<uint64, std::unique_ptr<scene>>> mScenes{};
+
 		std::vector<std::unique_ptr<subsystem>> mSubsystems;
 
 		std::vector<uint32> mViews{};
