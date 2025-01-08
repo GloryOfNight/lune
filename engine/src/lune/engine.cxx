@@ -81,6 +81,11 @@ void lune::engine::run()
 			}
 		}
 
+		for (auto& [sId, s] : mScenes)
+		{
+			s->update(0);
+		}
+
 		auto vkSubsystem = vulkan_subsystem::get();
 
 		for (uint32 view : mViews)
@@ -88,6 +93,11 @@ void lune::engine::run()
 			if (vkSubsystem->beginNextFrame(view))
 			{
 				auto [imageIndex, commandBuffer] = vkSubsystem->getFrameInfo(view);
+
+				for (auto& [sId, s] : mScenes)
+				{
+					s->render();
+				}
 
 				vkSubsystem->sumbitFrame(view);
 			}

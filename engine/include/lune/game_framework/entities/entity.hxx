@@ -18,8 +18,6 @@ namespace lune
 		entity(entity&&) = default;
 		virtual ~entity() = default;
 
-		virtual void update(double deltaTime) = 0;
-
 		template <typename T, typename... Args>
 		component* addComponent(Args&&... args)
 		{
@@ -61,10 +59,10 @@ namespace lune
 		}
 
 		template <typename T>
-		component* findComponent() const
+		T* findComponent() const
 		{
 			auto it = mComponents.find(typeid(T));
-			return it != mComponents.end() ? it->second.get() : nullptr;
+			return it != mComponents.end() ? dynamic_cast<T*>(it->second.get()) : nullptr;
 		}
 
 		uint64 getId() const { return mId; }

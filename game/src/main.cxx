@@ -1,30 +1,21 @@
 #include "lune/engine.hxx"
+#include "lune/game_framework/components/isometric_camera.hxx"
+#include "lune/game_framework/components/transform.hxx"
+#include "lune/game_framework/systems/camera_system.hxx"
 #include "lune/lune.hxx"
 
 #include <iostream>
 #include <string>
 #include <vector>
 
-struct game_componentA : public lune::component
-{
-	uint64 gameA;
-};
-
-struct game_componentB : public lune::component
-{
-	uint64 gameB;
-};
-
-class game_entity : public lune::entity
+class camera_entity : public lune::entity
 {
 public:
-	game_entity()
+	camera_entity()
 	{
-		addComponent<game_componentA>();
-		attachComponent(std::make_unique<game_componentB>());
+		addComponent<lune::transform_component>();
+		addComponent<lune::isometric_camera_component>();
 	}
-
-	virtual void update(double DeltaTime) override {}
 };
 
 class game_scene : public lune::scene
@@ -32,7 +23,7 @@ class game_scene : public lune::scene
 public:
 	game_scene()
 	{
-		addEntity<game_entity>();
+		addEntity<camera_entity>();
 	}
 };
 
@@ -47,7 +38,9 @@ int main(int argc, char** argv)
 	if (!engine.initialize(std::move(args)))
 		return 1;
 
-	engine.createWindow("so8", 800, 600);
+	engine.createWindow("so8", 800, 800);
+
+	engine.addScene(std::make_unique<game_scene>());
 
 	engine.run();
 
