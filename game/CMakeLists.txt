@@ -14,5 +14,6 @@ set_target_properties(${PROJECT_NAME} PROPERTIES        C_STANDARD 17
 
 find_program(CLANG_TIDY_EXE NAMES "clang-tidy")
 if(CLANG_TIDY_EXE)
+        target_compile_definitions(${PROJECT_NAME} PRIVATE SDL_DISABLE_ANALYZE_MACROS)
         set_target_properties(${PROJECT_NAME} PROPERTIES CXX_CLANG_TIDY "${CLANG_TIDY_EXE};-p=${CMAKE_BINARY_DIR}")
 endif()
