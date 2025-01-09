@@ -1,11 +1,11 @@
 #include "lune/vulkan/buffer.hxx"
 
-std::unique_ptr<lune::vulkan::Buffer> lune::vulkan::Buffer::create()
+lune::vulkan::UniqueBuffer lune::vulkan::Buffer::create(vk::BufferUsageFlags usage, vk::DeviceSize size, VmaMemoryUsage vmaUsage, VmaAllocationCreateFlags vmaFlags)
 {
 	return std::make_unique<Buffer>();
 }
 
-void lune::vulkan::Buffer::init(vk::BufferUsageFlags usage, vk::DeviceSize size)
+void lune::vulkan::Buffer::init(vk::BufferUsageFlags usage, vk::DeviceSize size, VmaMemoryUsage vmaUsage, VmaAllocationCreateFlags vmaFlags)
 {
 	mSize = size;
 	vk::BufferCreateInfo bufferCreateInfo = vk::BufferCreateInfo()
@@ -15,8 +15,8 @@ void lune::vulkan::Buffer::init(vk::BufferUsageFlags usage, vk::DeviceSize size)
 												.setSharingMode(vk::SharingMode::eExclusive);
 
 	VmaAllocationCreateInfo vmaCreateInfo{};
-	vmaCreateInfo.usage = VMA_MEMORY_USAGE_AUTO;
-	vmaCreateInfo.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
+	vmaCreateInfo.usage = vmaUsage;
+	vmaCreateInfo.flags = vmaFlags;
 
 	VmaAllocationInfo info{};
 	vmaCreateBuffer(getVulkanContext().vmaAllocator, reinterpret_cast<const VkBufferCreateInfo*>(&bufferCreateInfo), &vmaCreateInfo, reinterpret_cast<VkBuffer*>(&mBuffer), &mVmaAllocation, &info);

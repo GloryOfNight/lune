@@ -4,7 +4,7 @@
 
 namespace lune::vulkan
 {
-	class MsaaImage
+	class MsaaImage final
 	{
 	public:
 		MsaaImage() = default;

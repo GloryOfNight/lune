@@ -7,7 +7,7 @@ std::unique_ptr<lune::vulkan::DescriptorSets> lune::vulkan::DescriptorSets::crea
 	return std::make_unique<DescriptorSets>();
 }
 
-void lune::vulkan::DescriptorSets::init(std::shared_ptr<Pipeline> pipeline, uint32 maxSets)
+void lune::vulkan::DescriptorSets::init(std::shared_ptr<GraphicsPipeline> pipeline, uint32 maxSets)
 {
 	mPipeline = pipeline;
 	mMaxSets = maxSets;

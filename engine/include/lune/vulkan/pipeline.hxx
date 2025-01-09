@@ -5,17 +5,16 @@
 
 namespace lune::vulkan
 {
-	class Pipeline final
+	class GraphicsPipeline final
 	{
 	public:
-		Pipeline() = default;
-		Pipeline(Pipeline&) = delete;
-		Pipeline(Pipeline&&) = default;
-		~Pipeline() = default;
+		GraphicsPipeline() = default;
+		GraphicsPipeline(GraphicsPipeline&) = delete;
+		GraphicsPipeline(GraphicsPipeline&&) = default;
+		~GraphicsPipeline() = default;
 
-		static std::shared_ptr<Pipeline> create();
+		static SharedGraphicsPipeline create(std::shared_ptr<Shader> vertShader, std::shared_ptr<Shader> fragShader);
 
-		void init(std::shared_ptr<Shader> vertShader, std::shared_ptr<Shader> fragShader);
 		void destroy();
 
 		std::shared_ptr<Shader> getVertShader() const { return mVertShader; }
@@ -30,6 +29,8 @@ namespace lune::vulkan
 		void cmdBind(vk::CommandBuffer commandBuffer);
 
 	private:
+		void init(std::shared_ptr<Shader> vertShader, std::shared_ptr<Shader> fragShader);
+
 		void createDescriptorLayoutsAndPoolSizes();
 		void createPipelineLayout();
 		void createPipeline();

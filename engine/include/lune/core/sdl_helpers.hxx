@@ -8,7 +8,7 @@ namespace lune
 {
 	namespace sdl
 	{
-		struct surfaceDeleter
+		struct SurfaceDeleter
 		{
 			void operator()(SDL_Surface* surface) const
 			{
@@ -16,18 +16,18 @@ namespace lune
 			}
 		};
 
-		using sharedSurface = std::shared_ptr<SDL_Surface>;
-		using weakSurface = std::weak_ptr<SDL_Surface>;
-		using uniqueSurface = std::unique_ptr<SDL_Surface, surfaceDeleter>;
+		using SharedSurface = std::shared_ptr<SDL_Surface>;
+		using WeakSurface = std::weak_ptr<SDL_Surface>;
+		using UniqueSurface = std::unique_ptr<SDL_Surface, SurfaceDeleter>;
 
-		static sharedSurface makeSharedSurface(SDL_Surface* surface)
+		static SharedSurface makeSharedSurface(SDL_Surface* surface)
 		{
-			return sharedSurface(std::move(surface), surfaceDeleter());
+			return SharedSurface(std::move(surface), SurfaceDeleter());
 		}
 
-		static uniqueSurface makeUniqueSurface(SDL_Surface* surface)
+		static UniqueSurface makeUniqueSurface(SDL_Surface* surface)
 		{
-			return std::unique_ptr<SDL_Surface, surfaceDeleter>(std::move(surface));
+			return std::unique_ptr<SDL_Surface, SurfaceDeleter>(std::move(surface));
 		}
 
 	} // namespace sdl

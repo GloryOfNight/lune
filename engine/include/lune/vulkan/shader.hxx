@@ -3,6 +3,9 @@
 #include "vulkan/vulkan.hpp"
 
 #include "spirv_reflect.h"
+#include "vulkan_core.hxx"
+
+#include <filesystem>
 
 namespace lune::vulkan
 {
@@ -14,9 +17,8 @@ namespace lune::vulkan
 		Shader(Shader&&) = default;
 		~Shader() = default;
 
-		static std::shared_ptr<Shader> create();
+		static SharedShader create(const std::filesystem::path spvPath);
 
-		void init(const std::string_view spvPath);
 		void destroy();
 
 		vk::ShaderModule getShaderModule() const { return mShaderModule; }
@@ -24,6 +26,8 @@ namespace lune::vulkan
 		SpvReflectShaderModule getReflectModule() const { return mReflectModule; }
 
 	private:
+		bool init(const std::string& spvCode);
+
 		vk::ShaderModule mShaderModule{};
 
 		SpvReflectShaderModule mReflectModule{};

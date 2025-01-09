@@ -88,28 +88,36 @@ std::vector<vk::PushConstantRange> reflPushConstantRanges(const SpvReflectShader
 	return result;
 }
 
-std::shared_ptr<lune::vulkan::Pipeline> lune::vulkan::Pipeline::create()
+lune::vulkan::SharedGraphicsPipeline lune::vulkan::GraphicsPipeline::create(std::shared_ptr<Shader> vertShader, std::shared_ptr<Shader> fragShader)
 {
-	return std::make_unique<Pipeline>();
+	if (!vertShader || vertShader->getReflectModule().shader_stage != SpvReflectShaderStageFlagBits::SPV_REFLECT_SHADER_STAGE_VERTEX_BIT)
+	{
+		LN_LOG(Fatal, Vulkan::Pipeline, "Failed to initialize pipeline: vertex shader invalid");
+		return nullptr;
+	}
+
+	if (!fragShader || fragShader->getReflectModule().shader_stage != SpvReflectShaderStageFlagBits::SPV_REFLECT_SHADER_STAGE_FRAGMENT_BIT)
+	{
+		LN_LOG(Fatal, Vulkan::Pipeline, "Failed to initialize pipeline: fragment shader invalid");
+		return nullptr;
+	}
+
+	auto newPipeline = std::make_shared<GraphicsPipeline>();
+	newPipeline->init(vertShader, fragShader);
+	return std::move(newPipeline);
 }
 
-void lune::vulkan::Pipeline::init(std::shared_ptr<Shader> vertShader, std::shared_ptr<Shader> fragShader)
+void lune::vulkan::GraphicsPipeline::init(std::shared_ptr<Shader> vertShader, std::shared_ptr<Shader> fragShader)
 {
 	mVertShader = vertShader;
 	mFragShader = fragShader;
-
-	if (!mVertShader || !mFragShader)
-	{
-		LN_LOG(Fatal, Vulkan::Pipeline, "Failed to initialize pipeline: missing shader(s)");
-		return;
-	}
 
 	createDescriptorLayoutsAndPoolSizes();
 	createPipelineLayout();
 	createPipeline();
 }
 
-void lune::vulkan::Pipeline::destroy()
+void lune::vulkan::GraphicsPipeline::destroy()
 {
 	getVulkanContext().device.destroyPipeline(mPipeline);
 	getVulkanContext().device.destroyPipelineLayout(mPipelineLayout);
@@ -119,15 +127,15 @@ void lune::vulkan::Pipeline::destroy()
 		getVulkanContext().device.destroyDescriptorSetLayout(layout);
 	}
 
-	new (this) Pipeline();
+	new (this) GraphicsPipeline();
 }
 
-void lune::vulkan::Pipeline::cmdBind(vk::CommandBuffer commandBuffer)
+void lune::vulkan::GraphicsPipeline::cmdBind(vk::CommandBuffer commandBuffer)
 {
 	commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, mPipeline);
 }
 
-void lune::vulkan::Pipeline::createDescriptorLayoutsAndPoolSizes()
+void lune::vulkan::GraphicsPipeline::createDescriptorLayoutsAndPoolSizes()
 {
 	std::vector<std::vector<vk::DescriptorSetLayoutBinding>> totalBindings{};
 	{
@@ -155,7 +163,7 @@ void lune::vulkan::Pipeline::createDescriptorLayoutsAndPoolSizes()
 	}
 }
 
-void lune::vulkan::Pipeline::createPipelineLayout()
+void lune::vulkan::GraphicsPipeline::createPipelineLayout()
 {
 	std::vector<vk::PushConstantRange> pushConstantRanges{};
 	{
@@ -175,7 +183,7 @@ void lune::vulkan::Pipeline::createPipelineLayout()
 	mPipelineLayout = getVulkanContext().device.createPipelineLayout(pipelineLayoutCreateInfo);
 }
 
-void lune::vulkan::Pipeline::createPipeline()
+void lune::vulkan::GraphicsPipeline::createPipeline()
 {
 	const std::vector<vk::PipelineShaderStageCreateInfo> shaderStages =
 		{
@@ -270,7 +278,6 @@ void lune::vulkan::Pipeline::createPipeline()
 	if (createResult.result != vk::Result::eSuccess)
 	{
 		LN_LOG(Fatal, Vulkan::Pipeline, "Failed to create pipeline: {}", vk::to_string(createResult.result));
-		return;
 	}
 	mPipeline = createResult.value;
 }

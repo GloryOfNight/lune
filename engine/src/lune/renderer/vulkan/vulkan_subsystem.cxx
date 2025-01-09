@@ -3,6 +3,7 @@
 #include "SDL3/SDL_vulkan.h"
 #include "lune/core/log.hxx"
 #include "lune/lune.hxx"
+#include "lune/vulkan/shader.hxx"
 
 #include <vector>
 
@@ -103,6 +104,8 @@ void lune::vulkan_subsystem::initialize()
 
 void lune::vulkan_subsystem::shutdown()
 {
+	getVulkanContext().device.waitIdle();
+
 	for (auto& [viewId, view] : mViews)
 	{
 		view->destroy();
@@ -143,6 +146,41 @@ uint32 lune::vulkan_subsystem::createView(SDL_Window* window)
 		return viewId;
 	}
 	return UINT32_MAX;
+}
+
+lune::vulkan::SharedShader lune::vulkan_subsystem::loadShader(std::filesystem::path spvPath)
+{
+	if (auto shader = findShader(spvPath); shader)
+		return shader;
+
+	auto shader = vulkan::Shader::create(spvPath);
+	if (shader)
+	{
+		mShaders.emplace(spvPath, shader);
+	}
+	return shader;
+}
+
+lune::vulkan::SharedShader lune::vulkan_subsystem::findShader(std::filesystem::path spvPath)
+{
+	auto findRes = mShaders.find(spvPath);
+	return findRes != mShaders.end() ? findRes->second : nullptr;
+}
+
+void lune::vulkan_subsystem::addPipeline(std::string name, vulkan::SharedGraphicsPipeline pipeline)
+{
+	if (mGraphicsPipelines.find(name) != mGraphicsPipelines.end())
+	{
+		LN_LOG(Fatal, Vulkan, "Can't emplace new pipeline, name already taken: {}", name);
+		return;
+	}
+	mGraphicsPipelines.emplace(name, std::move(pipeline));
+}
+
+lune::vulkan::SharedGraphicsPipeline lune::vulkan_subsystem::findPipeline(std::string name)
+{
+	auto findRes = mGraphicsPipelines.find(name);
+	return findRes != mGraphicsPipelines.end() ? findRes->second : nullptr;
 }
 
 bool lune::vulkan_subsystem::beginNextFrame(uint32 viewId)

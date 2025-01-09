@@ -5,6 +5,8 @@
 
 #include "vk_mem_alloc.h"
 
+#include <memory>
+
 namespace lune
 {
 	struct VulkanContext final
@@ -33,6 +35,13 @@ namespace lune
 		vk::Format depthFormat{};
 		vk::SampleCountFlagBits sampleCount{};
 	};
+
+	namespace vulkan
+	{
+		using SharedGraphicsPipeline = std::shared_ptr<class GraphicsPipeline>;
+		using SharedShader = std::shared_ptr<class Shader>;
+		using SharedPrimitive = std::shared_ptr<class Primitive>;
+	} // namespace vulkan
 
 	extern "C++" VulkanContext& getVulkanContext();
 	extern "C++" VulkanConfig& getVulkanConfig();

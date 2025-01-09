@@ -9,7 +9,10 @@
 
 #include "vulkan_core.hxx"
 
+#include <filesystem>
+#include <unordered_map>
 #include <utility>
+#include <vector>
 
 namespace lune
 {
@@ -49,6 +52,12 @@ namespace lune
 
 		uint32 createView(SDL_Window* window);
 
+		vulkan::SharedShader loadShader(std::filesystem::path spvPath);
+		vulkan::SharedShader findShader(std::filesystem::path spvPath);
+
+		void addPipeline(std::string name, vulkan::SharedGraphicsPipeline pipeline);
+		vulkan::SharedGraphicsPipeline findPipeline(std::string name);
+
 		bool beginNextFrame(uint32 viewId);
 		std::pair<uint32, vk::CommandBuffer> getFrameInfo(uint32 viewId);
 		void sumbitFrame(uint32 viewId);
@@ -57,6 +66,10 @@ namespace lune
 		vulkan::View* findView(uint32 Id);
 
 		uint32 mApiVersion{};
+
+		std::unordered_map<std::filesystem::path, vulkan::SharedShader> mShaders{};
+
+		std::unordered_map<std::string, vulkan::SharedGraphicsPipeline> mGraphicsPipelines{};
 
 		std::vector<std::pair<uint32, std::unique_ptr<vulkan::View>>> mViews{};
 	};

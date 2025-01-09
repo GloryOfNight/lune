@@ -9,7 +9,7 @@
 
 namespace lune::vulkan
 {
-	class TextureImage
+	class TextureImage final
 	{
 	public:
 		TextureImage() = default;

@@ -209,8 +209,6 @@ void lune::vulkan::View::sumbit()
 	const std::array<vk::Fence, 1> waitFences{mSubmitQueueFences[mImageIndex]};
 	const vk::Result waitFencesResult = getVulkanContext().device.waitForFences(waitFences, true, UINT32_MAX);
 	getVulkanContext().device.resetFences(waitFences);
-
-	mImageIndex = UINT32_MAX;
 }
 
 bool lune::vulkan::View::acquireNextImageIndex()

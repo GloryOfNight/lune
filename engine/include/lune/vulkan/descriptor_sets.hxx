@@ -8,9 +8,9 @@
 
 namespace lune::vulkan
 {
-	class Pipeline;
+	class GraphicsPipeline;
 
-	class DescriptorSets
+	class DescriptorSets final
 	{
 	public:
 		DescriptorSets() = default;
@@ -20,7 +20,7 @@ namespace lune::vulkan
 
 		static std::unique_ptr<DescriptorSets> create();
 
-		void init(std::shared_ptr<Pipeline> pipeline, uint32 maxSets);
+		void init(std::shared_ptr<GraphicsPipeline> pipeline, uint32 maxSets);
 		void destroy();
 
 		void addBufferInfo(std::string_view name, uint32 index, vk::Buffer buffer, vk::DeviceSize offset, vk::DeviceSize range);
@@ -36,7 +36,7 @@ namespace lune::vulkan
 
 		void allocateDescriptorSets();
 
-		std::shared_ptr<Pipeline> mPipeline{};
+		std::shared_ptr<GraphicsPipeline> mPipeline{};
 
 		uint32 mMaxSets{};
 

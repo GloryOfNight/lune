@@ -6,17 +6,18 @@
 
 namespace lune::vulkan
 {
+	using UniqueBuffer = std::unique_ptr<class Buffer>;
+
 	class Buffer
 	{
 	public:
 		Buffer() = default;
 		Buffer(const Buffer&) = delete;
-		Buffer(Buffer&&) = delete;
+		Buffer(Buffer&&) = default;
 		~Buffer() = default;
 
-		static std::unique_ptr<Buffer> create();
+		static UniqueBuffer create(vk::BufferUsageFlags usage, vk::DeviceSize size, VmaMemoryUsage vmaUsage, VmaAllocationCreateFlags vmaFlags);
 
-		void init(vk::BufferUsageFlags usage, vk::DeviceSize size);
 		void destroy();
 
 		vk::Buffer getBuffer() const { return mBuffer; }
@@ -24,6 +25,8 @@ namespace lune::vulkan
 		void write(const void* data, size_t offset, size_t size);
 
 	private:
+		void init(vk::BufferUsageFlags usage, vk::DeviceSize size, VmaMemoryUsage vmaUsage, VmaAllocationCreateFlags vmaFlags);
+
 		vk::Buffer mBuffer{};
 		vk::DeviceSize mSize{};
 
