@@ -9,15 +9,15 @@
 
 namespace lune::vulkan
 {
-	class texture_image
+	class TextureImage
 	{
 	public:
-		texture_image() = default;
-		texture_image(const texture_image&) = delete;
-		texture_image(texture_image&&) = delete;
-		~texture_image() = default;
+		TextureImage() = default;
+		TextureImage(const TextureImage&) = delete;
+		TextureImage(TextureImage&&) = delete;
+		~TextureImage() = default;
 
-		static std::unique_ptr<texture_image> create();
+		static std::unique_ptr<TextureImage> create();
 
 		void init(const SDL_Surface& surface);
 		void destroy();

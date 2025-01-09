@@ -8,7 +8,7 @@ namespace lune
 {
 	namespace logging
 	{
-		enum class log_level : uint8_t
+		enum class LogLevel : uint8_t
 		{
 			NoLogs,
 			Verbose,
@@ -18,19 +18,19 @@ namespace lune
 			Fatal
 		};
 
-		static log_level gLogLevel = log_level::Info;
+		static LogLevel gLogLevel = LogLevel::Info;
 
-		static std::string lex_to_string(const log_level level)
+		static std::string lex_to_string(const LogLevel level)
 		{
 			switch (level)
 			{
-			case log_level::Error:
+			case LogLevel::Error:
 				return "Error";
-			case log_level::Warning:
+			case LogLevel::Warning:
 				return "Warning";
-			case log_level::Info:
+			case LogLevel::Info:
 				return "Info";
-			case log_level::Verbose:
+			case LogLevel::Verbose:
 				return "Verbose";
 			default:
 				return "Unknown";
@@ -38,12 +38,12 @@ namespace lune
 		}
 
 		template <typename... Args>
-		void log(const log_level level, const std::string_view category, const std::string_view format, Args... args)
+		void log(const LogLevel level, const std::string_view category, const std::string_view format, Args... args)
 		{
-			if (level <= log_level::NoLogs || level < gLogLevel)
+			if (level <= LogLevel::NoLogs || level < gLogLevel)
 				return;
 
-			std::ostream& ostream = level == log_level::Fatal || level == log_level::Error || level == log_level::Warning
+			std::ostream& ostream = level == LogLevel::Fatal || level == LogLevel::Error || level == LogLevel::Warning
 										? std::cerr
 										: std::cout;
 
@@ -52,7 +52,7 @@ namespace lune
 
 			ostream << std::vformat("[{0:%F}T{0:%T}] {1}: {2}: ", std::make_format_args(now, category, log_level_str)) << std::vformat(format, std::make_format_args(args...)) << '\n';
 
-			if (level == log_level::Fatal)
+			if (level == LogLevel::Fatal)
 			{
 				std::cout.flush();
 				std::cerr.flush();
@@ -62,5 +62,5 @@ namespace lune
 	} // namespace logging
 } // namespace lune
 
-#define LUNE_LOG(level, category, format, ...) lune::logging::log(lune::logging::log_level::level, #category, format, ##__VA_ARGS__);
+#define LUNE_LOG(level, category, format, ...) lune::logging::log(lune::logging::LogLevel::level, #category, format, ##__VA_ARGS__);
 #define LN_LOG(level, category, format, ...) LUNE_LOG(level, category, format, ##__VA_ARGS__)

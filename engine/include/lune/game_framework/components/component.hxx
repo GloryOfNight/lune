@@ -2,11 +2,11 @@
 
 namespace lune
 {
-	struct component
+	struct ComponentBase
 	{
-		component() = default;
-		component(const component&) = default;
-		component(component&&) = default;
-		virtual ~component() = default;
+		ComponentBase() = default;
+		ComponentBase(const ComponentBase&) = default;
+		ComponentBase(ComponentBase&&) = default;
+		virtual ~ComponentBase() = default;
 	};
 } // namespace lune

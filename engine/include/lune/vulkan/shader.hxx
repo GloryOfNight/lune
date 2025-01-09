@@ -6,15 +6,15 @@
 
 namespace lune::vulkan
 {
-	class shader final
+	class Shader final
 	{
 	public:
-		shader() = default;
-		shader(shader&) = delete;
-		shader(shader&&) = default;
-		~shader() = default;
+		Shader() = default;
+		Shader(Shader&) = delete;
+		Shader(Shader&&) = default;
+		~Shader() = default;
 
-		static std::shared_ptr<shader> create();
+		static std::shared_ptr<Shader> create();
 
 		void init(const std::string_view spvPath);
 		void destroy();

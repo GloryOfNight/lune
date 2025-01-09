@@ -1,25 +1,25 @@
 #pragma once
 
-#include "depth_image.hxx"
-#include "msaa_image.hxx"
+#include "lune/vulkan/depth_image.hxx"
+#include "lune/vulkan/msaa_image.hxx"
+#include "vulkan/vulkan.hpp"
 
 #include <memory>
 #include <vector>
-#include <vulkan/vulkan.hpp>
 
 struct SDL_Window;
 
 namespace lune::vulkan
 {
-	class view final
+	class View final
 	{
 	public:
-		view() = default;
-		view(view&) = delete;
-		view(view&&) = default;
-		~view() = default;
+		View() = default;
+		View(View&) = delete;
+		View(View&&) = default;
+		~View() = default;
 
-		static std::unique_ptr<view> create(SDL_Window* window);
+		static std::unique_ptr<View> create(SDL_Window* window);
 
 		void init();
 		void recreateSwapchain();
@@ -65,9 +65,9 @@ namespace lune::vulkan
 
 		uint32 mImageIndex{};
 
-		std::unique_ptr<depth_image> mDepthImage;
+		std::unique_ptr<DepthImage> mDepthImage;
 
-		std::unique_ptr<msaa_image> mMsaaImage;
+		std::unique_ptr<MsaaImage> mMsaaImage;
 
 		vk::SurfaceKHR mSurface;
 

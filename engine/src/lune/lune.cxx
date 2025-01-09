@@ -1,4 +1,4 @@
-#include "lune.hxx"
+#include "lune/lune.hxx"
 
 uint32& lune::getApplicationVersion()
 {

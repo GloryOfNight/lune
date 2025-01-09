@@ -7,16 +7,16 @@
 
 namespace lune
 {
-	class entity;
+	class Entity;
 
-	class system
+	class SystemBase
 	{
 	public:
-		system() = default;
-		system(const system&) = delete;
-		system(system&&) = default;
-		virtual ~system() = default;
+		SystemBase() = default;
+		SystemBase(const SystemBase&) = delete;
+		SystemBase(SystemBase&&) = default;
+		virtual ~SystemBase() = default;
 
-		virtual void update(const std::vector<std::shared_ptr<entity>>& entities, double deltaTime) = 0;
+		virtual void update(const std::vector<std::shared_ptr<Entity>>& entities, double deltaTime) = 0;
 	};
 } // namespace lune

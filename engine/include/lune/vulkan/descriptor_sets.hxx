@@ -1,6 +1,6 @@
 #pragma once
 
-#include "vulkan_core.hxx"
+#include "lune/vulkan/vulkan_core.hxx"
 
 #include <map>
 #include <memory>
@@ -8,19 +8,19 @@
 
 namespace lune::vulkan
 {
-	class pipeline;
+	class Pipeline;
 
-	class descriptor_sets
+	class DescriptorSets
 	{
 	public:
-		descriptor_sets() = default;
-		descriptor_sets(descriptor_sets&) = delete;
-		descriptor_sets(descriptor_sets&&) = default;
-		~descriptor_sets() = default;
+		DescriptorSets() = default;
+		DescriptorSets(DescriptorSets&) = delete;
+		DescriptorSets(DescriptorSets&&) = default;
+		~DescriptorSets() = default;
 
-		static std::unique_ptr<descriptor_sets> create();
+		static std::unique_ptr<DescriptorSets> create();
 
-		void init(std::shared_ptr<pipeline> pipeline, uint32 maxSets);
+		void init(std::shared_ptr<Pipeline> pipeline, uint32 maxSets);
 		void destroy();
 
 		void addBufferInfo(std::string_view name, uint32 index, vk::Buffer buffer, vk::DeviceSize offset, vk::DeviceSize range);
@@ -36,7 +36,7 @@ namespace lune::vulkan
 
 		void allocateDescriptorSets();
 
-		std::shared_ptr<pipeline> mPipeline{};
+		std::shared_ptr<Pipeline> mPipeline{};
 
 		uint32 mMaxSets{};
 

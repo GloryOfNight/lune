@@ -1,22 +1,22 @@
 #pragma once
 
-#include "vulkan_core.hxx"
+#include "lune/vulkan/vulkan_core.hxx"
 
 #include <memory>
 
 namespace lune::vulkan
 {
-	class depth_image final
+	class DepthImage final
 	{
 	public:
-		depth_image() = default;
-		depth_image(depth_image&) = delete;
-		depth_image(depth_image&&) = default;
-		~depth_image() = default;
+		DepthImage() = default;
+		DepthImage(DepthImage&) = delete;
+		DepthImage(DepthImage&&) = default;
+		~DepthImage() = default;
 
-		static std::unique_ptr<depth_image> create();
+		static std::unique_ptr<DepthImage> create();
 
-		void init(class view* view);
+		void init(class View* view);
 		void destroy();
 
 		vk::Format getFormat() const { return mFormat; }

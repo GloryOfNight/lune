@@ -1,9 +1,8 @@
 #pragma once
 
-#include "game_framework/scene.hxx"
-
-#include "lune.hxx"
-#include "subsystem.hxx"
+#include "lune/core/engine_subsystem.hxx"
+#include "lune/game_framework/scene.hxx"
+#include "lune/lune.hxx"
 
 #include <memory>
 #include <string>
@@ -11,15 +10,15 @@
 
 namespace lune
 {
-	class engine final
+	class Engine final
 	{
 	public:
-		engine() = default;
-		engine(const engine&) = delete;
-		engine(engine&&) = delete;
-		~engine() = default;
+		Engine() = default;
+		Engine(const Engine&) = delete;
+		Engine(Engine&&) = delete;
+		~Engine() = default;
 
-		static engine* get();
+		static Engine* get();
 
 		bool initialize(std::vector<std::string> args);
 
@@ -34,12 +33,12 @@ namespace lune
 
 		void createWindow(const std::string_view name, const uint32 width, const uint32 height, const uint32 flags = 0);
 
-		uint64 addScene(std::unique_ptr<scene> s);
+		uint64 addScene(std::unique_ptr<Scene> s);
 
 	private:
-		std::vector<std::pair<uint64, std::unique_ptr<scene>>> mScenes{};
+		std::vector<std::pair<uint64, std::unique_ptr<Scene>>> mScenes{};
 
-		std::vector<std::unique_ptr<subsystem>> mSubsystems;
+		std::vector<std::unique_ptr<EngineSubsystem>> mSubsystems;
 
 		std::vector<uint32> mViews{};
 
@@ -47,7 +46,7 @@ namespace lune
 	};
 
 	template <typename T, typename... Args>
-	inline bool engine::addSubsystem(Args&&... args)
+	inline bool Engine::addSubsystem(Args&&... args)
 	{
 		auto newSubsystem = std::make_unique<T>(std::forward<Args>(args)...);
 		if (wasInitialized() && newSubsystem->allowInitialize())

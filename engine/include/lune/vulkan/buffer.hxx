@@ -1,31 +1,31 @@
 #pragma once
 
-#include "vulkan_core.hxx"
+#include "lune/vulkan/vulkan_core.hxx"
 
 #include <memory>
 
 namespace lune::vulkan
 {
-	class buffer
+	class Buffer
 	{
 	public:
-		buffer() = default;
-		buffer(const buffer&) = delete;
-		buffer(buffer&&) = delete;
-		~buffer() = default;
+		Buffer() = default;
+		Buffer(const Buffer&) = delete;
+		Buffer(Buffer&&) = delete;
+		~Buffer() = default;
 
-		static std::unique_ptr<buffer> create();
+		static std::unique_ptr<Buffer> create();
 
 		void init(vk::BufferUsageFlags usage, vk::DeviceSize size);
 		void destroy();
 
 		vk::Buffer getBuffer() const { return mBuffer; }
 
-        void write(const void* data, size_t offset, size_t size);
+		void write(const void* data, size_t offset, size_t size);
 
 	private:
 		vk::Buffer mBuffer{};
-        vk::DeviceSize mSize{};
+		vk::DeviceSize mSize{};
 
 		VmaAllocation mVmaAllocation{};
 	};

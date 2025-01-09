@@ -1,7 +1,7 @@
 #pragma once
 
 #include "lune/game_framework/components/component.hxx"
-#include "lune/log.hxx"
+#include "lune/core/log.hxx"
 #include "lune/lune.hxx"
 
 #include <memory>
@@ -10,16 +10,16 @@
 
 namespace lune
 {
-	class entity
+	class Entity
 	{
 	public:
-		entity() = default;
-		entity(const entity&) = delete;
-		entity(entity&&) = default;
-		virtual ~entity() = default;
+		Entity() = default;
+		Entity(const Entity&) = delete;
+		Entity(Entity&&) = default;
+		virtual ~Entity() = default;
 
 		template <typename T, typename... Args>
-		component* addComponent(Args&&... args)
+		ComponentBase* addComponent(Args&&... args)
 		{
 			std::type_index typeId = typeid(T);
 			const auto findRes = mComponents.find(typeId);
@@ -30,7 +30,7 @@ namespace lune
 		}
 
 		template <typename T>
-		component* attachComponent(std::unique_ptr<T> c)
+		ComponentBase* attachComponent(std::unique_ptr<T> c)
 		{
 			std::type_index typeId = typeid(T);
 			const auto findRes = mComponents.find(typeId);
@@ -42,7 +42,7 @@ namespace lune
 		}
 
 		template <typename T>
-		std::unique_ptr<component> detachComponent()
+		std::unique_ptr<ComponentBase> detachComponent()
 		{
 			std::type_index typeId = typeid(T);
 			const auto findRes = mComponents.find(typeId);
@@ -77,6 +77,6 @@ namespace lune
 	private:
 		uint64 mId{};
 
-		std::unordered_map<std::type_index, std::unique_ptr<component>> mComponents{};
+		std::unordered_map<std::type_index, std::unique_ptr<ComponentBase>> mComponents{};
 	};
 } // namespace lune

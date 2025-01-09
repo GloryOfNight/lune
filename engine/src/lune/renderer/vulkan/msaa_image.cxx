@@ -1,28 +1,28 @@
-#include "msaa_image.hxx"
+#include "lune/vulkan/msaa_image.hxx"
 
-#include "view.hxx"
-#include "vulkan_subsystem.hxx"
+#include "lune/vulkan/view.hxx"
+#include "lune/vulkan/vulkan_subsystem.hxx"
 
-std::unique_ptr<lune::vulkan::msaa_image> lune::vulkan::msaa_image::create()
+std::unique_ptr<lune::vulkan::MsaaImage> lune::vulkan::MsaaImage::create()
 {
-	return std::make_unique<msaa_image>();
+	return std::make_unique<MsaaImage>();
 }
 
-void lune::vulkan::msaa_image::init(view* view)
+void lune::vulkan::MsaaImage::init(View* view)
 {
 	mFormat = getVulkanConfig().colorFormat;
 	mExtent = view->getCurrentExtent();
 	mSampleCount = getVulkanConfig().sampleCount;
 }
 
-void lune::vulkan::msaa_image::destroy()
+void lune::vulkan::MsaaImage::destroy()
 {
 	getVulkanContext().device.destroyImageView(mImageView);
 	vmaDestroyImage(getVulkanContext().vmaAllocator, mImage, mVmaAllocation);
-	new (this) msaa_image(); // reset the object
+	new (this) MsaaImage(); // reset the object
 }
 
-void lune::vulkan::msaa_image::createImage()
+void lune::vulkan::MsaaImage::createImage()
 {
 	const vk::ImageCreateInfo imageCreateInfo =
 		vk::ImageCreateInfo()
@@ -41,7 +41,7 @@ void lune::vulkan::msaa_image::createImage()
 	mImage = getVulkanContext().device.createImage(imageCreateInfo);
 }
 
-void lune::vulkan::msaa_image::allocateMemory()
+void lune::vulkan::MsaaImage::allocateMemory()
 {
 	const vk::MemoryRequirements memoryRequirements = getVulkanContext().device.getImageMemoryRequirements(mImage);
 
@@ -52,7 +52,7 @@ void lune::vulkan::msaa_image::allocateMemory()
 	vmaBindImageMemory(getVulkanContext().vmaAllocator, mVmaAllocation, mImage);
 }
 
-void lune::vulkan::msaa_image::createImageView()
+void lune::vulkan::MsaaImage::createImageView()
 {
 	const vk::ImageSubresourceRange subresourceRange =
 		vk::ImageSubresourceRange()

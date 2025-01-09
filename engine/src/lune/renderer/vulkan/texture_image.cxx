@@ -1,7 +1,7 @@
-#include "texture_image.hxx"
+#include "lune/vulkan/texture_image.hxx"
 
-#include "log.hxx"
-#include "vulkan_subsystem.hxx"
+#include "lune/core/log.hxx"
+#include "lune/vulkan/vulkan_subsystem.hxx"
 
 vk::Format sdlFormatToVulkan(SDL_PixelFormat format)
 {
@@ -18,12 +18,12 @@ vk::Format sdlFormatToVulkan(SDL_PixelFormat format)
 	}
 }
 
-std::unique_ptr<lune::vulkan::texture_image> lune::vulkan::texture_image::create()
+std::unique_ptr<lune::vulkan::TextureImage> lune::vulkan::TextureImage::create()
 {
-	return std::make_unique<texture_image>();
+	return std::make_unique<TextureImage>();
 }
 
-void lune::vulkan::texture_image::init(const SDL_Surface& surface)
+void lune::vulkan::TextureImage::init(const SDL_Surface& surface)
 {
 	mFormat = sdlFormatToVulkan(surface.format);
 	if (mFormat == vk::Format::eUndefined)
@@ -42,14 +42,14 @@ void lune::vulkan::texture_image::init(const SDL_Surface& surface)
 	copyPixelsToImage(surface);
 }
 
-void lune::vulkan::texture_image::destroy()
+void lune::vulkan::TextureImage::destroy()
 {
 	getVulkanContext().device.destroySampler(mSampler);
 	getVulkanContext().device.destroyImageView(mImageView);
 	vmaDestroyImage(getVulkanContext().vmaAllocator, mImage, mVmaAllocation);
 }
 
-void lune::vulkan::texture_image::createImage()
+void lune::vulkan::TextureImage::createImage()
 {
 	const vk::ImageCreateInfo imageCreateInfo =
 		vk::ImageCreateInfo()
@@ -73,7 +73,7 @@ void lune::vulkan::texture_image::createImage()
 	vmaCreateImage(getVulkanContext().vmaAllocator, reinterpret_cast<const VkImageCreateInfo*>(&imageCreateInfo), &allocationCreateInfo, reinterpret_cast<VkImage*>(&mImage), &mVmaAllocation, &allocationInfo);
 }
 
-void lune::vulkan::texture_image::createImageView()
+void lune::vulkan::TextureImage::createImageView()
 {
 	const vk::ImageSubresourceRange subresourceRange =
 		vk::ImageSubresourceRange()
@@ -93,7 +93,7 @@ void lune::vulkan::texture_image::createImageView()
 	mImageView = getVulkanContext().device.createImageView(imageViewCreateInfo);
 }
 
-void lune::vulkan::texture_image::createSampler()
+void lune::vulkan::TextureImage::createSampler()
 {
 	const vk::SamplerCreateInfo samplerCreateInfo =
 		vk::SamplerCreateInfo()
@@ -116,7 +116,7 @@ void lune::vulkan::texture_image::createSampler()
 	mSampler = getVulkanContext().device.createSampler(samplerCreateInfo);
 }
 
-void lune::vulkan::texture_image::copyPixelsToImage(const SDL_Surface& surface)
+void lune::vulkan::TextureImage::copyPixelsToImage(const SDL_Surface& surface)
 {
 	const auto size = surface.h * surface.pitch;
 

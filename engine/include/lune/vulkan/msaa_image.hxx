@@ -1,20 +1,20 @@
 #pragma once
 
-#include "vulkan_core.hxx"
+#include "lune/vulkan/vulkan_core.hxx"
 
 namespace lune::vulkan
 {
-	class msaa_image
+	class MsaaImage
 	{
 	public:
-		msaa_image() = default;
-		msaa_image(msaa_image&) = delete;
-		msaa_image(msaa_image&&) = default;
-		~msaa_image() = default;
+		MsaaImage() = default;
+		MsaaImage(MsaaImage&) = delete;
+		MsaaImage(MsaaImage&&) = default;
+		~MsaaImage() = default;
 
-		static std::unique_ptr<msaa_image> create();
+		static std::unique_ptr<MsaaImage> create();
 
-		void init(class view* view);
+		void init(class View* view);
 		void destroy();
 
 		vk::Format getFormat() const { return mFormat; }

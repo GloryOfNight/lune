@@ -1,25 +1,25 @@
 #pragma once
 
-#include "shader.hxx"
-#include "vulkan_core.hxx"
+#include "lune/vulkan/shader.hxx"
+#include "lune/vulkan/vulkan_core.hxx"
 
 namespace lune::vulkan
 {
-	class pipeline final
+	class Pipeline final
 	{
 	public:
-		pipeline() = default;
-		pipeline(pipeline&) = delete;
-		pipeline(pipeline&&) = default;
-		~pipeline() = default;
+		Pipeline() = default;
+		Pipeline(Pipeline&) = delete;
+		Pipeline(Pipeline&&) = default;
+		~Pipeline() = default;
 
-		static std::shared_ptr<pipeline> create();
+		static std::shared_ptr<Pipeline> create();
 
-		void init(std::shared_ptr<shader> vertShader, std::shared_ptr<shader> fragShader);
+		void init(std::shared_ptr<Shader> vertShader, std::shared_ptr<Shader> fragShader);
 		void destroy();
 
-		std::shared_ptr<shader> getVertShader() const { return mVertShader; }
-		std::shared_ptr<shader> getFragShader() const { return mFragShader; }
+		std::shared_ptr<Shader> getVertShader() const { return mVertShader; }
+		std::shared_ptr<Shader> getFragShader() const { return mFragShader; }
 
 		const std::vector<vk::DescriptorSetLayout>& getDescriptorLayouts() const { return mDescriptorSetLayouts; }
 		const std::vector<vk::DescriptorPoolSize>& getDescriptorPoolSizes() const { return mPoolSizes; }
@@ -34,8 +34,8 @@ namespace lune::vulkan
 		void createPipelineLayout();
 		void createPipeline();
 
-		std::shared_ptr<shader> mVertShader{};
-		std::shared_ptr<shader> mFragShader{};
+		std::shared_ptr<Shader> mVertShader{};
+		std::shared_ptr<Shader> mFragShader{};
 
 		std::vector<vk::DescriptorSetLayout> mDescriptorSetLayouts{};
 		std::vector<vk::DescriptorPoolSize> mPoolSizes{};

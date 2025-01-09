@@ -1,7 +1,7 @@
-#include "pipeline.hxx"
+#include "lune/vulkan/pipeline.hxx"
 
-#include "log.hxx"
-#include "vulkan_subsystem.hxx"
+#include "lune/core/log.hxx"
+#include "lune/vulkan/vulkan_subsystem.hxx"
 
 #include <utility>
 
@@ -36,7 +36,7 @@ std::pair<std::vector<vk::VertexInputAttributeDescription>, std::vector<vk::Vert
 	return {vertAttrs, vertBindings};
 }
 
-vk::PipelineShaderStageCreateInfo reflShaderStage(const std::shared_ptr<lune::vulkan::shader>& shader)
+vk::PipelineShaderStageCreateInfo reflShaderStage(const std::shared_ptr<lune::vulkan::Shader>& shader)
 {
 	return vk::PipelineShaderStageCreateInfo()
 		.setModule(shader->getShaderModule())
@@ -88,12 +88,12 @@ std::vector<vk::PushConstantRange> reflPushConstantRanges(const SpvReflectShader
 	return result;
 }
 
-std::shared_ptr<lune::vulkan::pipeline> lune::vulkan::pipeline::create()
+std::shared_ptr<lune::vulkan::Pipeline> lune::vulkan::Pipeline::create()
 {
-	return std::make_unique<pipeline>();
+	return std::make_unique<Pipeline>();
 }
 
-void lune::vulkan::pipeline::init(std::shared_ptr<shader> vertShader, std::shared_ptr<shader> fragShader)
+void lune::vulkan::Pipeline::init(std::shared_ptr<Shader> vertShader, std::shared_ptr<Shader> fragShader)
 {
 	mVertShader = vertShader;
 	mFragShader = fragShader;
@@ -109,7 +109,7 @@ void lune::vulkan::pipeline::init(std::shared_ptr<shader> vertShader, std::share
 	createPipeline();
 }
 
-void lune::vulkan::pipeline::destroy()
+void lune::vulkan::Pipeline::destroy()
 {
 	getVulkanContext().device.destroyPipeline(mPipeline);
 	getVulkanContext().device.destroyPipelineLayout(mPipelineLayout);
@@ -119,15 +119,15 @@ void lune::vulkan::pipeline::destroy()
 		getVulkanContext().device.destroyDescriptorSetLayout(layout);
 	}
 
-	new (this) pipeline();
+	new (this) Pipeline();
 }
 
-void lune::vulkan::pipeline::cmdBind(vk::CommandBuffer commandBuffer)
+void lune::vulkan::Pipeline::cmdBind(vk::CommandBuffer commandBuffer)
 {
 	commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, mPipeline);
 }
 
-void lune::vulkan::pipeline::createDescriptorLayoutsAndPoolSizes()
+void lune::vulkan::Pipeline::createDescriptorLayoutsAndPoolSizes()
 {
 	std::vector<std::vector<vk::DescriptorSetLayoutBinding>> totalBindings{};
 	{
@@ -155,7 +155,7 @@ void lune::vulkan::pipeline::createDescriptorLayoutsAndPoolSizes()
 	}
 }
 
-void lune::vulkan::pipeline::createPipelineLayout()
+void lune::vulkan::Pipeline::createPipelineLayout()
 {
 	std::vector<vk::PushConstantRange> pushConstantRanges{};
 	{
@@ -175,7 +175,7 @@ void lune::vulkan::pipeline::createPipelineLayout()
 	mPipelineLayout = getVulkanContext().device.createPipelineLayout(pipelineLayoutCreateInfo);
 }
 
-void lune::vulkan::pipeline::createPipeline()
+void lune::vulkan::Pipeline::createPipeline()
 {
 	const std::vector<vk::PipelineShaderStageCreateInfo> shaderStages =
 		{

@@ -1,15 +1,15 @@
 #pragma once
 
-#include "lune/math.hxx"
+#include "lune/core/math.hxx"
 
 #include "system.hxx"
 
 namespace lune
 {
-	class camera_system : public system
+	class CameraSystem : public SystemBase
 	{
 	public:
-		virtual void update(const std::vector<std::shared_ptr<entity>>& entities, double deltaTime) override;
+		virtual void update(const std::vector<std::shared_ptr<Entity>>& entities, double deltaTime) override;
 
 		const lnm::mat4& getView() const { return mView; }
 		const lnm::mat4& getProjection() const { return mProjection; }

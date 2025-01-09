@@ -1,9 +1,8 @@
-#include "vulkan_subsystem.hxx"
+#include "lune/vulkan/vulkan_subsystem.hxx"
 
 #include "SDL3/SDL_vulkan.h"
-
-#include "log.hxx"
-#include "lune.hxx"
+#include "lune/core/log.hxx"
+#include "lune/lune.hxx"
 
 #include <vector>
 
@@ -128,7 +127,7 @@ void lune::vulkan_subsystem::shutdown()
 	if (getVulkanContext().instance)
 		getVulkanContext().instance.destroy();
 
-	getVulkanContext() = vulkan_context{};
+	getVulkanContext() = VulkanContext{};
 	gVulkanSubsystem = nullptr;
 }
 
@@ -136,7 +135,7 @@ uint32 lune::vulkan_subsystem::createView(SDL_Window* window)
 {
 	static uint32 viewIdsCounter = 0;
 
-	auto newView = lune::vulkan::view::create(window);
+	auto newView = lune::vulkan::View::create(window);
 	if (newView)
 	{
 		auto& [viewId, view] = mViews.emplace_back(std::pair{viewIdsCounter++, std::move(newView)});
@@ -175,9 +174,9 @@ void lune::vulkan_subsystem::sumbitFrame(uint32 viewId)
 	}
 }
 
-lune::vulkan::view* lune::vulkan_subsystem::findView(uint32 Id)
+lune::vulkan::View* lune::vulkan_subsystem::findView(uint32 Id)
 {
-	const auto findPred = [Id](std::pair<uint32, std::unique_ptr<vulkan::view>>& view) -> bool
+	const auto findPred = [Id](std::pair<uint32, std::unique_ptr<vulkan::View>>& view) -> bool
 	{
 		return Id == view.first;
 	};
@@ -185,7 +184,7 @@ lune::vulkan::view* lune::vulkan_subsystem::findView(uint32 Id)
 	return foundView != mViews.end() ? foundView->second.get() : nullptr;
 }
 
-void lune::vulkan::createInstance(const vk::ApplicationInfo& applicationInfo, const std::vector<const char*>& instanceExtensions, const std::vector<const char*>& instanceLayers, vulkan_context& context)
+void lune::vulkan::createInstance(const vk::ApplicationInfo& applicationInfo, const std::vector<const char*>& instanceExtensions, const std::vector<const char*>& instanceLayers, VulkanContext& context)
 {
 	const vk::InstanceCreateInfo instanceCreateInfo = vk::InstanceCreateInfo()
 														  .setPApplicationInfo(&applicationInfo)
@@ -194,7 +193,7 @@ void lune::vulkan::createInstance(const vk::ApplicationInfo& applicationInfo, co
 	context.instance = vk::createInstance(instanceCreateInfo);
 }
 
-void lune::vulkan::findPhysicalDevice(vulkan_context& context)
+void lune::vulkan::findPhysicalDevice(VulkanContext& context)
 {
 	const auto physicalDevices = context.instance.enumeratePhysicalDevices();
 
@@ -224,7 +223,7 @@ void lune::vulkan::findPhysicalDevice(vulkan_context& context)
 	context.physicalDevice = selectedDevice;
 }
 
-void lune::vulkan::createDevice(vulkan_context& context)
+void lune::vulkan::createDevice(VulkanContext& context)
 {
 	const auto queueFamilyProperties = context.physicalDevice.getQueueFamilyProperties();
 	const auto enabledFeatures = context.physicalDevice.getFeatures();
@@ -270,7 +269,7 @@ void lune::vulkan::createDevice(vulkan_context& context)
 	context.device = context.physicalDevice.createDevice(deviceCreateInfo);
 }
 
-void lune::vulkan::createQueues(vulkan_context& context)
+void lune::vulkan::createQueues(VulkanContext& context)
 {
 	const auto queueFamilyProperties = context.physicalDevice.getQueueFamilyProperties();
 	const size_t queueFamilyPropertiesSize = queueFamilyProperties.size();
@@ -294,7 +293,7 @@ void lune::vulkan::createQueues(vulkan_context& context)
 	context.transferQueue = context.device.getQueue(context.transferQueueIndex, 0);
 }
 
-void lune::vulkan::createGraphicsCommandPool(vulkan_context& context)
+void lune::vulkan::createGraphicsCommandPool(VulkanContext& context)
 {
 	const vk::CommandPoolCreateInfo graphicsCreateInfo = vk::CommandPoolCreateInfo()
 															 .setFlags(vk::CommandPoolCreateFlagBits::eResetCommandBuffer)
@@ -302,7 +301,7 @@ void lune::vulkan::createGraphicsCommandPool(vulkan_context& context)
 	context.graphicsCommandPool = context.device.createCommandPool(graphicsCreateInfo);
 }
 
-void lune::vulkan::createTransferCommandPool(vulkan_context& context)
+void lune::vulkan::createTransferCommandPool(VulkanContext& context)
 {
 	const vk::CommandPoolCreateInfo transferCreateInfo = vk::CommandPoolCreateInfo()
 															 .setFlags(vk::CommandPoolCreateFlagBits::eResetCommandBuffer | vk::CommandPoolCreateFlagBits::eTransient)
@@ -310,7 +309,7 @@ void lune::vulkan::createTransferCommandPool(vulkan_context& context)
 	context.transferCommandPool = context.device.createCommandPool(transferCreateInfo);
 }
 
-void lune::vulkan::createRenderPass(vulkan_context& context)
+void lune::vulkan::createRenderPass(VulkanContext& context)
 {
 	const bool msaaEnabled = getVulkanConfig().sampleCount != vk::SampleCountFlagBits::e1;
 
@@ -380,7 +379,7 @@ void lune::vulkan::createRenderPass(vulkan_context& context)
 	getVulkanContext().renderPass = getVulkanContext().device.createRenderPass(renderPassCreateInfo);
 }
 
-void lune::vulkan::createVmaAllocator(vulkan_context& context)
+void lune::vulkan::createVmaAllocator(VulkanContext& context)
 {
 	VmaAllocatorCreateInfo allocatorCreateInfo = {};
 	allocatorCreateInfo.flags = VMA_ALLOCATOR_CREATE_EXT_MEMORY_BUDGET_BIT;

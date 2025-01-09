@@ -16,10 +16,9 @@ namespace lune
 			}
 		};
 
-
-        using sharedSurface = std::shared_ptr<SDL_Surface>;
-        using weakSurface = std::weak_ptr<SDL_Surface>;
-        using uniqueSurface = std::unique_ptr<SDL_Surface, surfaceDeleter>;
+		using sharedSurface = std::shared_ptr<SDL_Surface>;
+		using weakSurface = std::weak_ptr<SDL_Surface>;
+		using uniqueSurface = std::unique_ptr<SDL_Surface, surfaceDeleter>;
 
 		static sharedSurface makeSharedSurface(SDL_Surface* surface)
 		{

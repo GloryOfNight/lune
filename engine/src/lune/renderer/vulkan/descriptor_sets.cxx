@@ -1,13 +1,13 @@
-#include "descriptor_sets.hxx"
+#include "lune/vulkan/descriptor_sets.hxx"
 
-#include "pipeline.hxx"
+#include "lune/vulkan/pipeline.hxx"
 
-std::unique_ptr<lune::vulkan::descriptor_sets> lune::vulkan::descriptor_sets::create()
+std::unique_ptr<lune::vulkan::DescriptorSets> lune::vulkan::DescriptorSets::create()
 {
-	return std::make_unique<descriptor_sets>();
+	return std::make_unique<DescriptorSets>();
 }
 
-void lune::vulkan::descriptor_sets::init(std::shared_ptr<pipeline> pipeline, uint32 maxSets)
+void lune::vulkan::DescriptorSets::init(std::shared_ptr<Pipeline> pipeline, uint32 maxSets)
 {
 	mPipeline = pipeline;
 	mMaxSets = maxSets;
@@ -19,15 +19,15 @@ void lune::vulkan::descriptor_sets::init(std::shared_ptr<pipeline> pipeline, uin
 	allocateDescriptorSets();
 }
 
-void lune::vulkan::descriptor_sets::destroy()
+void lune::vulkan::DescriptorSets::destroy()
 {
 	if (mDescriptorPool)
 		getVulkanContext().device.destroyDescriptorPool(mDescriptorPool);
 
-	new (this) descriptor_sets();
+	new (this) DescriptorSets();
 }
 
-void lune::vulkan::descriptor_sets::addBufferInfo(std::string_view name, uint32 index, vk::Buffer buffer, vk::DeviceSize offset, vk::DeviceSize range)
+void lune::vulkan::DescriptorSets::addBufferInfo(std::string_view name, uint32 index, vk::Buffer buffer, vk::DeviceSize offset, vk::DeviceSize range)
 {
 	auto bufferInfo = vk::DescriptorBufferInfo()
 						  .setBuffer(buffer)
@@ -37,7 +37,7 @@ void lune::vulkan::descriptor_sets::addBufferInfo(std::string_view name, uint32 
 	mBufferInfos[index].emplace(name, std::move(bufferInfo));
 }
 
-void lune::vulkan::descriptor_sets::addImageInfo(std::string_view name, uint32 index, vk::ImageView imageView, vk::Sampler sampler)
+void lune::vulkan::DescriptorSets::addImageInfo(std::string_view name, uint32 index, vk::ImageView imageView, vk::Sampler sampler)
 {
 	auto imageInfo = vk::DescriptorImageInfo()
 						 .setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal)
@@ -47,7 +47,7 @@ void lune::vulkan::descriptor_sets::addImageInfo(std::string_view name, uint32 i
 	mImageInfos[index].emplace(name, std::move(imageInfo));
 }
 
-void lune::vulkan::descriptor_sets::updateSets(uint32 index)
+void lune::vulkan::DescriptorSets::updateSets(uint32 index)
 {
 	const uint32 descriptorSetOffset = mPipeline->getDescriptorLayouts().size() * index;
 
@@ -88,13 +88,13 @@ void lune::vulkan::descriptor_sets::updateSets(uint32 index)
 	getVulkanContext().device.updateDescriptorSets(writes, {});
 }
 
-void lune::vulkan::descriptor_sets::cmdBind(vk::CommandBuffer commandBuffer, uint32 offsetSets)
+void lune::vulkan::DescriptorSets::cmdBind(vk::CommandBuffer commandBuffer, uint32 offsetSets)
 {
 	uint32 count = mPipeline->getDescriptorLayouts().size();
 	commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, mPipeline->getPipelineLayout(), 0, count, mDescriptorSets.data() + offsetSets, 0, nullptr);
 }
 
-void lune::vulkan::descriptor_sets::createDescriptorPool()
+void lune::vulkan::DescriptorSets::createDescriptorPool()
 {
 	const auto& Sizes = mPipeline->getDescriptorPoolSizes();
 
@@ -106,7 +106,7 @@ void lune::vulkan::descriptor_sets::createDescriptorPool()
 	mDescriptorPool = getVulkanContext().device.createDescriptorPool(createInfo);
 }
 
-void lune::vulkan::descriptor_sets::allocateDescriptorSets()
+void lune::vulkan::DescriptorSets::allocateDescriptorSets()
 {
 	const auto& Layouts = mPipeline->getDescriptorLayouts();
 	for (uint32 i = 0; i < mMaxSets; ++i)

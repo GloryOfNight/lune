@@ -4,9 +4,9 @@
 
 namespace lune
 {
-	class render_system : public system
+	class RenderSystem : public SystemBase
 	{
 	public:
-		virtual void render(const std::vector<std::shared_ptr<entity>>& entities) = 0;
+		virtual void render(const std::vector<std::shared_ptr<Entity>>& entities) = 0;
 	};
 } // namespace lune

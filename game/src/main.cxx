@@ -1,4 +1,4 @@
-#include "lune/engine.hxx"
+#include "lune/core/engine.hxx"
 #include "lune/game_framework/components/isometric_camera.hxx"
 #include "lune/game_framework/components/transform.hxx"
 #include "lune/game_framework/systems/camera_system.hxx"
@@ -8,17 +8,17 @@
 #include <string>
 #include <vector>
 
-class camera_entity : public lune::entity
+class camera_entity : public lune::Entity
 {
 public:
 	camera_entity()
 	{
-		addComponent<lune::transform_component>();
-		addComponent<lune::isometric_camera_component>();
+		addComponent<lune::TransformComponent>();
+		addComponent<lune::IsometricCameraComponent>();
 	}
 };
 
-class game_scene : public lune::scene
+class game_scene : public lune::Scene
 {
 public:
 	game_scene()
@@ -34,7 +34,7 @@ int main(int argc, char** argv)
 	ln::getApplicationName() = "so8";
 	ln::getApplicationVersion() = ln::makeVersion(1, 0, 0);
 
-	ln::engine engine = ln::engine();
+	ln::Engine engine = ln::Engine();
 	if (!engine.initialize(std::move(args)))
 		return 1;
 

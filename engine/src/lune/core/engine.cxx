@@ -1,20 +1,19 @@
-#include "engine.hxx"
+#include "lune/core/engine.hxx"
 
 #include "SDL3/SDL.h"
 #include "SDL3/SDL_vulkan.h"
-#include "renderer/vulkan/vulkan_subsystem.hxx"
+#include "lune/core/log.hxx"
+#include "lune/lune.hxx"
+#include "lune/vulkan/vulkan_subsystem.hxx"
 
-#include "log.hxx"
-#include "lune.hxx"
+static lune::Engine* gEngine{nullptr};
 
-static lune::engine* gEngine{nullptr};
-
-lune::engine* lune::engine::get()
+lune::Engine* lune::Engine::get()
 {
 	return gEngine;
 }
 
-bool lune::engine::initialize(std::vector<std::string> args)
+bool lune::Engine::initialize(std::vector<std::string> args)
 {
 	if (gEngine != nullptr)
 		return false;
@@ -53,12 +52,12 @@ bool lune::engine::initialize(std::vector<std::string> args)
 	return true;
 }
 
-bool lune::engine::wasInitialized() const
+bool lune::Engine::wasInitialized() const
 {
 	return gEngine == this;
 }
 
-void lune::engine::shutdown()
+void lune::Engine::shutdown()
 {
 	for (auto& engineSubsystem : mSubsystems)
 	{
@@ -68,7 +67,7 @@ void lune::engine::shutdown()
 	SDL_Quit();
 }
 
-void lune::engine::run()
+void lune::Engine::run()
 {
 	while (true)
 	{
@@ -105,7 +104,7 @@ void lune::engine::run()
 	}
 }
 
-void lune::engine::createWindow(const std::string_view name, const uint32 width, const uint32 height, const uint32 flags)
+void lune::Engine::createWindow(const std::string_view name, const uint32 width, const uint32 height, const uint32 flags)
 {
 	auto subsystem = vulkan_subsystem::get();
 	if (subsystem)
@@ -118,10 +117,10 @@ void lune::engine::createWindow(const std::string_view name, const uint32 width,
 	}
 }
 
-uint64 lune::engine::addScene(std::unique_ptr<scene> s)
+uint64 lune::Engine::addScene(std::unique_ptr<Scene> s)
 {
 	static uint64 sIdCounter = 0;
 	if (s) [[likely]]
-		return mScenes.emplace_back(std::pair<uint64, std::unique_ptr<scene>>{++sIdCounter, std::move(s)}).first;
+		return mScenes.emplace_back(std::pair<uint64, std::unique_ptr<Scene>>{++sIdCounter, std::move(s)}).first;
 	return uint64();
 }

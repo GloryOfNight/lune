@@ -1,13 +1,13 @@
-#include "vulkan_core.hxx"
+#include "lune/vulkan/vulkan_core.hxx"
 
-lune::vulkan_context& lune::getVulkanContext()
+lune::VulkanContext& lune::getVulkanContext()
 {
-	static vulkan_context context{};
+	static VulkanContext context{};
 	return context;
 }
 
-lune::vulkan_config& lune::getVulkanConfig()
+lune::VulkanConfig& lune::getVulkanConfig()
 {
-	static vulkan_config config{};
+	static VulkanConfig config{};
 	return config;
 }

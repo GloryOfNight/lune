@@ -1,7 +1,7 @@
-#include "view.hxx"
+#include "lune/vulkan/view.hxx"
 
-#include "log.hxx"
-#include "vulkan_subsystem.hxx"
+#include "lune/core/log.hxx"
+#include "lune/vulkan/vulkan_subsystem.hxx"
 
 #include <SDL3/SDL_video.h>
 #include <SDL3/SDL_vulkan.h>
@@ -33,7 +33,7 @@ vk::PresentModeKHR findPresentMode(vk::PhysicalDevice physicalDevice, vk::Surfac
 	return result != modesPriority.end() ? *result : vk::PresentModeKHR();
 }
 
-std::unique_ptr<lune::vulkan::view> lune::vulkan::view::create(SDL_Window* window)
+std::unique_ptr<lune::vulkan::View> lune::vulkan::View::create(SDL_Window* window)
 {
 	VkSurfaceKHR surface{};
 	SDL_Vulkan_CreateSurface(window, getVulkanContext().instance, nullptr, &surface);
@@ -43,14 +43,14 @@ std::unique_ptr<lune::vulkan::view> lune::vulkan::view::create(SDL_Window* windo
 		return nullptr;
 	}
 
-	auto newView = std::make_unique<view>();
+	auto newView = std::make_unique<View>();
 	newView->mWindow = window;
 	newView->mSurface = surface;
 
 	return std::move(newView);
 }
 
-void lune::vulkan::view::init()
+void lune::vulkan::View::init()
 {
 	createSwapchain();
 
@@ -58,12 +58,12 @@ void lune::vulkan::view::init()
 
 	createImageCommandBuffers();
 
-	mDepthImage = depth_image::create();
+	mDepthImage = DepthImage::create();
 	mDepthImage->init(this);
 
 	if (getVulkanConfig().sampleCount != vk::SampleCountFlagBits::e1)
 	{
-		mMsaaImage = msaa_image::create();
+		mMsaaImage = MsaaImage::create();
 		mMsaaImage->init(this);
 	}
 
@@ -72,7 +72,7 @@ void lune::vulkan::view::init()
 	createSemaphores();
 }
 
-void lune::vulkan::view::recreateSwapchain()
+void lune::vulkan::View::recreateSwapchain()
 {
 	if (0 == mCurrentExtent.height || 0 == mCurrentExtent.width)
 	{
@@ -97,7 +97,7 @@ void lune::vulkan::view::recreateSwapchain()
 	createFramebuffers();
 }
 
-void lune::vulkan::view::destroy()
+void lune::vulkan::View::destroy()
 {
 	[[maybe_unused]] const auto waitResult = getVulkanContext().device.waitForFences(mSubmitQueueFences, true, UINT32_MAX);
 	for (auto& fence : mSubmitQueueFences)
@@ -118,10 +118,10 @@ void lune::vulkan::view::destroy()
 
 	getVulkanContext().instance.destroy(mSurface);
 
-	new (this) view(); // reset the object
+	new (this) View(); // reset the object
 }
 
-bool lune::vulkan::view::updateExtent()
+bool lune::vulkan::View::updateExtent()
 {
 	const vk::Extent2D newExtent = getVulkanContext().physicalDevice.getSurfaceCapabilitiesKHR(mSurface).currentExtent;
 	if (mCurrentExtent != newExtent)
@@ -132,7 +132,7 @@ bool lune::vulkan::view::updateExtent()
 	return false;
 }
 
-bool lune::vulkan::view::beginNextFrame()
+bool lune::vulkan::View::beginNextFrame()
 {
 	if (!acquireNextImageIndex())
 		return false;
@@ -161,7 +161,7 @@ bool lune::vulkan::view::beginNextFrame()
 	return true;
 }
 
-void lune::vulkan::view::sumbit()
+void lune::vulkan::View::sumbit()
 {
 	auto commandBuffer = getCurrentImageCmdBuffer();
 	if (!commandBuffer) [[unlikely]]
@@ -213,7 +213,7 @@ void lune::vulkan::view::sumbit()
 	mImageIndex = UINT32_MAX;
 }
 
-bool lune::vulkan::view::acquireNextImageIndex()
+bool lune::vulkan::View::acquireNextImageIndex()
 {
 	constexpr uint64 timeout = 3 * 1000 * 1000; // ms to us to ns
 	const VkResult aquireRes = vkAcquireNextImageKHR(getVulkanContext().device, mSwapchain, timeout, mSemaphoreImageAvailable, VK_NULL_HANDLE, &mImageIndex);
@@ -228,7 +228,7 @@ bool lune::vulkan::view::acquireNextImageIndex()
 	return false;
 }
 
-void lune::vulkan::view::createSwapchain()
+void lune::vulkan::View::createSwapchain()
 {
 	const vk::SurfaceCapabilitiesKHR surfaceCapabilities = getVulkanContext().physicalDevice.getSurfaceCapabilitiesKHR(mSurface);
 	mCurrentExtent = surfaceCapabilities.currentExtent;
@@ -270,7 +270,7 @@ void lune::vulkan::view::createSwapchain()
 	}
 }
 
-void lune::vulkan::view::cleanupSwapchain(vk::SwapchainKHR swapchain)
+void lune::vulkan::View::cleanupSwapchain(vk::SwapchainKHR swapchain)
 {
 	getVulkanContext().device.waitIdle();
 
@@ -289,7 +289,7 @@ void lune::vulkan::view::cleanupSwapchain(vk::SwapchainKHR swapchain)
 	getVulkanContext().device.destroySwapchainKHR(swapchain);
 }
 
-void lune::vulkan::view::createImageViews()
+void lune::vulkan::View::createImageViews()
 {
 	const auto swapchainImages = getVulkanContext().device.getSwapchainImagesKHR(mSwapchain);
 	const size_t imageCount = swapchainImages.size();
@@ -324,7 +324,7 @@ void lune::vulkan::view::createImageViews()
 	}
 }
 
-void lune::vulkan::view::createFramebuffers()
+void lune::vulkan::View::createFramebuffers()
 {
 	const size_t imageCount = getImageCount();
 	mFramebuffers.resize(imageCount);
@@ -349,7 +349,7 @@ void lune::vulkan::view::createFramebuffers()
 	}
 }
 
-void lune::vulkan::view::createImageCommandBuffers()
+void lune::vulkan::View::createImageCommandBuffers()
 {
 	const vk::CommandBufferAllocateInfo commandBufferAllocateInfo =
 		vk::CommandBufferAllocateInfo()
@@ -359,7 +359,7 @@ void lune::vulkan::view::createImageCommandBuffers()
 	mImageCommandBuffers = getVulkanContext().device.allocateCommandBuffers(commandBufferAllocateInfo);
 }
 
-void lune::vulkan::view::createFences()
+void lune::vulkan::View::createFences()
 {
 	mSubmitQueueFences.resize(getImageCount());
 	for (auto& fence : mSubmitQueueFences)
@@ -369,7 +369,7 @@ void lune::vulkan::view::createFences()
 	}
 }
 
-void lune::vulkan::view::createSemaphores()
+void lune::vulkan::View::createSemaphores()
 {
 	mSemaphoreImageAvailable = getVulkanContext().device.createSemaphore(vk::SemaphoreCreateInfo());
 	mSemaphoreRenderFinished = getVulkanContext().device.createSemaphore(vk::SemaphoreCreateInfo());

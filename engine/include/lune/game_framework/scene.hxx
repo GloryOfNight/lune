@@ -1,8 +1,8 @@
 #pragma once
 
-#include "components/component.hxx"
-#include "entities/entity.hxx"
-#include "systems/system.hxx"
+#include "lune/game_framework/components/component.hxx"
+#include "lune/game_framework/entities/entity.hxx"
+#include "lune/game_framework/systems/system.hxx"
 
 #include <memory>
 #include <unordered_map>
@@ -10,25 +10,25 @@
 
 namespace lune
 {
-	class scene
+	class Scene
 	{
-		struct registry
+		struct Registry
 		{
-			std::unordered_map<uint64, std::shared_ptr<entity>> entitiesIds{};
-			std::unordered_map<std::type_index, std::shared_ptr<system>> systemsIds{};
+			std::unordered_map<uint64, std::shared_ptr<Entity>> entitiesIds{};
+			std::unordered_map<std::type_index, std::shared_ptr<SystemBase>> systemsIds{};
 		};
 
 	public:
-		scene() = default;
-		scene(const scene&) = delete;
-		scene(scene&&) = default;
-		virtual ~scene() = default;
+		Scene() = default;
+		Scene(const Scene&) = delete;
+		Scene(Scene&&) = default;
+		virtual ~Scene() = default;
 
 		virtual void update(double deltaTime);
 		virtual void render();
 
 		template <typename T, typename... Args>
-		std::shared_ptr<entity> addEntity(Args&&... args)
+		std::shared_ptr<Entity> addEntity(Args&&... args)
 		{
 			static uint64 eIdCounter = 0;
 
@@ -52,14 +52,14 @@ namespace lune
 			return false;
 		}
 
-		std::shared_ptr<entity> findEntity(uint64 eId) const
+		std::shared_ptr<Entity> findEntity(uint64 eId) const
 		{
 			auto findRes = mRegistry.entitiesIds.find(eId);
 			return findRes != mRegistry.entitiesIds.end() ? findRes->second : nullptr;
 		}
 
 		template <typename T, typename... Args>
-		system* registerSystem(Args&&... args)
+		SystemBase* registerSystem(Args&&... args)
 		{
 			std::type_index typeId = typeid(T);
 			const auto findRes = mRegistry.systemsIds.find(typeId);
@@ -73,8 +73,8 @@ namespace lune
 		}
 
 	private:
-		std::vector<std::shared_ptr<entity>> mEntities{};
-		std::vector<std::shared_ptr<system>> mSystems{};
-		registry mRegistry{};
+		std::vector<std::shared_ptr<Entity>> mEntities{};
+		std::vector<std::shared_ptr<SystemBase>> mSystems{};
+		Registry mRegistry{};
 	};
 } // namespace lune

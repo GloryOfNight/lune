@@ -1,15 +1,15 @@
-#include "depth_image.hxx"
+#include "lune/vulkan/depth_image.hxx"
 
-#include "log.hxx"
-#include "view.hxx"
-#include "vulkan_subsystem.hxx"
+#include "lune/core/log.hxx"
+#include "lune/vulkan/view.hxx"
+#include "lune/vulkan/vulkan_subsystem.hxx"
 
-std::unique_ptr<lune::vulkan::depth_image> lune::vulkan::depth_image::create()
+std::unique_ptr<lune::vulkan::DepthImage> lune::vulkan::DepthImage::create()
 {
-	return std::make_unique<depth_image>();
+	return std::make_unique<DepthImage>();
 }
 
-void lune::vulkan::depth_image::init(class view* view)
+void lune::vulkan::DepthImage::init(View* view)
 {
 	mFormat = getVulkanConfig().depthFormat;
 	mExtent = view->getCurrentExtent();
@@ -24,14 +24,14 @@ void lune::vulkan::depth_image::init(class view* view)
 	transitionImageLayout(vk::ImageLayout::eUndefined, vk::ImageLayout::eDepthStencilAttachmentOptimal);
 }
 
-void lune::vulkan::depth_image::destroy()
+void lune::vulkan::DepthImage::destroy()
 {
 	getVulkanContext().device.destroyImageView(mImageView);
 	vmaDestroyImage(getVulkanContext().vmaAllocator, mImage, mVmaAllocation);
-	new (this) depth_image(); // reset the object
+	new (this) DepthImage(); // reset the object
 }
 
-void lune::vulkan::depth_image::createImage()
+void lune::vulkan::DepthImage::createImage()
 {
 	const vk::ImageCreateInfo imageCreateInfo =
 		vk::ImageCreateInfo()
@@ -50,7 +50,7 @@ void lune::vulkan::depth_image::createImage()
 	mImage = getVulkanContext().device.createImage(imageCreateInfo);
 }
 
-void lune::vulkan::depth_image::allocateMemory()
+void lune::vulkan::DepthImage::allocateMemory()
 {
 	const vk::MemoryRequirements memoryRequirements = getVulkanContext().device.getImageMemoryRequirements(mImage);
 
@@ -61,7 +61,7 @@ void lune::vulkan::depth_image::allocateMemory()
 	vmaBindImageMemory(getVulkanContext().vmaAllocator, mVmaAllocation, mImage);
 }
 
-void lune::vulkan::depth_image::createImageView()
+void lune::vulkan::DepthImage::createImageView()
 {
 	const vk::ImageViewCreateInfo imageViewCreateInfo =
 		vk::ImageViewCreateInfo()
@@ -74,7 +74,7 @@ void lune::vulkan::depth_image::createImageView()
 	mImageView = getVulkanContext().device.createImageView(imageViewCreateInfo);
 }
 
-void lune::vulkan::depth_image::transitionImageLayout(vk::ImageLayout oldLayout, vk::ImageLayout newLayout)
+void lune::vulkan::DepthImage::transitionImageLayout(vk::ImageLayout oldLayout, vk::ImageLayout newLayout)
 {
 	const vk::CommandBufferAllocateInfo commandBufferAllocateInfo =
 		vk::CommandBufferAllocateInfo()

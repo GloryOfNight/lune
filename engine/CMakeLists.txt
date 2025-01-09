@@ -10,12 +10,6 @@ add_library(${PROJECT_NAME}-static STATIC ${LUNE_HEADER_FILES} ${LUNE_SOURCE_FIL
 
 target_include_directories(${PROJECT_NAME}-static PUBLIC        "include")
 
-target_include_directories(${PROJECT_NAME}-static PRIVATE       "include/lune" 
-                                                                "include/lune/game_framework/ecs"
-                                                                "include/lune/game_framework/"
-                                                                "include/lune/renderer/vulkan"
-                                                                )
-
 set_target_properties(${PROJECT_NAME}-static PROPERTIES         C_STANDARD 17
                                                                 CXX_STANDARD 20
                                                                 CXX_STANDARD_REQUIRED ON

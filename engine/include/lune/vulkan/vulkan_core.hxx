@@ -1,13 +1,13 @@
 #pragma once
 
+#include "lune/lune.hxx"
 #include "vulkan/vulkan.hpp"
 
-#include "lune.hxx"
 #include "vk_mem_alloc.h"
 
 namespace lune
 {
-	struct vulkan_context final
+	struct VulkanContext final
 	{
 		vk::Instance instance{};
 		vk::PhysicalDevice physicalDevice{};
@@ -27,13 +27,13 @@ namespace lune
 		VmaAllocator vmaAllocator{};
 	};
 
-	struct vulkan_config final
+	struct VulkanConfig final
 	{
 		vk::Format colorFormat{};
 		vk::Format depthFormat{};
 		vk::SampleCountFlagBits sampleCount{};
 	};
 
-	extern "C++" vulkan_context& getVulkanContext();
-	extern "C++" vulkan_config& getVulkanConfig();
+	extern "C++" VulkanContext& getVulkanContext();
+	extern "C++" VulkanConfig& getVulkanConfig();
 } // namespace lune
