@@ -1,5 +1,7 @@
 #include "lune/vulkan/buffer.hxx"
 
+#include "lune/core/log.hxx"
+
 lune::vulkan::UniqueBuffer lune::vulkan::Buffer::create(vk::BufferUsageFlags usage, vk::DeviceSize size, VmaMemoryUsage vmaUsage, VmaAllocationCreateFlags vmaFlags)
 {
 	return std::make_unique<Buffer>();
@@ -29,12 +31,58 @@ void lune::vulkan::Buffer::destroy()
 	new (this) Buffer();
 }
 
-void lune::vulkan::Buffer::write(const void* data, size_t offset, size_t size)
+void lune::vulkan::Buffer::copyMap(const void* data, size_t offset, size_t size)
 {
 	uint8* pBuffer{};
-	vmaMapMemory(getVulkanContext().vmaAllocator, mVmaAllocation, reinterpret_cast<void**>(&pBuffer));
+	VkResult mapRes = vmaMapMemory(getVulkanContext().vmaAllocator, mVmaAllocation, reinterpret_cast<void**>(&pBuffer));
+	if (mapRes != VK_SUCCESS) [[unlikely]]
+	{
+		LN_LOG(Fatal, Vulkan::Buffer, "Failed to vmaMapMemory. Did you tried to map device memory?");
+		return;
+	}
 
 	memcpy(pBuffer + offset, data, size);
-
 	vmaUnmapMemory(getVulkanContext().vmaAllocator, mVmaAllocation);
+}
+
+void lune::vulkan::Buffer::copyTransfer(const void* data, size_t offset, size_t size)
+{
+	const auto vmaUsage = VmaMemoryUsage::VMA_MEMORY_USAGE_AUTO_PREFER_HOST;
+	const auto vmaFlags = VmaAllocationCreateFlagBits::VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
+	auto stagingBuffer = create(vk::BufferUsageFlagBits::eTransferSrc, size, vmaUsage, vmaFlags);
+
+	stagingBuffer->copyMap(data, 0, size);
+
+	const vk::CommandBufferAllocateInfo commandBufferAllocateInfo =
+		vk::CommandBufferAllocateInfo()
+			.setCommandPool(getVulkanContext().transferCommandPool)
+			.setLevel(vk::CommandBufferLevel::ePrimary)
+			.setCommandBufferCount(1);
+
+	const vk::CommandBuffer commandBuffer = getVulkanContext().device.allocateCommandBuffers(commandBufferAllocateInfo)[0];
+
+	const vk::CommandBufferBeginInfo commandBufferBeginInfo =
+		vk::CommandBufferBeginInfo()
+			.setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
+
+	commandBuffer.begin(commandBufferBeginInfo);
+
+	const vk::BufferCopy copyRegion = vk::BufferCopy()
+										  .setDstOffset(offset)
+										  .setSize(size)
+										  .setSrcOffset(0);
+
+	commandBuffer.copyBuffer(stagingBuffer->getBuffer(), getBuffer(), copyRegion);
+
+	commandBuffer.end();
+
+	const vk::Fence transferFence = getVulkanContext().device.createFence(vk::FenceCreateInfo());
+	const vk::SubmitInfo submitInfo =
+		vk::SubmitInfo()
+			.setCommandBufferCount(1)
+			.setPCommandBuffers(&commandBuffer);
+
+	getVulkanContext().transferQueue.submit(submitInfo, transferFence);
+	[[maybe_unused]] vk::Result waitRes = getVulkanContext().device.waitForFences(transferFence, true, UINT64_MAX);
+	getVulkanContext().device.destroyFence(transferFence);
 }

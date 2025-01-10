@@ -10,6 +10,7 @@
 #include "vulkan_core.hxx"
 
 #include <filesystem>
+#include <map>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -39,7 +40,6 @@ namespace lune
 	{
 	public:
 		static vulkan_subsystem* get();
-		static vulkan_subsystem* getChecked();
 
 		vulkan_subsystem() = default;
 		vulkan_subsystem(const EngineSubsystem&) = delete;
@@ -51,6 +51,7 @@ namespace lune
 		virtual void shutdown() override;
 
 		uint32 createView(SDL_Window* window);
+		void removeView(uint32 viewId);
 
 		vulkan::SharedShader loadShader(std::filesystem::path spvPath);
 		vulkan::SharedShader findShader(std::filesystem::path spvPath);
@@ -63,14 +64,12 @@ namespace lune
 		void sumbitFrame(uint32 viewId);
 
 	private:
-		vulkan::View* findView(uint32 Id);
-
 		uint32 mApiVersion{};
 
 		std::unordered_map<std::filesystem::path, vulkan::SharedShader> mShaders{};
 
 		std::unordered_map<std::string, vulkan::SharedGraphicsPipeline> mGraphicsPipelines{};
 
-		std::vector<std::pair<uint32, std::unique_ptr<vulkan::View>>> mViews{};
+		std::map<uint32, std::unique_ptr<vulkan::View>> mViews{};
 	};
 } // namespace lune

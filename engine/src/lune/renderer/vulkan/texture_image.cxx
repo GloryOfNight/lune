@@ -219,13 +219,15 @@ void lune::vulkan::TextureImage::copyPixelsToImage(const SDL_Surface& surface)
 
 		commandBuffer.end();
 
+		const vk::Fence transferFence = getVulkanContext().device.createFence(vk::FenceCreateInfo());
 		const vk::SubmitInfo submitInfo =
 			vk::SubmitInfo()
 				.setCommandBufferCount(1)
 				.setPCommandBuffers(&commandBuffer);
 
-		getVulkanContext().transferQueue.submit(submitInfo, nullptr);
-		getVulkanContext().transferQueue.waitIdle();
+		getVulkanContext().transferQueue.submit(submitInfo, transferFence);
+		[[maybe_unused]] vk::Result waitRes = getVulkanContext().device.waitForFences(transferFence, true, UINT64_MAX);
+		getVulkanContext().device.destroyFence(transferFence);
 	}
 
 	vmaDestroyBuffer(getVulkanContext().vmaAllocator, stagingBuffer, stagingAllocation);

@@ -21,29 +21,29 @@ using char32 = char32_t;
 
 namespace lune
 {
-	static constexpr uint32 makeVersion(uint32 major, uint32 minor, uint32 patch)
+	static constexpr uint32 makeVersion(uint32 major, uint32 minor, uint32 patch) noexcept
 	{
 		return (((uint32_t)(major)) << 22U) | (((uint32_t)(minor)) << 12U) | ((uint32_t)(patch));
 	}
 
-	static void getVersion(uint32 version, uint32& major, uint32& minor, uint32& patch)
+	static void getVersion(uint32 version, uint32& major, uint32& minor, uint32& patch) noexcept
 	{
 		major = (version >> 22U) & 0x7FU;
 		minor = (version >> 12U) & 0x3FFU;
 		patch = version & 0xFFFU;
 	}
 
-	extern "C++" uint32& getApplicationVersion();
+	extern "C++" uint32& getApplicationVersion() noexcept;
 
-	extern "C++" std::string& getApplicationName();
+	extern "C++" std::string& getApplicationName() noexcept;
 
-	static uint32 getEngineVersion()
+	static uint32 getEngineVersion() noexcept
 	{
 		static constexpr uint32 version = makeVersion(0, 0, 1);
 		return version;
 	}
 
-	static const char* getEngineName()
+	static const char* getEngineName() noexcept
 	{
 		return "Lune";
 	}

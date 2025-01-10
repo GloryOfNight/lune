@@ -32,7 +32,9 @@ namespace lune::vulkan
 
 		void destroy();
 
-		void cmdBind(vk::CommandBuffer cmd);
+		void cmdBind(vk::CommandBuffer commandBuffer);
+
+		void cmdDraw(vk::CommandBuffer commandBuffer, uint32 instanceCount = 1, uint32 firstInstance = 0);
 
 	private:
 		void init(const std::vector<Vertex>& vertexies, const std::vector<Index>& indices);

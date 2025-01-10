@@ -22,7 +22,11 @@ namespace lune::vulkan
 
 		vk::Buffer getBuffer() const { return mBuffer; }
 
-		void write(const void* data, size_t offset, size_t size);
+		// copies data to allocation with VkMapMemory (if possible)
+		void copyMap(const void* data, size_t offset, size_t size);
+
+		// copies data to allocation using stagin buffer and transfer queue
+		void copyTransfer(const void* data, size_t offset, size_t size);
 
 	private:
 		void init(vk::BufferUsageFlags usage, vk::DeviceSize size, VmaMemoryUsage vmaUsage, VmaAllocationCreateFlags vmaFlags);

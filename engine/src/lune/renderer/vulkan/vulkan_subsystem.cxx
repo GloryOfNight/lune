@@ -39,15 +39,6 @@ lune::vulkan_subsystem* lune::vulkan_subsystem::get()
 	return gVulkanSubsystem;
 }
 
-lune::vulkan_subsystem* lune::vulkan_subsystem::getChecked()
-{
-	if (nullptr == gVulkanSubsystem) [[unlikely]]
-	{
-		std::abort();
-	}
-	return gVulkanSubsystem;
-}
-
 bool lune::vulkan_subsystem::allowInitialize()
 {
 	return nullptr != vkGetInstanceProcAddr(VK_NULL_HANDLE, "vkEnumerateInstanceVersion");
@@ -106,6 +97,8 @@ void lune::vulkan_subsystem::shutdown()
 {
 	getVulkanContext().device.waitIdle();
 
+	getVulkanDeleteQueue().cleanup();
+
 	for (auto& [viewId, view] : mViews)
 	{
 		view->destroy();
@@ -141,11 +134,22 @@ uint32 lune::vulkan_subsystem::createView(SDL_Window* window)
 	auto newView = lune::vulkan::View::create(window);
 	if (newView)
 	{
-		auto& [viewId, view] = mViews.emplace_back(std::pair{viewIdsCounter++, std::move(newView)});
+		const auto& [it, res] = mViews.emplace(viewIdsCounter++, std::move(newView));
+		auto& [viewId, view] = *it;
 		view->init();
 		return viewId;
 	}
 	return UINT32_MAX;
+}
+
+void lune::vulkan_subsystem::removeView(uint32 viewId)
+{
+	if (const auto it = mViews.find(viewId); it != mViews.end())
+	{
+		auto& [viewId, view] = *it;
+		view->destroy();
+		mViews.erase(it);
+	}
 }
 
 lune::vulkan::SharedShader lune::vulkan_subsystem::loadShader(std::filesystem::path spvPath)
@@ -185,8 +189,9 @@ lune::vulkan::SharedGraphicsPipeline lune::vulkan_subsystem::findPipeline(std::s
 
 bool lune::vulkan_subsystem::beginNextFrame(uint32 viewId)
 {
-	if (const auto& view = findView(viewId); view) [[likely]]
+	if (const auto it = mViews.find(viewId); it != mViews.end()) [[likely]]
 	{
+		auto& [viewId, view] = *it;
 		return view->beginNextFrame();
 	}
 	return false;
@@ -194,8 +199,9 @@ bool lune::vulkan_subsystem::beginNextFrame(uint32 viewId)
 
 std::pair<uint32, vk::CommandBuffer> lune::vulkan_subsystem::getFrameInfo(uint32 viewId)
 {
-	if (const auto& view = findView(viewId); view) [[likely]]
+	if (const auto it = mViews.find(viewId); it != mViews.end()) [[likely]]
 	{
+		auto& [viewId, view] = *it;
 		const auto imageIndex = view->getImageIndex();
 		const auto commandBuffer = view->getCurrentImageCmdBuffer();
 
@@ -206,20 +212,11 @@ std::pair<uint32, vk::CommandBuffer> lune::vulkan_subsystem::getFrameInfo(uint32
 
 void lune::vulkan_subsystem::sumbitFrame(uint32 viewId)
 {
-	if (const auto& view = findView(viewId); view) [[likely]]
+	if (const auto it = mViews.find(viewId); it != mViews.end()) [[likely]]
 	{
+		auto& [viewId, view] = *it;
 		view->sumbit();
 	}
-}
-
-lune::vulkan::View* lune::vulkan_subsystem::findView(uint32 Id)
-{
-	const auto findPred = [Id](std::pair<uint32, std::unique_ptr<vulkan::View>>& view) -> bool
-	{
-		return Id == view.first;
-	};
-	auto foundView = std::find_if(mViews.begin(), mViews.end(), findPred);
-	return foundView != mViews.end() ? foundView->second.get() : nullptr;
 }
 
 void lune::vulkan::createInstance(const vk::ApplicationInfo& applicationInfo, const std::vector<const char*>& instanceExtensions, const std::vector<const char*>& instanceLayers, VulkanContext& context)
