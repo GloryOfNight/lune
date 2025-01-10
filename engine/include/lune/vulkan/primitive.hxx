@@ -15,7 +15,7 @@ namespace lune::vulkan
 	{
 		lnm::vec3 position;
 		lnm::vec4 color;
-		lnm::vec3 uvw;
+		lnm::vec2 uv;
 	};
 
 	using Index = uint32;
@@ -28,9 +28,9 @@ namespace lune::vulkan
 		Primitive(Primitive&&) = default;
 		~Primitive() = default;
 
-		static SharedPrimitive create(const std::vector<Vertex>& vertexies, const std::vector<Index>& indices);
+		static SharedPrimitive create(const std::vector<Vertex>& vertices, const std::vector<Index>& indices);
 
-		void destroy();
+		void destroy() {};
 
 		void cmdBind(vk::CommandBuffer commandBuffer);
 
@@ -39,7 +39,7 @@ namespace lune::vulkan
 	private:
 		void init(const std::vector<Vertex>& vertexies, const std::vector<Index>& indices);
 
-		uint32 mVertexiesSize{};
+		uint32 mVerticesSize{};
 		uint32 mIndeciesSize{};
 
 		UniqueBuffer mBuffer{};

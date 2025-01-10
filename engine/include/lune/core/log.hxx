@@ -24,14 +24,16 @@ namespace lune
 		{
 			switch (level)
 			{
-			case LogLevel::Error:
-				return "Error";
-			case LogLevel::Warning:
-				return "Warning";
-			case LogLevel::Info:
-				return "Info";
 			case LogLevel::Verbose:
 				return "Verbose";
+			case LogLevel::Info:
+				return "Info";
+			case LogLevel::Warning:
+				return "Warning";
+			case LogLevel::Error:
+				return "Error";
+			case LogLevel::Fatal:
+				return "Fatal";
 			default:
 				return "Unknown";
 			}
@@ -50,7 +52,7 @@ namespace lune
 			const auto now = std::chrono::utc_clock::now();
 			const auto log_level_str = lex_to_string(level);
 
-			ostream << std::vformat("[{0:%F}T{0:%T}] {1}: {2}: ", std::make_format_args(now, category, log_level_str)) << std::vformat(format, std::make_format_args(args...)) << '\n';
+			ostream << std::vformat("[{0:%F}T{0:%T}] {1}: {2}: ", std::make_format_args(now, category, log_level_str)) << std::vformat(format, std::make_format_args(args...)) << std::endl;
 
 			if (level == LogLevel::Fatal)
 			{

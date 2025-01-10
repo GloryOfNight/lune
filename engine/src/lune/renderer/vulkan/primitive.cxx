@@ -2,26 +2,32 @@
 
 #include "lune/core/log.hxx"
 
-lune::vulkan::SharedPrimitive lune::vulkan::Primitive::create(const std::vector<Vertex>& vertexies, const std::vector<Index>& indices)
+lune::vulkan::SharedPrimitive lune::vulkan::Primitive::create(const std::vector<Vertex>& vertices, const std::vector<Index>& indices)
 {
-	if (vertexies.size() == 0) [[unlikely]]
+	if (vertices.size() == 0) [[unlikely]]
 	{
 		LN_LOG(Error, Vulkan::Primitive, "Attempt to create primitive with 0 vertexies");
 		return nullptr;
 	}
 
-	return SharedPrimitive();
+	auto newPrimitive = std::make_shared<Primitive>();
+	newPrimitive->init(vertices, indices);
+
+	return std::move(newPrimitive);
 }
 
-void lune::vulkan::Primitive::init(const std::vector<Vertex>& vertexies, const std::vector<Index>& indices)
+void lune::vulkan::Primitive::init(const std::vector<Vertex>& vertices, const std::vector<Index>& indices)
 {
-	mVertexiesSize = vertexies.size() * sizeof(Vertex);
+	mVerticesSize = vertices.size() * sizeof(Vertex);
 	mIndeciesSize = indices.size() * sizeof(Index);
 
-	mBuffer = Buffer::create(vk::BufferUsageFlagBits::eVertexBuffer, mVertexiesSize + mIndeciesSize, VmaMemoryUsage::VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE, {});
+	mBuffer = Buffer::create(vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eTransferDst, mVerticesSize + mIndeciesSize, VmaMemoryUsage::VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE, {});
 
-	mBuffer->copyTransfer(vertexies.data(), 0, mVertexiesSize);
-	mBuffer->copyTransfer(indices.data(), mVertexiesSize, mIndeciesSize);
+	mBuffer->copyTransfer(vertices.data(), 0, mVerticesSize);
+	if (mIndeciesSize)
+	{
+		mBuffer->copyTransfer(indices.data(), mVerticesSize, mIndeciesSize);
+	}
 }
 
 void lune::vulkan::Primitive::cmdBind(vk::CommandBuffer commandBuffer)
@@ -31,7 +37,7 @@ void lune::vulkan::Primitive::cmdBind(vk::CommandBuffer commandBuffer)
 
 	if (mIndeciesSize)
 	{
-		commandBuffer.bindIndexBuffer(mBuffer->getBuffer(), mVertexiesSize, vk::IndexType::eUint32);
+		commandBuffer.bindIndexBuffer(mBuffer->getBuffer(), mVerticesSize, vk::IndexType::eUint32);
 		static_assert(sizeof(Index) == sizeof(uint32), "Fix index buffer bind ^^^^^^^^^^^^^^^^^^^^");
 	}
 }
@@ -40,10 +46,10 @@ void lune::vulkan::Primitive::cmdDraw(vk::CommandBuffer commandBuffer, uint32 in
 {
 	if (mIndeciesSize == 0)
 	{
-		commandBuffer.draw(mVertexiesSize / sizeof(Vertex), instanceCount, 0, firstInstance);
+		commandBuffer.draw(mVerticesSize / sizeof(Vertex), instanceCount, 0, firstInstance);
 	}
 	else
 	{
-		commandBuffer.drawIndexed(mIndeciesSize / sizeof(Index), instanceCount, 0, mVertexiesSize, firstInstance);
+		commandBuffer.drawIndexed(mIndeciesSize / sizeof(Index), instanceCount, 0, mVerticesSize, firstInstance);
 	}
 }

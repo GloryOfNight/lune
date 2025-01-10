@@ -57,18 +57,25 @@ namespace lune
 		vulkan::SharedShader findShader(std::filesystem::path spvPath);
 
 		void addPipeline(std::string name, vulkan::SharedGraphicsPipeline pipeline);
-		vulkan::SharedGraphicsPipeline findPipeline(std::string name);
+		vulkan::SharedGraphicsPipeline findPipeline(const std::string& name);
+
+		void addPrimitive(std::string name, vulkan::SharedPrimitive primitive);
+		vulkan::SharedPrimitive findPrimitive(const std::string& name);
 
 		bool beginNextFrame(uint32 viewId);
 		std::pair<uint32, vk::CommandBuffer> getFrameInfo(uint32 viewId);
 		void sumbitFrame(uint32 viewId);
 
 	private:
+		void loadDefaultAssets();
+
 		uint32 mApiVersion{};
 
 		std::unordered_map<std::filesystem::path, vulkan::SharedShader> mShaders{};
 
 		std::unordered_map<std::string, vulkan::SharedGraphicsPipeline> mGraphicsPipelines{};
+
+		std::unordered_map<std::string, vulkan::SharedPrimitive> mPrimitives{};
 
 		std::map<uint32, std::unique_ptr<vulkan::View>> mViews{};
 	};

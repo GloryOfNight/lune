@@ -4,7 +4,9 @@
 
 lune::vulkan::UniqueBuffer lune::vulkan::Buffer::create(vk::BufferUsageFlags usage, vk::DeviceSize size, VmaMemoryUsage vmaUsage, VmaAllocationCreateFlags vmaFlags)
 {
-	return std::make_unique<Buffer>();
+	auto newBuffer = std::make_unique<Buffer>();
+	newBuffer->init(usage, size, vmaUsage, vmaFlags);
+	return std::move(newBuffer);
 }
 
 void lune::vulkan::Buffer::init(vk::BufferUsageFlags usage, vk::DeviceSize size, VmaMemoryUsage vmaUsage, VmaAllocationCreateFlags vmaFlags)
@@ -47,8 +49,8 @@ void lune::vulkan::Buffer::copyMap(const void* data, size_t offset, size_t size)
 
 void lune::vulkan::Buffer::copyTransfer(const void* data, size_t offset, size_t size)
 {
-	const auto vmaUsage = VmaMemoryUsage::VMA_MEMORY_USAGE_AUTO_PREFER_HOST;
-	const auto vmaFlags = VmaAllocationCreateFlagBits::VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
+	const auto vmaUsage = VMA_MEMORY_USAGE_AUTO_PREFER_HOST;
+	const auto vmaFlags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT;
 	auto stagingBuffer = create(vk::BufferUsageFlagBits::eTransferSrc, size, vmaUsage, vmaFlags);
 
 	stagingBuffer->copyMap(data, 0, size);

@@ -1,8 +1,11 @@
 #include "lune/vulkan/vulkan_subsystem.hxx"
 
 #include "SDL3/SDL_vulkan.h"
+#include "lune/core/assets.hxx"
 #include "lune/core/log.hxx"
 #include "lune/lune.hxx"
+#include "lune/vulkan/pipeline.hxx"
+#include "lune/vulkan/primitive.hxx"
 #include "lune/vulkan/shader.hxx"
 
 #include <vector>
@@ -85,25 +88,44 @@ void lune::vulkan_subsystem::initialize()
 	LN_LOG(Info, Vulkan, "	API: {0}.{1}.{2}", VK_VERSION_MAJOR(deviceApiVersion), VK_VERSION_MINOR(deviceApiVersion), VK_VERSION_PATCH(deviceApiVersion))
 
 	vulkan::createDevice(getVulkanContext());
-
 	vulkan::createRenderPass(getVulkanContext());
 	vulkan::createQueues(getVulkanContext());
 	vulkan::createGraphicsCommandPool(getVulkanContext());
 	vulkan::createTransferCommandPool(getVulkanContext());
 	vulkan::createVmaAllocator(getVulkanContext());
+
+	loadDefaultAssets();
 }
 
 void lune::vulkan_subsystem::shutdown()
 {
 	getVulkanContext().device.waitIdle();
 
-	getVulkanDeleteQueue().cleanup();
+	for (auto& [path, shader] : mShaders)
+	{
+		shader->destroy();
+	}
+	mShaders.clear();
+
+	for (auto& [name, pipeline] : mGraphicsPipelines)
+	{
+		pipeline->destroy();
+	}
+	mGraphicsPipelines.clear();
+
+	for (auto& [name, primitive] : mPrimitives)
+	{
+		primitive->destroy();
+	}
+	mPrimitives.clear();
 
 	for (auto& [viewId, view] : mViews)
 	{
 		view->destroy();
 	}
 	mViews.clear();
+
+	getVulkanDeleteQueue().cleanup();
 
 	if (getVulkanContext().graphicsCommandPool)
 		getVulkanContext().device.destroyCommandPool(getVulkanContext().graphicsCommandPool);
@@ -181,10 +203,26 @@ void lune::vulkan_subsystem::addPipeline(std::string name, vulkan::SharedGraphic
 	mGraphicsPipelines.emplace(name, std::move(pipeline));
 }
 
-lune::vulkan::SharedGraphicsPipeline lune::vulkan_subsystem::findPipeline(std::string name)
+lune::vulkan::SharedGraphicsPipeline lune::vulkan_subsystem::findPipeline(const std::string& name)
 {
 	auto findRes = mGraphicsPipelines.find(name);
 	return findRes != mGraphicsPipelines.end() ? findRes->second : nullptr;
+}
+
+void lune::vulkan_subsystem::addPrimitive(std::string name, vulkan::SharedPrimitive primitive)
+{
+	if (mPrimitives.find(name) != mPrimitives.end())
+	{
+		LN_LOG(Fatal, Vulkan, "Can't emplace new primitive, name already taken: {}", name);
+		return;
+	}
+	mPrimitives.emplace(name, std::move(primitive));
+}
+
+lune::vulkan::SharedPrimitive lune::vulkan_subsystem::findPrimitive(const std::string& name)
+{
+	auto findRes = mPrimitives.find(name);
+	return findRes != mPrimitives.end() ? findRes->second : nullptr;
 }
 
 bool lune::vulkan_subsystem::beginNextFrame(uint32 viewId)
@@ -216,6 +254,49 @@ void lune::vulkan_subsystem::sumbitFrame(uint32 viewId)
 	{
 		auto& [viewId, view] = *it;
 		view->sumbit();
+	}
+}
+
+void lune::vulkan_subsystem::loadDefaultAssets()
+{
+	auto spriteShVert = loadShader(*EngineShaderPath("sprite.vert.spv"));
+	auto spriteShFrag = loadShader(*EngineShaderPath("sprite.frag.spv"));
+	addPipeline("lune::sprite", vulkan::GraphicsPipeline::create(spriteShVert, spriteShFrag));
+
+	{
+		std::vector<vulkan::Vertex> vertices = {
+			{{-1.0f, 1.0f, 0.0f}, {1.0f, 0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}}, // Top-left
+			{{1.0f, 1.0f, 0.0f}, {0.0f, 1.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},  // Top-right
+			{{1.0f, -1.0f, 0.0f}, {0.0f, 0.0f, 1.0f, 1.0f}, {1.0f, 0.0f}}, // Bottom-right
+			{{-1.0f, 1.0f, 0.0f}, {1.0f, 0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}}, // Top-left
+			{{1.0f, -1.0f, 0.0f}, {0.0f, 0.0f, 1.0f, 1.0f}, {1.0f, 0.0f}}, // Bottom-right
+			{{-1.0f, -1.0f, 0.0f}, {1.0f, 1.0f, 0.0f, 1.0f}, {0.0f, 0.0f}} // Bottom-left
+		};
+		addPrimitive("lune::plane", vulkan::Primitive::create(vertices, {}));
+	}
+
+	{
+		std::vector<vulkan::Vertex> vertices = {
+
+			{{-1.0f, -1.0f, 1.0f}, {1.0f, 0.0f, 0.0f, 1.0f}, {0.0f, 0.0f}},	 // Front face; Bottom-left
+			{{1.0f, -1.0f, 1.0f}, {0.0f, 1.0f, 0.0f, 1.0f}, {1.0f, 0.0f}},	 // Bottom-right
+			{{1.0f, 1.0f, 1.0f}, {0.0f, 0.0f, 1.0f, 1.0f}, {1.0f, 1.0f}},	 // Top-right
+			{{-1.0f, 1.0f, 1.0f}, {1.0f, 1.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},	 // Top-left
+			{{-1.0f, -1.0f, -1.0f}, {1.0f, 0.0f, 1.0f, 1.0f}, {0.0f, 0.0f}}, // Back face; Bottom-left
+			{{1.0f, -1.0f, -1.0f}, {0.0f, 1.0f, 1.0f, 1.0f}, {1.0f, 0.0f}},	 // Bottom-right
+			{{1.0f, 1.0f, -1.0f}, {1.0f, 1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}},	 // Top-right
+			{{-1.0f, 1.0f, -1.0f}, {0.5f, 0.5f, 0.5f, 1.0f}, {0.0f, 1.0f}}	 // Top-left
+		};
+
+		std::vector<uint32_t> indices = {
+			0, 1, 2, 0, 2, 3, // Front face
+			4, 5, 6, 4, 6, 7, // Back face
+			4, 0, 3, 4, 3, 7, // Left face
+			1, 5, 6, 1, 6, 2, // Right face
+			3, 2, 6, 3, 6, 7, // Top face
+			4, 5, 1, 4, 1, 0  // Bottom face
+		};
+		addPrimitive("lune::box", vulkan::Primitive::create(vertices, indices));
 	}
 }
 

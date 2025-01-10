@@ -12,7 +12,7 @@ lune::VulkanConfig& lune::getVulkanConfig() noexcept
 	return config;
 }
 
-lune::VulkanDeleteQueue& lune::getDeleteQueue() noexcept
+lune::VulkanDeleteQueue& lune::getVulkanDeleteQueue() noexcept
 {
 	static VulkanDeleteQueue queue{};
 	return queue;
