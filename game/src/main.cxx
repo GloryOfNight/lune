@@ -1,5 +1,5 @@
 #include "lune/core/engine.hxx"
-#include "lune/game_framework/components/isometric_camera.hxx"
+#include "lune/game_framework/components/camera.hxx"
 #include "lune/game_framework/components/sprite.hxx"
 #include "lune/game_framework/components/transform.hxx"
 #include "lune/game_framework/systems/camera_system.hxx"
@@ -10,24 +10,35 @@
 #include <string>
 #include <vector>
 
-class camera_entity : public lune::Entity
+class CameraEntity : public lune::Entity
 {
 public:
-	camera_entity()
+	CameraEntity()
 	{
 		addComponent<lune::TransformComponent>();
-		addComponent<lune::IsometricCameraComponent>();
+		addComponent<lune::PerspectiveCameraComponent>();
+	}
+};
+
+class ScarletSprite : public lune::Entity
+{
+public:
+	ScarletSprite()
+	{
+		addComponent<lune::TransformComponent>();
 		auto sprite = addComponent<lune::SpriteComponent>();
 		sprite->imageName = "lune::scarlet";
 	}
 };
 
-class game_scene : public lune::Scene
+class GameScene : public lune::Scene
 {
 public:
-	game_scene()
+	GameScene()
 	{
-		addEntity<camera_entity>();
+		addEntity<CameraEntity>();
+		addEntity<ScarletSprite>();
+
 		registerSystem<lune::CameraSystem>();
 		registerSystem<lune::SpriteRenderSystem>();
 	}
@@ -46,7 +57,7 @@ int main(int argc, char** argv)
 
 	engine.createWindow("so8", 800, 800);
 
-	engine.addScene(std::make_unique<game_scene>());
+	engine.addScene(std::make_unique<GameScene>());
 
 	engine.run();
 

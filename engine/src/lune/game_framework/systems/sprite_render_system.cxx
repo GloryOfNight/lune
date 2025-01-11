@@ -1,6 +1,5 @@
 #include "lune/game_framework/systems/sprite_render_system.hxx"
 
-#include "lune/game_framework/components/isometric_camera.hxx"
 #include "lune/game_framework/components/sprite.hxx"
 #include "lune/game_framework/components/transform.hxx"
 #include "lune/game_framework/entities/entity.hxx"

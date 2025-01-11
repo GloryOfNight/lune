@@ -59,10 +59,17 @@ bool lune::Engine::wasInitialized() const
 
 void lune::Engine::shutdown()
 {
+	mScenes.clear();
+
 	for (auto& engineSubsystem : mSubsystems)
-	{
 		engineSubsystem->shutdown();
-	}
+
+	mSubsystems.clear();
+	mViews.clear();
+	mArgs.clear();
+
+	if (gEngine == this)
+		gEngine = nullptr;
 
 	SDL_Quit();
 }
