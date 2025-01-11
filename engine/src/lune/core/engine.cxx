@@ -76,8 +76,29 @@ void lune::Engine::shutdown()
 
 void lune::Engine::run()
 {
+	constexpr int32 frameTimeMs = 1000 / 480;
+
+	uint32 nowTicks = SDL_GetTicks();
+	uint32 nextTick = nowTicks;
+	uint32 prevTick = nowTicks;
+
 	while (true)
 	{
+		uint32_t nowTicks = SDL_GetTicks();
+		if (nextTick > nowTicks)
+		{
+			SDL_Delay(nextTick - nowTicks);
+		}
+		nowTicks = SDL_GetTicks();
+
+		const uint32_t elapsedMs = nowTicks - prevTick;
+		double deltaSeconds = elapsedMs / 1000.f;
+		if (deltaSeconds > 0.16)
+			deltaSeconds = 0.16;
+
+		prevTick = nowTicks;
+		nextTick += frameTimeMs;
+
 		SDL_Event event;
 		while (SDL_PollEvent(&event))
 		{
@@ -89,7 +110,7 @@ void lune::Engine::run()
 
 		for (auto& [sId, s] : mScenes)
 		{
-			s->update(0);
+			s->update(deltaSeconds);
 		}
 
 		auto vkSubsystem = vulkan_subsystem::get();
