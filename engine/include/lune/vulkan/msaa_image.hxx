@@ -4,24 +4,29 @@
 
 namespace lune::vulkan
 {
+	using UniqueMsaaImage = std::unique_ptr<class MsaaImage>;
+
 	class MsaaImage final
 	{
 	public:
 		MsaaImage() = default;
 		MsaaImage(MsaaImage&) = delete;
 		MsaaImage(MsaaImage&&) = default;
-		~MsaaImage() = default;
+		~MsaaImage();
 
-		static std::unique_ptr<MsaaImage> create();
-
-		void init(class View* view);
-		void destroy();
+		static UniqueMsaaImage create(class View* view);
 
 		vk::Format getFormat() const { return mFormat; }
 		vk::Image getImage() const { return mImage; }
 		vk::ImageView getImageView() const { return mImageView; }
 
 	private:
+		void init(class View* view);
+
+		void createImage();
+		void allocateMemory();
+		void createImageView();
+
 		vk::Format mFormat{};
 		vk::Extent2D mExtent{};
 		vk::SampleCountFlagBits mSampleCount{vk::SampleCountFlagBits::e1};
@@ -29,9 +34,5 @@ namespace lune::vulkan
 		vk::Image mImage{};
 		VmaAllocation mVmaAllocation{};
 		vk::ImageView mImageView{};
-
-        void createImage();
-        void allocateMemory();
-        void createImageView();
 	};
-} // namespace lune
+} // namespace lune::vulkan

@@ -10,33 +10,33 @@ namespace lune::vulkan
 {
 	class GraphicsPipeline;
 
+	using UniqueDescriptorSets = std::unique_ptr<class DescriptorSets>;
+
 	class DescriptorSets final
 	{
 	public:
 		DescriptorSets() = default;
+		DescriptorSets(SharedGraphicsPipeline pipeline, uint32 maxSets);
 		DescriptorSets(DescriptorSets&) = delete;
 		DescriptorSets(DescriptorSets&&) = default;
-		~DescriptorSets() = default;
+		~DescriptorSets();
 
-		static std::unique_ptr<DescriptorSets> create();
+		static UniqueDescriptorSets create(SharedGraphicsPipeline pipeline, uint32 maxSets);
 
-		void init(std::shared_ptr<GraphicsPipeline> pipeline, uint32 maxSets);
-		void destroy();
-
-		void addBufferInfo(std::string_view name, uint32 index, vk::Buffer buffer, vk::DeviceSize offset, vk::DeviceSize range);
-
-		void addImageInfo(std::string_view name, uint32 index, vk::ImageView imageView, vk::Sampler sampler);
+		void setBufferInfo(std::string_view name, uint32 index, vk::Buffer buffer, vk::DeviceSize offset, vk::DeviceSize range);
+		void setImageInfo(std::string_view name, uint32 index, vk::ImageView imageView, vk::Sampler sampler);
 
 		void updateSets(uint32 index);
 
 		void cmdBind(vk::CommandBuffer commandBuffer, uint32 offsetSets);
 
 	private:
+		void init();
 		void createDescriptorPool();
 
 		void allocateDescriptorSets();
 
-		std::shared_ptr<GraphicsPipeline> mPipeline{};
+		SharedGraphicsPipeline mPipeline{};
 
 		uint32 mMaxSets{};
 

@@ -33,7 +33,51 @@ vk::PresentModeKHR findPresentMode(vk::PhysicalDevice physicalDevice, vk::Surfac
 	return result != modesPriority.end() ? *result : vk::PresentModeKHR();
 }
 
-std::unique_ptr<lune::vulkan::View> lune::vulkan::View::create(SDL_Window* window)
+lune::vulkan::View::View(SDL_Window* window, vk::SurfaceKHR surface)
+	: View()
+{
+	mWindow = window;
+	mSurface = surface;
+}
+
+lune::vulkan::View::~View()
+{
+	const auto cleanSwapchainLam = [framebuffers = mFramebuffers, imageViews = mSwapchainImageViews, swapchain = mSwapchain]() -> bool
+	{
+		for (auto framebuffer : framebuffers)
+			getVulkanContext().device.destroyFramebuffer(framebuffer);
+		for (auto imageView : imageViews)
+			getVulkanContext().device.destroyImageView(imageView);
+		getVulkanContext().device.destroySwapchainKHR(swapchain);
+		return true;
+	};
+
+	const auto cleanSurfaceLam = [surface = mSurface]() -> bool
+	{
+		SDL_Vulkan_DestroySurface(getVulkanContext().instance, surface, nullptr);
+		return true;
+	};
+
+	const auto cleanOtherLam = [semaphore1 = mSemaphoreImageAvailable, semaphore2 = mSemaphoreRenderFinished, fences = mSubmitQueueFences, commandBuffers = mImageCommandBuffers]() -> bool
+	{
+		getVulkanContext().device.destroySemaphore(semaphore1);
+		getVulkanContext().device.destroySemaphore(semaphore2);
+		for (auto fence : fences)
+			getVulkanContext().device.destroyFence(fence);
+		if (commandBuffers.size())
+			getVulkanContext().device.freeCommandBuffers(getVulkanContext().graphicsCommandPool, commandBuffers);
+		return true;
+	};
+
+	getVulkanDeleteQueue().push(cleanSwapchainLam);
+	getVulkanDeleteQueue().push(cleanSurfaceLam);
+	getVulkanDeleteQueue().push(cleanOtherLam);
+
+	mMsaaImage.reset();
+	mDepthImage.reset();
+}
+
+lune::vulkan::UniqueView lune::vulkan::View::create(SDL_Window* window)
 {
 	VkSurfaceKHR surface{};
 	SDL_Vulkan_CreateSurface(window, getVulkanContext().instance, nullptr, &surface);
@@ -43,10 +87,8 @@ std::unique_ptr<lune::vulkan::View> lune::vulkan::View::create(SDL_Window* windo
 		return nullptr;
 	}
 
-	auto newView = std::make_unique<View>();
-	newView->mWindow = window;
-	newView->mSurface = surface;
-
+	auto newView = std::make_unique<View>(window, surface);
+	newView->init();
 	return std::move(newView);
 }
 
@@ -58,14 +100,10 @@ void lune::vulkan::View::init()
 
 	createImageCommandBuffers();
 
-	mDepthImage = DepthImage::create();
-	mDepthImage->init(this);
+	mDepthImage = DepthImage::create(this);
 
 	if (getVulkanConfig().sampleCount != vk::SampleCountFlagBits::e1)
-	{
-		mMsaaImage = MsaaImage::create();
-		mMsaaImage->init(this);
-	}
+		mMsaaImage = MsaaImage::create(this);
 
 	createFramebuffers();
 	createFences();
@@ -83,42 +121,12 @@ void lune::vulkan::View::recreateSwapchain()
 	createImageViews();
 
 	if (mDepthImage)
-	{
-		mDepthImage->destroy();
-		mDepthImage->init(this);
-	}
+		mDepthImage = DepthImage::create(this);
 
 	if (mMsaaImage)
-	{
-		mMsaaImage->destroy();
-		mMsaaImage->init(this);
-	}
+		mMsaaImage = MsaaImage::create(this);
 
 	createFramebuffers();
-}
-
-void lune::vulkan::View::destroy()
-{
-	[[maybe_unused]] const auto waitResult = getVulkanContext().device.waitForFences(mSubmitQueueFences, true, UINT32_MAX);
-	for (auto& fence : mSubmitQueueFences)
-	{
-		getVulkanContext().device.destroyFence(fence);
-	}
-
-	cleanupSwapchain(mSwapchain);
-
-	getVulkanContext().device.destroySemaphore(mSemaphoreImageAvailable);
-	getVulkanContext().device.destroySemaphore(mSemaphoreRenderFinished);
-
-	if (mDepthImage)
-		mDepthImage->destroy();
-
-	if (mMsaaImage)
-		mMsaaImage->destroy();
-
-	getVulkanContext().instance.destroy(mSurface);
-
-	new (this) View(); // reset the object
 }
 
 bool lune::vulkan::View::updateExtent()
@@ -270,18 +278,14 @@ void lune::vulkan::View::createSwapchain()
 
 void lune::vulkan::View::cleanupSwapchain(vk::SwapchainKHR swapchain)
 {
-	getVulkanContext().device.waitIdle();
+	//getVulkanContext().device.waitIdle();
 
 	for (auto frameBuffer : mFramebuffers)
-	{
 		getVulkanContext().device.destroyFramebuffer(frameBuffer);
-	}
 	mFramebuffers.clear();
 
 	for (auto imageView : mSwapchainImageViews)
-	{
 		getVulkanContext().device.destroyImageView(imageView);
-	}
 	mSwapchainImageViews.clear();
 
 	getVulkanContext().device.destroySwapchainKHR(swapchain);
@@ -353,7 +357,7 @@ void lune::vulkan::View::createImageCommandBuffers()
 		vk::CommandBufferAllocateInfo()
 			.setLevel(vk::CommandBufferLevel::ePrimary)
 			.setCommandBufferCount(getImageCount())
-			.setCommandPool(getVulkanContext().transferCommandPool);
+			.setCommandPool(getVulkanContext().graphicsCommandPool);
 	mImageCommandBuffers = getVulkanContext().device.allocateCommandBuffers(commandBufferAllocateInfo);
 }
 

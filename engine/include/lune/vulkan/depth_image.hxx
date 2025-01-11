@@ -6,24 +6,25 @@
 
 namespace lune::vulkan
 {
+	using UniqueDepthImage = std::unique_ptr<class DepthImage>;
+
 	class DepthImage final
 	{
 	public:
 		DepthImage() = default;
 		DepthImage(DepthImage&) = delete;
 		DepthImage(DepthImage&&) = default;
-		~DepthImage() = default;
+		~DepthImage();
 
-		static std::unique_ptr<DepthImage> create();
-
-		void init(class View* view);
-		void destroy();
+		static UniqueDepthImage create(class View* view);
 
 		vk::Format getFormat() const { return mFormat; }
 		vk::Image getImage() const { return mImage; }
 		vk::ImageView getImageView() const { return mImageView; }
 
 	private:
+		void init(class View* view);
+
 		void createImage();
 		void allocateMemory();
 		void createImageView();

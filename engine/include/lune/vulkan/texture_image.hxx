@@ -9,17 +9,18 @@
 
 namespace lune::vulkan
 {
+	using UniqueTextureImage = std::unique_ptr<class TextureImage>;
+
 	class TextureImage final
 	{
 	public:
 		TextureImage() = default;
 		TextureImage(const TextureImage&) = delete;
 		TextureImage(TextureImage&&) = delete;
-		~TextureImage() = default;
+		~TextureImage();
 
-		static std::unique_ptr<TextureImage> create();
+		static UniqueTextureImage create(const SDL_Surface& surface);
 
-		void init(const SDL_Surface& surface);
 		void destroy();
 
 		vk::Format getFormat() const { return mFormat; }
@@ -28,6 +29,8 @@ namespace lune::vulkan
 		vk::Sampler getSampler() const { return mSampler; }
 
 	private:
+		void init(const SDL_Surface& surface);
+
 		void createImage();
 		void createImageView();
 		void createSampler();

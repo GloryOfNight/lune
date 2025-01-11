@@ -1,17 +1,34 @@
 #include "lune/vulkan/descriptor_sets.hxx"
 
+#include "lune/core/log.hxx"
 #include "lune/vulkan/pipeline.hxx"
 
-std::unique_ptr<lune::vulkan::DescriptorSets> lune::vulkan::DescriptorSets::create()
-{
-	return std::make_unique<DescriptorSets>();
-}
-
-void lune::vulkan::DescriptorSets::init(std::shared_ptr<GraphicsPipeline> pipeline, uint32 maxSets)
+lune::vulkan::DescriptorSets::DescriptorSets(SharedGraphicsPipeline pipeline, uint32 maxSets)
+	: DescriptorSets()
 {
 	mPipeline = pipeline;
 	mMaxSets = maxSets;
+}
 
+lune::vulkan::DescriptorSets::~DescriptorSets()
+{
+	const auto cleanDescPoolLam = [descPool = mDescriptorPool]() -> bool
+	{
+		getVulkanContext().device.destroyDescriptorPool(descPool);
+		return true;
+	};
+	getVulkanDeleteQueue().push(cleanDescPoolLam);
+}
+
+lune::vulkan::UniqueDescriptorSets lune::vulkan::DescriptorSets::create(SharedGraphicsPipeline pipeline, uint32 maxSets)
+{
+	auto newDescSets = std::make_unique<DescriptorSets>(pipeline, maxSets);
+	newDescSets->init();
+	return std::move(newDescSets);
+}
+
+void lune::vulkan::DescriptorSets::init()
+{
 	mBufferInfos.resize(mMaxSets);
 	mImageInfos.resize(mMaxSets);
 
@@ -19,31 +36,21 @@ void lune::vulkan::DescriptorSets::init(std::shared_ptr<GraphicsPipeline> pipeli
 	allocateDescriptorSets();
 }
 
-void lune::vulkan::DescriptorSets::destroy()
-{
-	if (mDescriptorPool)
-		getVulkanContext().device.destroyDescriptorPool(mDescriptorPool);
-
-	new (this) DescriptorSets();
-}
-
-void lune::vulkan::DescriptorSets::addBufferInfo(std::string_view name, uint32 index, vk::Buffer buffer, vk::DeviceSize offset, vk::DeviceSize range)
+void lune::vulkan::DescriptorSets::setBufferInfo(std::string_view name, uint32 index, vk::Buffer buffer, vk::DeviceSize offset, vk::DeviceSize range)
 {
 	auto bufferInfo = vk::DescriptorBufferInfo()
 						  .setBuffer(buffer)
 						  .setOffset(offset)
 						  .setRange(range);
-
 	mBufferInfos[index].emplace(name, std::move(bufferInfo));
 }
 
-void lune::vulkan::DescriptorSets::addImageInfo(std::string_view name, uint32 index, vk::ImageView imageView, vk::Sampler sampler)
+void lune::vulkan::DescriptorSets::setImageInfo(std::string_view name, uint32 index, vk::ImageView imageView, vk::Sampler sampler)
 {
 	auto imageInfo = vk::DescriptorImageInfo()
 						 .setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal)
 						 .setImageView(imageView)
 						 .setSampler(sampler);
-
 	mImageInfos[index].emplace(name, std::move(imageInfo));
 }
 
@@ -76,6 +83,7 @@ void lune::vulkan::DescriptorSets::updateSets(uint32 index)
 					write.setPImageInfo(&mImageInfos[index].at(reflBinding.name));
 					break;
 				default:
+					LN_LOG(Fatal, Vulkan::DescriptorSets, "Type {} - not supported", static_cast<int32>(write.descriptorType))
 					break;
 				}
 			}

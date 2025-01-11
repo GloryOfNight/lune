@@ -118,11 +118,6 @@ void lune::vulkan_subsystem::shutdown()
 		primitive->destroy();
 	}
 	mPrimitives.clear();
-
-	for (auto& [viewId, view] : mViews)
-	{
-		view->destroy();
-	}
 	mViews.clear();
 
 	getVulkanDeleteQueue().cleanup();
@@ -158,7 +153,6 @@ uint32 lune::vulkan_subsystem::createView(SDL_Window* window)
 	{
 		const auto& [it, res] = mViews.emplace(viewIdsCounter++, std::move(newView));
 		auto& [viewId, view] = *it;
-		view->init();
 		return viewId;
 	}
 	return UINT32_MAX;
@@ -169,7 +163,6 @@ void lune::vulkan_subsystem::removeView(uint32 viewId)
 	if (const auto it = mViews.find(viewId); it != mViews.end())
 	{
 		auto& [viewId, view] = *it;
-		view->destroy();
 		mViews.erase(it);
 	}
 }

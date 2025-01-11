@@ -18,9 +18,33 @@ vk::Format sdlFormatToVulkan(SDL_PixelFormat format)
 	}
 }
 
-std::unique_ptr<lune::vulkan::TextureImage> lune::vulkan::TextureImage::create()
+lune::vulkan::TextureImage::~TextureImage()
 {
-	return std::make_unique<TextureImage>();
+	const auto cleanSampler = [sampler = mSampler]() -> bool
+	{
+		getVulkanContext().device.destroySampler(sampler);
+		return true;
+	};
+	const auto cleanImageView = [imageView = mImageView, sampler = mSampler]() -> bool
+	{
+		getVulkanContext().device.destroyImageView(imageView);
+		return true;
+	};
+	const auto cleanImageAlloc = [image = mImage, vmaAlloc = mVmaAllocation]() -> bool
+	{
+		vmaDestroyImage(getVulkanContext().vmaAllocator, image, vmaAlloc);
+		return true;
+	};
+	getVulkanDeleteQueue().push(cleanSampler);
+	getVulkanDeleteQueue().push(cleanImageView);
+	getVulkanDeleteQueue().push(cleanImageAlloc);
+}
+
+lune::vulkan::UniqueTextureImage lune::vulkan::TextureImage::create(const SDL_Surface& surface)
+{
+	auto newTexImage = std::make_unique<TextureImage>();
+	newTexImage->init(surface);
+	return newTexImage;
 }
 
 void lune::vulkan::TextureImage::init(const SDL_Surface& surface)
@@ -40,13 +64,6 @@ void lune::vulkan::TextureImage::init(const SDL_Surface& surface)
 	createSampler();
 
 	copyPixelsToImage(surface);
-}
-
-void lune::vulkan::TextureImage::destroy()
-{
-	getVulkanContext().device.destroySampler(mSampler);
-	getVulkanContext().device.destroyImageView(mImageView);
-	vmaDestroyImage(getVulkanContext().vmaAllocator, mImage, mVmaAllocation);
 }
 
 void lune::vulkan::TextureImage::createImage()

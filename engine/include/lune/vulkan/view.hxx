@@ -11,21 +11,19 @@ struct SDL_Window;
 
 namespace lune::vulkan
 {
+	using UniqueView = std::unique_ptr<class View>;
+
 	class View final
 	{
 	public:
 		View() = default;
+		View(SDL_Window* window, vk::SurfaceKHR surface);
+
 		View(View&) = delete;
 		View(View&&) = default;
-		~View() = default;
+		~View();
 
-		static std::unique_ptr<View> create(SDL_Window* window);
-
-		void init();
-		void recreateSwapchain();
-		void destroy();
-
-		bool updateExtent();
+		static UniqueView create(SDL_Window* window);
 
 		bool beginNextFrame();
 		void sumbit();
@@ -38,13 +36,18 @@ namespace lune::vulkan
 		vk::CommandBuffer getCurrentImageCmdBuffer()
 		{
 			if (mImageIndex != UINT32_MAX) [[likely]]
-
 				return mImageCommandBuffers[mImageIndex];
 			else
 				return vk::CommandBuffer();
 		}
 
 	private:
+		void init();
+
+		void recreateSwapchain();
+
+		bool updateExtent();
+
 		void createSwapchain();
 
 		void cleanupSwapchain(vk::SwapchainKHR swapchain);
@@ -65,9 +68,9 @@ namespace lune::vulkan
 
 		uint32 mImageIndex{};
 
-		std::unique_ptr<DepthImage> mDepthImage;
+		UniqueDepthImage mDepthImage;
 
-		std::unique_ptr<MsaaImage> mMsaaImage;
+		UniqueMsaaImage mMsaaImage;
 
 		vk::SurfaceKHR mSurface;
 

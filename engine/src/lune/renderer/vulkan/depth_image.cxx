@@ -4,9 +4,28 @@
 #include "lune/vulkan/view.hxx"
 #include "lune/vulkan/vulkan_subsystem.hxx"
 
-std::unique_ptr<lune::vulkan::DepthImage> lune::vulkan::DepthImage::create()
+lune::vulkan::DepthImage::~DepthImage()
 {
-	return std::make_unique<DepthImage>();
+	const auto cleanImageView = [imageView = mImageView]() -> bool
+	{
+		getVulkanContext().device.destroyImageView(imageView);
+		return true;
+	};
+	const auto cleanImageAlloc = [image = mImage, vmaAlloc = mVmaAllocation]() -> bool
+	{
+		vmaDestroyImage(getVulkanContext().vmaAllocator, image, vmaAlloc);
+		return true;
+	};
+	getVulkanDeleteQueue().push(cleanImageView);
+	getVulkanDeleteQueue().push(cleanImageAlloc);
+}
+
+lune::vulkan::UniqueDepthImage lune::vulkan::DepthImage::create(View* view)
+
+{
+	auto newDepthImage = std::make_unique<DepthImage>();
+	newDepthImage->init(view);
+	return std::move(newDepthImage);
 }
 
 void lune::vulkan::DepthImage::init(View* view)
@@ -22,13 +41,6 @@ void lune::vulkan::DepthImage::init(View* view)
 	createImageView();
 
 	transitionImageLayout(vk::ImageLayout::eUndefined, vk::ImageLayout::eDepthStencilAttachmentOptimal);
-}
-
-void lune::vulkan::DepthImage::destroy()
-{
-	getVulkanContext().device.destroyImageView(mImageView);
-	vmaDestroyImage(getVulkanContext().vmaAllocator, mImage, mVmaAllocation);
-	new (this) DepthImage(); // reset the object
 }
 
 void lune::vulkan::DepthImage::createImage()

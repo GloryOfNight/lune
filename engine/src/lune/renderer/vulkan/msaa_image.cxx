@@ -3,9 +3,27 @@
 #include "lune/vulkan/view.hxx"
 #include "lune/vulkan/vulkan_subsystem.hxx"
 
-std::unique_ptr<lune::vulkan::MsaaImage> lune::vulkan::MsaaImage::create()
+lune::vulkan::UniqueMsaaImage lune::vulkan::MsaaImage::create(View* view)
 {
-	return std::make_unique<MsaaImage>();
+	auto newMsaaImage = std::make_unique<MsaaImage>();
+	newMsaaImage->init(view);
+	return std::move(newMsaaImage);
+}
+
+lune::vulkan::MsaaImage::~MsaaImage()
+{
+	const auto cleanImageView = [imageView = mImageView]() -> bool
+	{
+		getVulkanContext().device.destroyImageView(imageView);
+		return true;
+	};
+	const auto cleanImageAlloc = [image = mImage, vmaAlloc = mVmaAllocation]() -> bool
+	{
+		vmaDestroyImage(getVulkanContext().vmaAllocator, image, vmaAlloc);
+		return true;
+	};
+	getVulkanDeleteQueue().push(cleanImageView);
+	getVulkanDeleteQueue().push(cleanImageAlloc);
 }
 
 void lune::vulkan::MsaaImage::init(View* view)
@@ -13,13 +31,6 @@ void lune::vulkan::MsaaImage::init(View* view)
 	mFormat = getVulkanConfig().colorFormat;
 	mExtent = view->getCurrentExtent();
 	mSampleCount = getVulkanConfig().sampleCount;
-}
-
-void lune::vulkan::MsaaImage::destroy()
-{
-	getVulkanContext().device.destroyImageView(mImageView);
-	vmaDestroyImage(getVulkanContext().vmaAllocator, mImage, mVmaAllocation);
-	new (this) MsaaImage(); // reset the object
 }
 
 void lune::vulkan::MsaaImage::createImage()

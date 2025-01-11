@@ -66,10 +66,9 @@ namespace lune
 		{
 			auto eraseBeginIt = mItems.begin();
 			auto eraseEndIt = mItems.end();
-			for (auto it = eraseBeginIt; eraseBeginIt != eraseEndIt; it++)
+			for (auto it = eraseBeginIt; it != eraseEndIt; it++)
 			{
-				auto& cleanupFunc = *it;
-				const bool cleanupRes = cleanupFunc();
+				const bool cleanupRes = (*it)();
 				if (!cleanupRes)
 				{
 					eraseBeginIt->swap(*it);
