@@ -114,8 +114,8 @@ void lune::vulkan::TextureImage::createSampler()
 {
 	const vk::SamplerCreateInfo samplerCreateInfo =
 		vk::SamplerCreateInfo()
-			.setMagFilter(vk::Filter::eLinear)
-			.setMinFilter(vk::Filter::eLinear)
+			.setMagFilter(vk::Filter::eNearest)
+			.setMinFilter(vk::Filter::eNearest)
 			.setAddressModeU(vk::SamplerAddressMode::eRepeat)
 			.setAddressModeV(vk::SamplerAddressMode::eRepeat)
 			.setAddressModeW(vk::SamplerAddressMode::eRepeat)

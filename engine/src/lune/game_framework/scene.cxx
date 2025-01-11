@@ -10,24 +10,24 @@ void lune::Scene::update(double deltaTime)
 	}
 }
 
-void lune::Scene::beforeRender(vk::CommandBuffer commandBuffer)
+void lune::Scene::prepareRender()
 {
 	for (auto s : mSystems)
 	{
 		if (auto rs = dynamic_cast<RenderSystem*>(s.get()); rs)
 		{
-			rs->beforeRender(commandBuffer, this);
+			rs->prepareRender(this);
 		}
 	}
 }
 
-void lune::Scene::render(vk::CommandBuffer commandBuffer)
+void lune::Scene::render()
 {
 	for (auto s : mSystems)
 	{
 		if (auto rs = dynamic_cast<RenderSystem*>(s.get()); rs)
 		{
-			rs->render(commandBuffer, this);
+			rs->render(this);
 		}
 	}
 }

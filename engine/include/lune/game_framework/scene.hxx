@@ -27,8 +27,8 @@ namespace lune
 
 		virtual void update(double deltaTime);
 
-		virtual void beforeRender(vk::CommandBuffer commandBuffer);
-		virtual void render(vk::CommandBuffer commandBuffer);
+		virtual void prepareRender();
+		virtual void render();
 
 		template <typename T, typename... Args>
 		std::shared_ptr<Entity> addEntity(Args&&... args)

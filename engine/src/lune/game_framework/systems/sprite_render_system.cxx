@@ -14,10 +14,11 @@ void lune::SpriteRenderSystem::update(const std::vector<std::shared_ptr<Entity>>
 {
 }
 
-void lune::SpriteRenderSystem::beforeRender(vk::CommandBuffer commandBuffer, Scene* scene)
+void lune::SpriteRenderSystem::prepareRender(Scene* scene)
 {
 	const auto& entities = scene->getEntities();
 	auto vkSubsystem = vulkan_subsystem::get();
+	auto [viewId, imageIndex, commandBuffer] = vkSubsystem->getFrameInfo();
 
 	auto cameraSystem = scene->findSystem<CameraSystem>();
 	if (!cameraSystem)
@@ -57,10 +58,12 @@ void lune::SpriteRenderSystem::beforeRender(vk::CommandBuffer commandBuffer, Sce
 				res = &findRes->second;
 			}
 
-			lnm::mat4 model = lnm::translate(lnm::mat4(1.0f), spriteComp->position);
+			lnm::mat4 model = lnm::mat4(1.f);
 			auto transformComp = entity->findComponent<TransformComponent>();
 			if (transformComp)
-				model *= transformComp->getTransform();
+				model = transformComp->getTransform();
+
+			model = lnm::translate(model, spriteComp->position);
 
 			bool bUpdateModel = false;
 			{
@@ -82,10 +85,11 @@ void lune::SpriteRenderSystem::beforeRender(vk::CommandBuffer commandBuffer, Sce
 	}
 }
 
-void lune::SpriteRenderSystem::render(vk::CommandBuffer commandBuffer, Scene* scene)
+void lune::SpriteRenderSystem::render(Scene* scene)
 {
 	const auto& entities = scene->getEntities();
 	auto vkSubsystem = vulkan_subsystem::get();
+	auto [viewId, imageIndex, commandBuffer] = vkSubsystem->getFrameInfo();
 
 	auto cameraSystem = scene->findSystem<CameraSystem>();
 	if (!cameraSystem)

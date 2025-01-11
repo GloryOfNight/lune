@@ -35,6 +35,8 @@ namespace lune
 
 		uint64 addScene(std::unique_ptr<Scene> s);
 
+		const std::vector<uint32>& getViewIds() const { return mViews; };
+
 	private:
 		std::vector<std::pair<uint64, std::unique_ptr<Scene>>> mScenes{};
 

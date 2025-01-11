@@ -1,5 +1,6 @@
 #include "lune/game_framework/systems/camera_system.hxx"
 
+#include "lune/core/engine.hxx"
 #include "lune/game_framework/components/camera.hxx"
 #include "lune/game_framework/components/transform.hxx"
 #include "lune/game_framework/entities/entity.hxx"
@@ -8,6 +9,7 @@
 
 void lune::CameraSystem::update(const std::vector<std::shared_ptr<lune::Entity>>& entities, double deltaTime)
 {
+	mViewsProjs.clear();
 	for (const auto& e : entities)
 	{
 		auto isoCam = e->findComponent<IsometricCameraComponent>();
@@ -24,11 +26,15 @@ void lune::CameraSystem::update(const std::vector<std::shared_ptr<lune::Entity>>
 			float left, right, bottom, top, near, far;
 			isoCam->getOrtho(left, right, bottom, top, near, far);
 
-			mView = lnm::lookAt(position, position - direction, up);
-			mProjection = lnm::ortho(left, right, bottom, top, near, far);
-
-			mViewProjection = mProjection * mView;
-
+			const auto& viewIds = Engine::get()->getViewIds();
+			for (uint32 viewId : viewIds)
+			{
+				auto [it, result] = mViewsProjs.try_emplace(viewId, ViewProj());
+				auto& viewProj = it->second;
+				viewProj.view = lnm::lookAt(position, position - direction, up);
+				viewProj.proj = lnm::ortho(left, right, bottom, top, near, far);
+				viewProj.viewProj = viewProj.proj * viewProj.view;
+			}
 			break;
 		}
 
@@ -43,41 +49,55 @@ void lune::CameraSystem::update(const std::vector<std::shared_ptr<lune::Entity>>
 			const auto& direction = persCam->mDirection;
 			const auto& up = persCam->mUp;
 
-			float fov, aspectRatio, nearPlane, farPlane;
-			persCam->getPerspective(fov, aspectRatio, nearPlane, farPlane);
+			auto vkSubsystem = vulkan_subsystem::get();
+			const auto& viewIds = Engine::get()->getViewIds();
+			for (uint32 viewId : viewIds)
+			{
+				auto [it, result] = mViewsProjs.try_emplace(viewId, ViewProj());
+				auto& viewProj = it->second;
 
-			mView = lnm::lookAt(position, position - direction, up);
-			mProjection = lnm::perspective(lnm::radians(fov), aspectRatio, nearPlane, farPlane);
+				auto currentExtent = vkSubsystem->findView(viewId)->getCurrentExtent();
+				float viewAspectRatio = static_cast<float>(currentExtent.width) / static_cast<float>(currentExtent.height);
 
-			mViewProjection = mProjection * mView;
+				float fov, aspectRatio, nearPlane, farPlane;
+				persCam->getPerspective(fov, aspectRatio, nearPlane, farPlane);
+
+				viewProj.view = lnm::lookAt(position, position - direction, up);
+				viewProj.proj = lnm::perspective(lnm::radians(fov), aspectRatio * viewAspectRatio, nearPlane, farPlane);
+				viewProj.viewProj = viewProj.proj * viewProj.view;
+			}
 		}
 	}
 }
-void lune::CameraSystem::beforeRender(vk::CommandBuffer commandBuffer, Scene* scene)
+
+void lune::CameraSystem::prepareRender(Scene* scene)
 {
 	const auto& entities = scene->getEntities();
 	auto vkSubsystem = vulkan_subsystem::get();
+	auto [viewId, imageIndex, commandBuffer] = vkSubsystem->getFrameInfo();
 
-	if (!stagingCameraBuffer)
-		stagingCameraBuffer = vulkan::Buffer::create(vk::BufferUsageFlagBits::eTransferSrc, sizeof(lnm::mat4), VMA_MEMORY_USAGE_AUTO, VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT);
-	if (!cameraBuffer)
-		cameraBuffer = vulkan::Buffer::create(vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eTransferDst, sizeof(lnm::mat4), VMA_MEMORY_USAGE_AUTO, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT);
+	if (!mStagingCameraBuffer)
+		mStagingCameraBuffer = vulkan::Buffer::create(vk::BufferUsageFlagBits::eTransferSrc, sizeof(lnm::mat4), VMA_MEMORY_USAGE_AUTO, VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT);
+	if (!mCameraBuffer)
+		mCameraBuffer = vulkan::Buffer::create(vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eTransferDst, sizeof(lnm::mat4), VMA_MEMORY_USAGE_AUTO, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT);
+
+	lnm::mat4 viewProj = lnm::mat4(1.f);
+
+	auto findRes = mViewsProjs.find(viewId);
+	if (findRes != mViewsProjs.end())
+		viewProj = findRes->second.viewProj;
 
 	int diff{};
-	uint8* stageBuffer = stagingCameraBuffer->map();
-	if (diff = memcmp(stageBuffer, &mViewProjection, sizeof(mViewProjection)); diff != 0)
+	uint8* stageBuffer = mStagingCameraBuffer->map();
+	if (diff = memcmp(stageBuffer, &viewProj, sizeof(viewProj)); diff != 0)
 	{
-		memcpy(stageBuffer, &mViewProjection, sizeof(mViewProjection));
+		memcpy(stageBuffer, &viewProj, sizeof(viewProj));
 	}
-	stagingCameraBuffer->unmap();
+	mStagingCameraBuffer->unmap();
 
 	if (diff)
 	{
-		const vk::BufferCopy bufferCopy = vk::BufferCopy().setSize(sizeof(mViewProjection));
-		commandBuffer.copyBuffer(stagingCameraBuffer->getBuffer(), cameraBuffer->getBuffer(), bufferCopy);
+		const vk::BufferCopy bufferCopy = vk::BufferCopy().setSize(sizeof(viewProj));
+		commandBuffer.copyBuffer(mStagingCameraBuffer->getBuffer(), mCameraBuffer->getBuffer(), bufferCopy);
 	}
-}
-
-void lune::CameraSystem::render(vk::CommandBuffer commandBuffer, Scene* scene)
-{
 }

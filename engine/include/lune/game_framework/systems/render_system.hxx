@@ -9,7 +9,7 @@ namespace lune
 	class RenderSystem : public SystemBase
 	{
 	public:
-		virtual void beforeRender(vk::CommandBuffer commandBuffer, class Scene* scene) = 0;
-		virtual void render(vk::CommandBuffer commandBuffer, class Scene* scene) = 0;
+		virtual void prepareRender(class Scene* scene) = 0;
+		virtual void render(class Scene* scene) = 0;
 	};
 } // namespace lune

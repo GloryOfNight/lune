@@ -12,8 +12,8 @@ namespace lune
 	public:
 		virtual void update(const std::vector<std::shared_ptr<Entity>>& entities, double deltaTime) override;
 
-		virtual void beforeRender(vk::CommandBuffer commandBuffer, class Scene* scene) override;
-		virtual void render(vk::CommandBuffer commandBuffer, class Scene* scene) override;
+		virtual void prepareRender(class Scene* scene) override;
+		virtual void render(class Scene* scene) override;
 
 	private:
 		struct SpriteResources

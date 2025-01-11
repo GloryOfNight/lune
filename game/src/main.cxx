@@ -16,7 +16,9 @@ public:
 	CameraEntity()
 	{
 		addComponent<lune::TransformComponent>();
-		addComponent<lune::PerspectiveCameraComponent>();
+		auto cam = addComponent<lune::PerspectiveCameraComponent>();
+
+		cam->mPosition = lnm::vec3(0.f, 0.f, 10.f);
 	}
 };
 
@@ -37,7 +39,26 @@ public:
 	GameScene()
 	{
 		addEntity<CameraEntity>();
-		addEntity<ScarletSprite>();
+
+		auto scarlet1 = addEntity<ScarletSprite>();
+
+		auto scarlet2 = addEntity<ScarletSprite>();
+		scarlet2->findComponent<lune::TransformComponent>()->translate(lnm::vec3(2, 0, 0));
+
+		auto scarlet3 = addEntity<ScarletSprite>();
+		scarlet3->findComponent<lune::TransformComponent>()->translate(lnm::vec3(-2, 0, 0));
+
+		auto scarlet4 = addEntity<ScarletSprite>();
+		scarlet4->findComponent<lune::TransformComponent>()->translate(lnm::vec3(0, 2, 0));
+
+		auto scarlet5 = addEntity<ScarletSprite>();
+		scarlet5->findComponent<lune::TransformComponent>()->translate(lnm::vec3(0, -2, 0));
+
+		auto scarlet6 = addEntity<ScarletSprite>();
+		scarlet6->findComponent<lune::TransformComponent>()->translate(lnm::vec3(2, 2, 2));
+
+		auto scarlet7 = addEntity<ScarletSprite>();
+		scarlet7->findComponent<lune::TransformComponent>()->translate(lnm::vec3(-2, -2, -2));
 
 		registerSystem<lune::CameraSystem>();
 		registerSystem<lune::SpriteRenderSystem>();

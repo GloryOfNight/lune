@@ -17,6 +17,13 @@
 
 namespace lune
 {
+	struct FrameInfo
+	{
+		uint32 viewId{};
+		uint32 imageIndex{};
+		vk::CommandBuffer commandBuffer{};
+	};
+
 	namespace vulkan
 	{
 		static void createInstance(const vk::ApplicationInfo& applicationInfo, const std::vector<const char*>& instanceExtensions, const std::vector<const char*>& instanceLayers, VulkanContext& context);
@@ -51,6 +58,7 @@ namespace lune
 		virtual void shutdown() override;
 
 		uint32 createView(SDL_Window* window);
+		vulkan::View* findView(uint32 viewId);
 		void removeView(uint32 viewId);
 
 		vulkan::SharedShader loadShader(std::filesystem::path spvPath);
@@ -66,14 +74,16 @@ namespace lune
 		vulkan::SharedTextureImage findTextureImage(const std::string& name);
 
 		bool beginNextFrame(uint32 viewId);
-		std::pair<uint32, vk::CommandBuffer> getFrameInfo(uint32 viewId);
-		void beginRenderPass(uint32 viewId);
-		void sumbitFrame(uint32 viewId);
+		FrameInfo getFrameInfo();
+		void beginRenderPass();
+		void sumbitFrame();
 
 	private:
 		void loadDefaultAssets();
 
 		uint32 mApiVersion{};
+
+		uint32 mCurrentFrameViewId{UINT32_MAX};
 
 		std::unordered_map<std::filesystem::path, vulkan::SharedShader> mShaders{};
 

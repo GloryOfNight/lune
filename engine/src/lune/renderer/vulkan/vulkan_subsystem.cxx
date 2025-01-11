@@ -151,13 +151,23 @@ uint32 lune::vulkan_subsystem::createView(SDL_Window* window)
 	static uint32 viewIdsCounter = 0;
 
 	auto newView = lune::vulkan::View::create(window);
-	if (newView)
+	if (newView) [[likely]]
 	{
 		const auto& [it, res] = mViews.emplace(viewIdsCounter++, std::move(newView));
 		auto& [viewId, view] = *it;
 		return viewId;
 	}
 	return UINT32_MAX;
+}
+
+lune::vulkan::View* lune::vulkan_subsystem::findView(uint32 viewId)
+{
+	if (const auto it = mViews.find(viewId); it != mViews.end()) [[likely]]
+	{
+		auto& [viewId, view] = *it;
+		return view.get();
+	}
+	return nullptr;
 }
 
 void lune::vulkan_subsystem::removeView(uint32 viewId)
@@ -241,40 +251,45 @@ bool lune::vulkan_subsystem::beginNextFrame(uint32 viewId)
 	if (const auto it = mViews.find(viewId); it != mViews.end()) [[likely]]
 	{
 		auto& [viewId, view] = *it;
+		mCurrentFrameViewId = viewId;
 		return view->beginNextFrame();
 	}
 	return false;
 }
 
-std::pair<uint32, vk::CommandBuffer> lune::vulkan_subsystem::getFrameInfo(uint32 viewId)
+lune::FrameInfo lune::vulkan_subsystem::getFrameInfo()
 {
-	if (const auto it = mViews.find(viewId); it != mViews.end()) [[likely]]
+	if (const auto it = mViews.find(mCurrentFrameViewId); it != mViews.end()) [[likely]]
 	{
 		auto& [viewId, view] = *it;
-		const auto imageIndex = view->getImageIndex();
-		const auto commandBuffer = view->getCurrentImageCmdBuffer();
 
-		return std::pair<uint32, vk::CommandBuffer>{imageIndex, commandBuffer};
+		FrameInfo info{};
+		info.viewId = mCurrentFrameViewId;
+		info.imageIndex = view->getImageIndex();
+		info.commandBuffer = view->getCurrentImageCmdBuffer();
+
+		return std::move(info);
 	}
-	return std::pair<uint32, vk::CommandBuffer>{};
+	return FrameInfo();
 }
 
-void lune::vulkan_subsystem::beginRenderPass(uint32 viewId)
+void lune::vulkan_subsystem::beginRenderPass()
 {
-	if (const auto it = mViews.find(viewId); it != mViews.end()) [[likely]]
+	if (const auto it = mViews.find(mCurrentFrameViewId); it != mViews.end()) [[likely]]
 	{
 		auto& [viewId, view] = *it;
 		view->beginRenderPass();
 	}
 }
 
-void lune::vulkan_subsystem::sumbitFrame(uint32 viewId)
+void lune::vulkan_subsystem::sumbitFrame()
 {
-	if (const auto it = mViews.find(viewId); it != mViews.end()) [[likely]]
+	if (const auto it = mViews.find(mCurrentFrameViewId); it != mViews.end()) [[likely]]
 	{
 		auto& [viewId, view] = *it;
 		view->sumbit();
 	}
+	mCurrentFrameViewId = UINT32_MAX;
 }
 
 #include "SDL3_image/SDL_image.h"

@@ -5,6 +5,8 @@
 
 #include "render_system.hxx"
 
+#include <map>
+
 namespace lune
 {
 	class CameraSystem : public RenderSystem
@@ -12,21 +14,25 @@ namespace lune
 	public:
 		virtual void update(const std::vector<std::shared_ptr<Entity>>& entities, double deltaTime) override;
 
-		virtual void beforeRender(vk::CommandBuffer commandBuffer, class Scene* scene) override;
-		virtual void render(vk::CommandBuffer commandBuffer, class Scene* scene) override;
+		virtual void prepareRender(class Scene* scene) override;
+		virtual void render(class Scene* scene) override {};
 
-		const vulkan::UniqueBuffer& getViewProjectionBuffer() const { return cameraBuffer; }
+		const vulkan::UniqueBuffer& getViewProjectionBuffer() const { return mCameraBuffer; }
 
-		const lnm::mat4& getView() const { return mView; }
-		const lnm::mat4& getProjection() const { return mProjection; }
-		const lnm::mat4& getViewProjection() const { return mViewProjection; }
+		const lnm::mat4& getView(uint32 viewId) const { return mViewsProjs.at(viewId).view; }
+		const lnm::mat4& getProjection(uint32 viewId) const { return mViewsProjs.at(viewId).proj; }
+		const lnm::mat4& getViewProjection(uint32 viewId) const { return mViewsProjs.at(viewId).viewProj; }
 
 	private:
-		vulkan::UniqueBuffer stagingCameraBuffer{};
-		vulkan::UniqueBuffer cameraBuffer{};
+		vulkan::UniqueBuffer mStagingCameraBuffer{};
+		vulkan::UniqueBuffer mCameraBuffer{};
 
-		lnm::mat4 mView{};
-		lnm::mat4 mProjection{};
-		lnm::mat4 mViewProjection{};
+		struct ViewProj
+		{
+			lnm::mat4 view{};
+			lnm::mat4 proj{};
+			lnm::mat4 viewProj{};
+		};
+		std::map<uint32, ViewProj> mViewsProjs{};
 	};
 } // namespace lune

@@ -35,6 +35,8 @@ bool lune::Engine::initialize(std::vector<std::string> args)
 
 	addSubsystem<vulkan_subsystem>();
 
+	gEngine = this;
+
 	for (auto it = mSubsystems.begin(); it != mSubsystems.end(); it++)
 	{
 		if (it->get()->allowInitialize())
@@ -115,25 +117,25 @@ void lune::Engine::run()
 
 		auto vkSubsystem = vulkan_subsystem::get();
 
-		for (uint32 view : mViews)
+		for (uint32 viewId : mViews)
 		{
-			if (vkSubsystem->beginNextFrame(view))
+			if (vkSubsystem->beginNextFrame(viewId))
 			{
-				auto [imageIndex, commandBuffer] = vkSubsystem->getFrameInfo(view);
+				auto [viewId, imageIndex, commandBuffer] = vkSubsystem->getFrameInfo();
 
 				for (auto& [sId, s] : mScenes)
 				{
-					s->beforeRender(commandBuffer);
+					s->prepareRender();
 				}
 
-				vkSubsystem->beginRenderPass(view);
+				vkSubsystem->beginRenderPass();
 
 				for (auto& [sId, s] : mScenes)
 				{
-					s->render(commandBuffer);
+					s->render();
 				}
 
-				vkSubsystem->sumbitFrame(view);
+				vkSubsystem->sumbitFrame();
 			}
 		}
 	}
