@@ -1,4 +1,8 @@
 #pragma once
+#include "lune/vulkan/buffer.hxx"
+#include "lune/vulkan/descriptor_sets.hxx"
+#include "lune/vulkan/vulkan_core.hxx"
+
 #include "render_system.hxx"
 
 namespace lune
@@ -6,8 +10,21 @@ namespace lune
 	class SpriteRenderSystem : public RenderSystem
 	{
 	public:
-        virtual void update(const std::vector<std::shared_ptr<Entity>>& entities, double deltaTime) override;
+		virtual void update(const std::vector<std::shared_ptr<Entity>>& entities, double deltaTime) override;
 
-		virtual void render(const std::vector<std::shared_ptr<Entity>>& entities) override;
+		virtual void beforeRender(vk::CommandBuffer commandBuffer, class Scene* scene) override;
+		virtual void render(vk::CommandBuffer commandBuffer, class Scene* scene) override;
+
+	private:
+		struct SpriteResources
+		{
+			vulkan::SharedPrimitive primitive{};
+			vulkan::SharedTextureImage texImage{};
+			vulkan::UniqueDescriptorSets descSets{};
+			vulkan::UniqueBuffer stagingModelBuffer{};
+			vulkan::UniqueBuffer modelBuffer{};
+		};
+
+		std::unordered_map<class SpriteComponent*, SpriteResources> mResources{};
 	};
 } // namespace lune

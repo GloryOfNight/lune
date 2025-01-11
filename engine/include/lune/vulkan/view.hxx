@@ -26,6 +26,7 @@ namespace lune::vulkan
 		static UniqueView create(SDL_Window* window);
 
 		bool beginNextFrame();
+		void beginRenderPass();
 		void sumbit();
 
 		vk::Extent2D getCurrentExtent() const { return mCurrentExtent; };

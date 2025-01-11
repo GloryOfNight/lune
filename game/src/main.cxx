@@ -1,7 +1,9 @@
 #include "lune/core/engine.hxx"
 #include "lune/game_framework/components/isometric_camera.hxx"
+#include "lune/game_framework/components/sprite.hxx"
 #include "lune/game_framework/components/transform.hxx"
 #include "lune/game_framework/systems/camera_system.hxx"
+#include "lune/game_framework/systems/sprite_render_system.hxx"
 #include "lune/lune.hxx"
 
 #include <iostream>
@@ -15,6 +17,8 @@ public:
 	{
 		addComponent<lune::TransformComponent>();
 		addComponent<lune::IsometricCameraComponent>();
+		auto sprite = addComponent<lune::SpriteComponent>();
+		sprite->imageName = "lune::scarlet";
 	}
 };
 
@@ -24,6 +28,8 @@ public:
 	game_scene()
 	{
 		addEntity<camera_entity>();
+		registerSystem<lune::CameraSystem>();
+		registerSystem<lune::SpriteRenderSystem>();
 	}
 };
 

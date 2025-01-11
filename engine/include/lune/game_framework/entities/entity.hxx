@@ -1,7 +1,7 @@
 #pragma once
 
-#include "lune/game_framework/components/component.hxx"
 #include "lune/core/log.hxx"
+#include "lune/game_framework/components/component.hxx"
 #include "lune/lune.hxx"
 
 #include <memory>
@@ -19,18 +19,18 @@ namespace lune
 		virtual ~Entity() = default;
 
 		template <typename T, typename... Args>
-		ComponentBase* addComponent(Args&&... args)
+		T* addComponent(Args&&... args)
 		{
 			std::type_index typeId = typeid(T);
 			const auto findRes = mComponents.find(typeId);
 			if (findRes != mComponents.end()) [[unlikely]]
 				return nullptr;
 			const auto& [it, bAdded] = mComponents.emplace(std::move(typeId), std::make_unique<T>(std::forward<Args>(args)...));
-			return it->second.get();
+			return dynamic_cast<T*>(it->second.get());
 		}
 
 		template <typename T>
-		ComponentBase* attachComponent(std::unique_ptr<T> c)
+		T* attachComponent(std::unique_ptr<T> c)
 		{
 			std::type_index typeId = typeid(T);
 			const auto findRes = mComponents.find(typeId);
@@ -38,7 +38,7 @@ namespace lune
 				return nullptr;
 
 			const auto& [it, bAdded] = mComponents.emplace(std::move(typeId), std::move(c));
-			return it->second.get();
+			return dynamic_cast<T*>(it->second.get());
 		}
 
 		template <typename T>

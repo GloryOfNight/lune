@@ -14,6 +14,11 @@ namespace lune
 			return lnm::ortho(mLeft, mRight, mBottom, mTop, mNear, mFar);
 		}
 
+		lnm::mat4 getView() const
+		{
+			return lnm::lookAt(mPosition, mPosition + mDirection, mUp);
+		}
+
 		void setProjection(float left, float right, float bottom, float top, float near, float far)
 		{
 			mLeft = left;

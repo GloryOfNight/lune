@@ -22,6 +22,10 @@ namespace lune::vulkan
 
 		vk::Buffer getBuffer() const { return mBuffer; }
 
+		uint8* map() const;
+
+		void unmap() const;
+
 		// copies data to allocation with VkMapMemory (if possible)
 		void copyMap(const void* data, size_t offset, size_t size);
 

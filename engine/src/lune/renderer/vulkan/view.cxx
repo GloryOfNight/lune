@@ -150,6 +150,13 @@ bool lune::vulkan::View::beginNextFrame()
 	const vk::CommandBufferBeginInfo commandBufferBeginInfo(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
 	commandBuffer.begin(commandBufferBeginInfo);
 
+	return true;
+}
+
+void lune::vulkan::View::beginRenderPass()
+{
+	auto commandBuffer = getCurrentImageCmdBuffer();
+
 	std::array<vk::ClearValue, 2> clearValues;
 	clearValues[0].color = vk::ClearColorValue(std::array<float, 4>{0.0F, 0.0F, 0.0F, 1.0F});
 	clearValues[1].depthStencil = vk::ClearDepthStencilValue(1.0F, 0U);
@@ -165,8 +172,7 @@ bool lune::vulkan::View::beginNextFrame()
 
 	commandBuffer.setViewport(0, vk::Viewport(0.f, 0.f, static_cast<float>(mCurrentExtent.width), static_cast<float>(mCurrentExtent.height), 0.f, 1.f));
 	commandBuffer.setScissor(0, vk::Rect2D(vk::Offset2D(0, 0), mCurrentExtent));
-
-	return true;
+	commandBuffer.setDepthTestEnable(true);
 }
 
 void lune::vulkan::View::sumbit()

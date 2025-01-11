@@ -95,7 +95,14 @@ void lune::Engine::run()
 
 				for (auto& [sId, s] : mScenes)
 				{
-					s->render();
+					s->beforeRender(commandBuffer);
+				}
+
+				vkSubsystem->beginRenderPass(view);
+
+				for (auto& [sId, s] : mScenes)
+				{
+					s->render(commandBuffer);
 				}
 
 				vkSubsystem->sumbitFrame(view);

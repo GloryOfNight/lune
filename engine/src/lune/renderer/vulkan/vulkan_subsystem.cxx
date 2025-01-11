@@ -101,6 +101,8 @@ void lune::vulkan_subsystem::shutdown()
 {
 	getVulkanContext().device.waitIdle();
 
+	mTextureImages.clear();
+
 	for (auto& [path, shader] : mShaders)
 	{
 		shader->destroy();
@@ -218,6 +220,22 @@ lune::vulkan::SharedPrimitive lune::vulkan_subsystem::findPrimitive(const std::s
 	return findRes != mPrimitives.end() ? findRes->second : nullptr;
 }
 
+void lune::vulkan_subsystem::addTextureImage(std::string name, vulkan::SharedTextureImage texImage)
+{
+	if (mTextureImages.find(name) != mTextureImages.end())
+	{
+		LN_LOG(Fatal, Vulkan, "Can't emplace new primitive, name already taken: {}", name);
+		return;
+	}
+	mTextureImages.emplace(name, std::move(texImage));
+}
+
+lune::vulkan::SharedTextureImage lune::vulkan_subsystem::findTextureImage(const std::string& name)
+{
+	auto findRes = mTextureImages.find(name);
+	return findRes != mTextureImages.end() ? findRes->second : nullptr;
+}
+
 bool lune::vulkan_subsystem::beginNextFrame(uint32 viewId)
 {
 	if (const auto it = mViews.find(viewId); it != mViews.end()) [[likely]]
@@ -241,6 +259,15 @@ std::pair<uint32, vk::CommandBuffer> lune::vulkan_subsystem::getFrameInfo(uint32
 	return std::pair<uint32, vk::CommandBuffer>{};
 }
 
+void lune::vulkan_subsystem::beginRenderPass(uint32 viewId)
+{
+	if (const auto it = mViews.find(viewId); it != mViews.end()) [[likely]]
+	{
+		auto& [viewId, view] = *it;
+		view->beginRenderPass();
+	}
+}
+
 void lune::vulkan_subsystem::sumbitFrame(uint32 viewId)
 {
 	if (const auto it = mViews.find(viewId); it != mViews.end()) [[likely]]
@@ -250,11 +277,17 @@ void lune::vulkan_subsystem::sumbitFrame(uint32 viewId)
 	}
 }
 
+#include "SDL3_image/SDL_image.h"
+#include "lune/vulkan/texture_image.hxx"
+
 void lune::vulkan_subsystem::loadDefaultAssets()
 {
 	auto spriteShVert = loadShader(*EngineShaderPath("sprite.vert.spv"));
 	auto spriteShFrag = loadShader(*EngineShaderPath("sprite.frag.spv"));
 	addPipeline("lune::sprite", vulkan::GraphicsPipeline::create(spriteShVert, spriteShFrag));
+
+	SDL_Surface* scarlet = IMG_Load((*EngineAssetPath("scarlet.png")).generic_string().data());
+	addTextureImage("lune::scarlet", vulkan::TextureImage::create(*scarlet));
 
 	{
 		std::vector<vulkan::Vertex> vertices = {

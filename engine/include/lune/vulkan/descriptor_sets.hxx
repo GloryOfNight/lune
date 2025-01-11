@@ -16,19 +16,21 @@ namespace lune::vulkan
 	{
 	public:
 		DescriptorSets() = default;
-		DescriptorSets(SharedGraphicsPipeline pipeline, uint32 maxSets);
+		DescriptorSets(SharedGraphicsPipeline pipeline, uint32 maxAllocations);
 		DescriptorSets(DescriptorSets&) = delete;
 		DescriptorSets(DescriptorSets&&) = default;
 		~DescriptorSets();
 
-		static UniqueDescriptorSets create(SharedGraphicsPipeline pipeline, uint32 maxSets);
+		static UniqueDescriptorSets create(SharedGraphicsPipeline pipeline, uint32 maxAllocations);
 
-		void setBufferInfo(std::string_view name, uint32 index, vk::Buffer buffer, vk::DeviceSize offset, vk::DeviceSize range);
-		void setImageInfo(std::string_view name, uint32 index, vk::ImageView imageView, vk::Sampler sampler);
+		void setBufferInfo(std::string_view name, uint32 allocId, vk::Buffer buffer, vk::DeviceSize offset, vk::DeviceSize range);
+		void setImageInfo(std::string_view name, uint32 allocId, vk::ImageView imageView, vk::Sampler sampler);
 
-		void updateSets(uint32 index);
+		void updateSets(uint32 allocId);
 
 		void cmdBind(vk::CommandBuffer commandBuffer, uint32 offsetSets);
+
+		SharedGraphicsPipeline getPipeline() const { return mPipeline; }
 
 	private:
 		void init();
@@ -38,7 +40,7 @@ namespace lune::vulkan
 
 		SharedGraphicsPipeline mPipeline{};
 
-		uint32 mMaxSets{};
+		uint32 mMaxAllocations{};
 
 		vk::DescriptorPool mDescriptorPool{};
 		std::vector<vk::DescriptorSet> mDescriptorSets{};

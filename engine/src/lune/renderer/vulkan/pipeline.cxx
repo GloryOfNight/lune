@@ -147,6 +147,8 @@ void lune::vulkan::GraphicsPipeline::createDescriptorLayoutsAndPoolSizes()
 		std::move(shaderBinds.begin(), shaderBinds.end(), std::back_inserter(totalBindings));
 	}
 
+	std::map<vk::DescriptorType, uint32> descriptorTypesCount{};
+
 	for (const auto& bindings : totalBindings)
 	{
 		const auto layoutCreateInfo = vk::DescriptorSetLayoutCreateInfo()
@@ -156,10 +158,17 @@ void lune::vulkan::GraphicsPipeline::createDescriptorLayoutsAndPoolSizes()
 
 		for (const auto& binding : bindings)
 		{
-			mPoolSizes.push_back(vk::DescriptorPoolSize()
-					.setType(binding.descriptorType)
-					.setDescriptorCount(binding.descriptorCount)); // might be missing * 2!
+			const auto [it, result] = descriptorTypesCount.try_emplace(binding.descriptorType, 0);
+			auto& [type, count] = *it;
+			count += binding.descriptorCount;
 		}
+	}
+
+	for (auto [type, count] : descriptorTypesCount)
+	{
+		mPoolSizes.push_back(vk::DescriptorPoolSize()
+				.setType(type)
+				.setDescriptorCount(count)); // might be missing * 2!
 	}
 }
 

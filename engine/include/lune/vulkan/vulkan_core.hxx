@@ -16,6 +16,7 @@ namespace lune
 		using SharedGraphicsPipeline = std::shared_ptr<class GraphicsPipeline>;
 		using SharedShader = std::shared_ptr<class Shader>;
 		using SharedPrimitive = std::shared_ptr<class Primitive>;
+		using SharedTextureImage = std::shared_ptr<class TextureImage>;
 	} // namespace vulkan
 
 	struct VulkanContext final

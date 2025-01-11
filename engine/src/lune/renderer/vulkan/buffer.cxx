@@ -33,18 +33,31 @@ void lune::vulkan::Buffer::destroy()
 	new (this) Buffer();
 }
 
-void lune::vulkan::Buffer::copyMap(const void* data, size_t offset, size_t size)
+uint8* lune::vulkan::Buffer::map() const
 {
 	uint8* pBuffer{};
 	VkResult mapRes = vmaMapMemory(getVulkanContext().vmaAllocator, mVmaAllocation, reinterpret_cast<void**>(&pBuffer));
 	if (mapRes != VK_SUCCESS) [[unlikely]]
 	{
 		LN_LOG(Fatal, Vulkan::Buffer, "Failed to vmaMapMemory. Did you tried to map device memory?");
-		return;
+		return nullptr;
 	}
+	return pBuffer;
+}
 
-	memcpy(pBuffer + offset, data, size);
+void lune::vulkan::Buffer::unmap() const
+{
 	vmaUnmapMemory(getVulkanContext().vmaAllocator, mVmaAllocation);
+}
+
+void lune::vulkan::Buffer::copyMap(const void* data, size_t offset, size_t size)
+{
+	uint8* pBuffer = map();
+	if (pBuffer)
+	{
+		memcpy(pBuffer + offset, data, size);
+		unmap();
+	}
 }
 
 void lune::vulkan::Buffer::copyTransfer(const void* data, size_t offset, size_t size)

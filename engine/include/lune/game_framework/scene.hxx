@@ -3,6 +3,7 @@
 #include "lune/game_framework/components/component.hxx"
 #include "lune/game_framework/entities/entity.hxx"
 #include "lune/game_framework/systems/system.hxx"
+#include "lune/vulkan/vulkan_core.hxx"
 
 #include <memory>
 #include <unordered_map>
@@ -25,7 +26,9 @@ namespace lune
 		virtual ~Scene() = default;
 
 		virtual void update(double deltaTime);
-		virtual void render();
+
+		virtual void beforeRender(vk::CommandBuffer commandBuffer);
+		virtual void render(vk::CommandBuffer commandBuffer);
 
 		template <typename T, typename... Args>
 		std::shared_ptr<Entity> addEntity(Args&&... args)
@@ -59,7 +62,7 @@ namespace lune
 		}
 
 		template <typename T, typename... Args>
-		SystemBase* registerSystem(Args&&... args)
+		T* registerSystem(Args&&... args)
 		{
 			std::type_index typeId = typeid(T);
 			const auto findRes = mRegistry.systemsIds.find(typeId);
@@ -69,8 +72,18 @@ namespace lune
 			auto newSystem = mSystems.emplace_back(std::make_unique<T>(std::forward<Args>(args)...));
 			const auto& [it, bAdded] = mRegistry.systemsIds.emplace(std::move(typeId), newSystem);
 
-			return newSystem;
+			return dynamic_cast<T*>(newSystem.get());
 		}
+
+		template <typename T>
+		T* findSystem() const
+		{
+			auto it = mRegistry.systemsIds.find(typeid(T));
+			return it != mRegistry.systemsIds.end() ? dynamic_cast<T*>(it->second.get()) : nullptr;
+		}
+
+		const std::vector<std::shared_ptr<Entity>>& getEntities() const { return mEntities; }
+		const std::vector<std::shared_ptr<SystemBase>>& getSystems() const { return mSystems; }
 
 	private:
 		std::vector<std::shared_ptr<Entity>> mEntities{};

@@ -62,8 +62,12 @@ namespace lune
 		void addPrimitive(std::string name, vulkan::SharedPrimitive primitive);
 		vulkan::SharedPrimitive findPrimitive(const std::string& name);
 
+		void addTextureImage(std::string name, vulkan::SharedTextureImage texImage);
+		vulkan::SharedTextureImage findTextureImage(const std::string& name);
+
 		bool beginNextFrame(uint32 viewId);
 		std::pair<uint32, vk::CommandBuffer> getFrameInfo(uint32 viewId);
+		void beginRenderPass(uint32 viewId);
 		void sumbitFrame(uint32 viewId);
 
 	private:
@@ -76,6 +80,8 @@ namespace lune
 		std::unordered_map<std::string, vulkan::SharedGraphicsPipeline> mGraphicsPipelines{};
 
 		std::unordered_map<std::string, vulkan::SharedPrimitive> mPrimitives{};
+
+		std::unordered_map<std::string, vulkan::SharedTextureImage> mTextureImages{};
 
 		std::map<uint32, std::unique_ptr<vulkan::View>> mViews{};
 	};

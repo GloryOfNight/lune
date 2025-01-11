@@ -7,7 +7,7 @@ lune::vulkan::DescriptorSets::DescriptorSets(SharedGraphicsPipeline pipeline, ui
 	: DescriptorSets()
 {
 	mPipeline = pipeline;
-	mMaxSets = maxSets;
+	mMaxAllocations = maxSets;
 }
 
 lune::vulkan::DescriptorSets::~DescriptorSets()
@@ -29,8 +29,8 @@ lune::vulkan::UniqueDescriptorSets lune::vulkan::DescriptorSets::create(SharedGr
 
 void lune::vulkan::DescriptorSets::init()
 {
-	mBufferInfos.resize(mMaxSets);
-	mImageInfos.resize(mMaxSets);
+	mBufferInfos.resize(mMaxAllocations);
+	mImageInfos.resize(mMaxAllocations);
 
 	createDescriptorPool();
 	allocateDescriptorSets();
@@ -104,12 +104,13 @@ void lune::vulkan::DescriptorSets::cmdBind(vk::CommandBuffer commandBuffer, uint
 
 void lune::vulkan::DescriptorSets::createDescriptorPool()
 {
-	const auto& Sizes = mPipeline->getDescriptorPoolSizes();
+	const auto& poolSizes = mPipeline->getDescriptorPoolSizes();
+	const uint32 maxSets = mPipeline->getDescriptorLayouts().size() * mMaxAllocations;
 
 	const vk::DescriptorPoolCreateInfo createInfo = vk::DescriptorPoolCreateInfo()
 														.setFlags(vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet)
-														.setPoolSizes(Sizes)
-														.setMaxSets(mMaxSets);
+														.setPoolSizes(poolSizes)
+														.setMaxSets(maxSets);
 
 	mDescriptorPool = getVulkanContext().device.createDescriptorPool(createInfo);
 }
@@ -117,7 +118,7 @@ void lune::vulkan::DescriptorSets::createDescriptorPool()
 void lune::vulkan::DescriptorSets::allocateDescriptorSets()
 {
 	const auto& Layouts = mPipeline->getDescriptorLayouts();
-	for (uint32 i = 0; i < mMaxSets; ++i)
+	for (uint32 i = 0; i < mMaxAllocations; ++i)
 	{
 		vk::DescriptorSetAllocateInfo allocInfo = vk::DescriptorSetAllocateInfo()
 													  .setDescriptorPool(mDescriptorPool)
