@@ -12,17 +12,17 @@
 
 namespace lune
 {
+	using EventCallbackFunc = std::function<void(const SDL_Event&)>;
+
+	struct EventBindingHandle
+	{
+		const uint32_t event{};
+		const std::forward_list<EventCallbackFunc>::iterator elem{};
+	};
+
 	class EventSubsystem final : public EngineSubsystem
 	{
 	public:
-		using EventCallbackFunc = std::function<void(const SDL_Event&)>;
-
-		struct EventBindingHandle
-		{
-			const uint32_t event{};
-			const std::forward_list<EventCallbackFunc>::iterator elem{};
-		};
-
 		EventSubsystem() = default;
 		EventSubsystem(const EventSubsystem&) = delete;
 		EventSubsystem(EventSubsystem&&) = delete;
@@ -41,11 +41,11 @@ namespace lune
 		void removeEventBinding(const EventBindingHandle& handle);
 
 	private:
-		std::map<uint32, std::forward_list<EventCallbackFunc>> eventBindings{};
+		std::map<uint32, std::forward_list<EventCallbackFunc>> mEventBindings{};
 	};
 
 	template <typename T, typename F>
-	inline EventSubsystem::EventBindingHandle EventSubsystem::addEventBindingMem(const uint32 event, T* obj, F func)
+	inline EventBindingHandle EventSubsystem::addEventBindingMem(const uint32 event, T* obj, F func)
 	{
 		return addEventBinding(event, std::bind(func, obj, std::placeholders::_1));
 	}

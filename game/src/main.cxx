@@ -1,8 +1,12 @@
 #include "lune/core/engine.hxx"
 #include "lune/game_framework/components/camera.hxx"
+#include "lune/game_framework/components/input.hxx"
+#include "lune/game_framework/components/move.hxx"
 #include "lune/game_framework/components/sprite.hxx"
 #include "lune/game_framework/components/transform.hxx"
 #include "lune/game_framework/systems/camera_system.hxx"
+#include "lune/game_framework/systems/input_system.hxx"
+#include "lune/game_framework/systems/move_system.hxx"
 #include "lune/game_framework/systems/sprite_render_system.hxx"
 #include "lune/lune.hxx"
 
@@ -16,9 +20,17 @@ public:
 	CameraEntity()
 	{
 		addComponent<lune::TransformComponent>();
+		addComponent<lune::MoveComponent>();
 		auto cam = addComponent<lune::PerspectiveCameraComponent>();
+		cam->mPosition = lnm::vec3(0.f, 0.f, -10.f);
 
-		cam->mPosition = lnm::vec3(0.f, 0.f, 10.f);
+		auto inputComp = addComponent<lune::InputComponent>();
+		inputComp->actions.push_back({"move_front"});
+		inputComp->actions.push_back({"move_back"});
+		inputComp->actions.push_back({"move_left"});
+		inputComp->actions.push_back({"move_right"});
+		inputComp->actions.push_back({"move_up"});
+		inputComp->actions.push_back({"move_down"});
 	}
 };
 
@@ -62,6 +74,8 @@ public:
 
 		registerSystem<lune::CameraSystem>();
 		registerSystem<lune::SpriteRenderSystem>();
+		registerSystem<lune::InputSystem>();
+		registerSystem<lune::MoveSystem>();
 	}
 };
 

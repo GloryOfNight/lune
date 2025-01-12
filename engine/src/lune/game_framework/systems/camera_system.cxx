@@ -62,7 +62,7 @@ void lune::CameraSystem::update(const std::vector<std::shared_ptr<lune::Entity>>
 				float fov, aspectRatio, nearPlane, farPlane;
 				persCam->getPerspective(fov, aspectRatio, nearPlane, farPlane);
 
-				viewProj.view = lnm::lookAt(position, position - direction, up);
+				viewProj.view = lnm::lookAt(-position, -(position + direction), up);
 				viewProj.proj = lnm::perspective(lnm::radians(fov), aspectRatio * viewAspectRatio, nearPlane, farPlane);
 				viewProj.viewProj = viewProj.proj * viewProj.view;
 			}

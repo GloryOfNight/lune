@@ -7,7 +7,7 @@ void lune::EventSubsystem::processEvents()
 	SDL_Event event;
 	while (SDL_PollEvent(&event))
 	{
-		if (const auto bindIt = eventBindings.find(event.type); bindIt != eventBindings.end())
+		if (const auto bindIt = mEventBindings.find(event.type); bindIt != mEventBindings.end())
 		{
 			for (auto bindFunc : bindIt->second)
 			{
@@ -24,9 +24,9 @@ void lune::EventSubsystem::processEvents()
 	}
 }
 
-lune::EventSubsystem::EventBindingHandle lune::EventSubsystem::addEventBinding(uint32 event, EventCallbackFunc callback)
+lune::EventBindingHandle lune::EventSubsystem::addEventBinding(uint32 event, EventCallbackFunc callback)
 {
-	auto binding = eventBindings.try_emplace(event);
+	auto binding = mEventBindings.try_emplace(event);
 	binding.first->second.push_front(callback);
 
 	return {event, binding.first->second.before_begin()};
@@ -34,7 +34,7 @@ lune::EventSubsystem::EventBindingHandle lune::EventSubsystem::addEventBinding(u
 
 void lune::EventSubsystem::removeEventBinding(const EventBindingHandle& handle)
 {
-	if (const auto bindIt = eventBindings.find(handle.event); bindIt != eventBindings.end())
+	if (const auto bindIt = mEventBindings.find(handle.event); bindIt != mEventBindings.end())
 	{
 		bindIt->second.erase_after(handle.elem);
 	}
