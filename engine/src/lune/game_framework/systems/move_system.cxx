@@ -5,9 +5,18 @@
 #include "lune/game_framework/components/rotate.hxx"
 #include "lune/game_framework/components/transform.hxx"
 #include "lune/game_framework/entities/entity.hxx"
+#include "lune/game_framework/scene.hxx"
+#include "lune/game_framework/systems/input_system.hxx"
 
-void lune::MoveSystem::update(const std::vector<std::shared_ptr<Entity>>& entities, double deltaTime)
+#include <SDL3/SDL.h>
+
+void lune::MoveSystem::update(Scene* scene, double deltaTime)
 {
+	auto inputSystem = scene->findSystem<InputSystem>();
+	if (!inputSystem)
+		return;
+
+	const auto& entities = scene->getEntities();
 	for (auto& entity : entities)
 	{
 		auto moveComp = entity->findComponent<MoveComponent>();
@@ -19,36 +28,66 @@ void lune::MoveSystem::update(const std::vector<std::shared_ptr<Entity>>& entiti
 			const double speed = moveComp->speed * deltaTime;
 			for (auto& [action, active] : inputComp->actions)
 			{
+				if (active && action == "mouse_left_button")
+				{
+					auto mouseState = inputSystem->getMouseMotionState();
+					auto windowId = inputSystem->getWindowId();
+					auto window = SDL_GetWindowFromID(windowId);
+
+					int w, h;
+					SDL_GetWindowSize(window, &w, &h);
+
+					const float halfW = static_cast<float>(w) * 0.5f;
+					const float halfH = static_cast<float>(h) * 0.5f;
+
+					if (mouseState.x && mouseState.x != halfW)
+					{
+						const auto coefDist = lnm::clamp(halfW / mouseState.x - 1, -0.1f, 0.1f);
+						transformComp->rotate(-lnm::radians(rotComp->speed * coefDist), yawAxis);
+					}
+					if (mouseState.y && mouseState.y != halfH)
+					{
+						const auto coefDist = lnm::clamp(halfH / mouseState.y - 1,  -0.1f, 0.1f);
+						transformComp->rotate(-lnm::radians(rotComp->speed * coefDist), transformComp->mRotation * pitchAxis);
+					}
+					inputSystem->setShowCursor(false);
+					inputSystem->warpMouse(halfW, halfH);
+				}
+				else if (!active && action == "mouse_left_button")
+				{
+					inputSystem->setShowCursor(true);
+				}
+
 				if (!active)
 					continue;
 
 				if (action == "move_front")
-					transformComp->move(moveComp->front * lnm::vec3(speed));
+					transformComp->move(frontAxis * lnm::vec3(speed));
 				else if (action == "move_back")
-					transformComp->move(-(moveComp->front * lnm::vec3(speed)));
+					transformComp->move(-(frontAxis * lnm::vec3(speed)));
 				else if (action == "move_left")
-					transformComp->move(moveComp->left * lnm::vec3(speed));
+					transformComp->move(leftAxis * lnm::vec3(speed));
 				else if (action == "move_right")
-					transformComp->move(-(moveComp->left * lnm::vec3(speed)));
+					transformComp->move(-(leftAxis * lnm::vec3(speed)));
 				else if (action == "move_up")
-					transformComp->move(moveComp->up * lnm::vec3(speed));
+					transformComp->translate(upAxis * lnm::vec3(speed));
 				else if (action == "move_down")
-					transformComp->move(-(moveComp->up * lnm::vec3(speed)));
+					transformComp->translate(-(upAxis * lnm::vec3(speed)));
 
 				if (rotComp)
 				{
-					if (action == "roll_left")
-						transformComp->rotate(lnm::radians(-moveComp->rotSpeed * deltaTime), moveComp->roll);
-					else if (action == "roll_right")
-						transformComp->rotate(lnm::radians(moveComp->rotSpeed * deltaTime), moveComp->roll);
 					if (action == "yaw_left")
-						transformComp->rotate(lnm::radians(-moveComp->rotSpeed * deltaTime), moveComp->yaw);
+						transformComp->rotate(lnm::radians(-rotComp->speed * deltaTime), yawAxis);
 					else if (action == "yaw_right")
-						transformComp->rotate(lnm::radians(moveComp->rotSpeed * deltaTime), moveComp->yaw);
+						transformComp->rotate(lnm::radians(rotComp->speed * deltaTime), yawAxis);
 					if (action == "pitch_up")
-						transformComp->rotate(lnm::radians(-moveComp->rotSpeed * deltaTime), moveComp->pitch);
+						transformComp->rotate(lnm::radians(-rotComp->speed * deltaTime), transformComp->mRotation * pitchAxis);
 					else if (action == "pitch_down")
-						transformComp->rotate(lnm::radians(moveComp->rotSpeed * deltaTime), moveComp->pitch);
+						transformComp->rotate(lnm::radians(rotComp->speed * deltaTime), transformComp->mRotation * pitchAxis);
+					else if (action == "roll_left")
+						transformComp->rotate(lnm::radians(-rotComp->speed * deltaTime), transformComp->mRotation * rollAxis);
+					else if (action == "roll_right")
+						transformComp->rotate(lnm::radians(rotComp->speed * deltaTime), transformComp->mRotation * rollAxis);
 				}
 			}
 		}

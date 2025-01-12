@@ -11,7 +11,7 @@
 #include "lune/vulkan/texture_image.hxx"
 #include "lune/vulkan/vulkan_subsystem.hxx"
 
-void lune::SpriteRenderSystem::update(const std::vector<std::shared_ptr<Entity>>& entities, double deltaTime)
+void lune::SpriteRenderSystem::update(Scene* scene, double deltaTime)
 {
 }
 

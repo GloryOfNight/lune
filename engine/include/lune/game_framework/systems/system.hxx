@@ -17,6 +17,6 @@ namespace lune
 		SystemBase(SystemBase&&) = default;
 		virtual ~SystemBase() = default;
 
-		virtual void update(const std::vector<std::shared_ptr<Entity>>& entities, double deltaTime) = 0;
+		virtual void update(class Scene* scene, double deltaTime) = 0;
 	};
 } // namespace lune

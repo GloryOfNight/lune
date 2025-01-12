@@ -148,6 +148,17 @@ uint32 lune::Engine::createWindow(const std::string_view name, const uint32 widt
 	return UINT32_MAX;
 }
 
+uint32 lune::Engine::getViewWindowId(uint32 viewId)
+{
+	auto subsystem = findSubsystem<VulkanSubsystem>();
+	{
+		auto view = subsystem->findView(viewId);
+		if (view)
+			return SDL_GetWindowID(view->getWindow());
+	}
+	return 0;
+}
+
 void lune::Engine::removeWindow(uint32 viewId)
 {
 	for (auto it = mViews.begin(); it != mViews.end(); it++)

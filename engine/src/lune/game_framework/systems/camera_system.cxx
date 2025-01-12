@@ -7,8 +7,10 @@
 #include "lune/game_framework/scene.hxx"
 #include "lune/vulkan/vulkan_subsystem.hxx"
 
-void lune::CameraSystem::update(const std::vector<std::shared_ptr<lune::Entity>>& entities, double deltaTime)
+void lune::CameraSystem::update(Scene* scene, double deltaTime)
 {
+	const auto& entities = scene->getEntities();
+	
 	mViewsProjs.clear();
 	for (const auto& e : entities)
 	{
@@ -66,8 +68,8 @@ void lune::CameraSystem::update(const std::vector<std::shared_ptr<lune::Entity>>
 				const lnm::vec3 forward = rotation * persCam->mDirection;
 				const lnm::vec3 up = rotation * persCam->mUp;
 
-				viewProj.view = lnm::lookAt(-position, -(position + forward), up);
-				//viewProj.view = glm::scale(glm::mat4(1.0f), glm::vec3(-1.0f, 1.0f, 1.0f)) * viewProj.view;
+				viewProj.view = lnm::lookAt(position, (position + forward), up);
+				//viewProj.view = glm::scale(glm::mat4(1.0f), glm::vec3(1.0f, -1.0f, -1.0f)) * viewProj.view;
 				viewProj.proj = lnm::perspective(lnm::radians(fov), aspectRatio * viewAspectRatio, nearPlane, farPlane);
 				viewProj.viewProj = viewProj.proj * viewProj.view;
 			}

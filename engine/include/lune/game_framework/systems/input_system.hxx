@@ -16,7 +16,7 @@ namespace lune
 	struct InputActionConditionBase
 	{
 		virtual ~InputActionConditionBase() = default;
-		virtual bool isActive(class InputSystem* input) const = 0;
+		virtual bool shouldActivate(class InputSystem* input) const = 0;
 	};
 
 	extern "C++" std::unordered_map<std::string, UniqueInputActionCondition>& getInputActionMapConfig();
@@ -24,20 +24,13 @@ namespace lune
 	class InputSystem : public SystemBase
 	{
 	public:
-		struct MouseState
-		{
-			SDL_MouseButtonFlags state{};
-			float x{};
-			float y{};
-		};
-
 		struct KeyState
 		{
 			KeyState() = default;
-			KeyState(const SDL_Event& event)
-				: timestamp{event.key.timestamp}
-				, down{event.key.down}
-				, repeat{event.key.repeat}
+			KeyState(const SDL_KeyboardEvent& event)
+				: timestamp{event.timestamp}
+				, down{event.down}
+				, repeat{event.repeat}
 			{
 			}
 
@@ -46,40 +39,69 @@ namespace lune
 			bool repeat;
 		};
 
+		struct MouseButtonState
+		{
+			MouseButtonState() = default;
+			MouseButtonState(const SDL_MouseButtonEvent& event)
+				: timestamp{event.timestamp}
+				, clicks{event.clicks}
+				, down{event.down}
+				, x{event.x}
+				, y{event.y}
+			{
+			}
+
+			uint64 timestamp;
+			uint8 clicks;
+			bool down;
+			float x, y;
+		};
+
+		struct MouseMotionState
+		{
+			MouseMotionState() = default;
+			MouseMotionState(const SDL_MouseMotionEvent& event)
+				: x{event.x}
+				, y{event.y}
+				, xrel{event.xrel}
+				, yrel{event.yrel}
+			{
+			}
+
+			float x, y, xrel, yrel;
+		};
+
 		InputSystem();
 		InputSystem(const InputSystem&) = delete;
 		InputSystem(InputSystem&&) = delete;
 		virtual ~InputSystem();
 
-		virtual void update(const std::vector<std::shared_ptr<Entity>>& entities, double deltaTime) override;
+		virtual void update(class Scene* scene, double deltaTime) override;
 
-		bool isKeyPressed(const SDL_Keycode key) const;
+		KeyState getKeyState(const SDL_Keycode key) const;
+		MouseButtonState getMouseButtonState(uint8 button) const;
+		MouseMotionState getMouseMotionState() const;
 
-		uint32 getMouseState(uint16* const x, uint16* const y) const;
-
-		void warpMouse(const uint16 x, const uint16 y);
+		void warpMouse(float x, float y);
 
 		void setShowCursor(const bool state) const;
 
-		void setMouseRelativeMode(const bool state) const;
-
-		bool isInMouseFocus() const;
-
 		void setWindowId(const uint32 windowId);
+		uint32 getWindowId() const { return mWindowId; }
 
 	protected:
 		void onKeyEvent(const SDL_Event& event);
-
-		void onMouseEvent(const SDL_Event& event);
+		void onMouseButtonEvent(const SDL_Event& event);
+		void onMouseMotionEvent(const SDL_Event& event);
 
 	private:
 		std::vector<EventBindingHandle> mBindings{};
 
 		std::map<SDL_Keycode, KeyState> mKeys{};
 
-		MouseState mMouseState{};
+		std::map<uint8, MouseButtonState> mMouseButtons{};
 
-		bool mHasMouseFocus{};
+		MouseMotionState mMouseMotionState{};
 
 		uint32 mWindowId{};
 	};
@@ -93,10 +115,10 @@ namespace lune
 		{
 		}
 
-		virtual bool isActive(InputSystem* input) const override
+		virtual bool shouldActivate(InputSystem* input) const override
 		{
-			const bool pressed = input->isKeyPressed(key);
-			return pressed && down;
+			const auto keyState = input->getKeyState(key);
+			return keyState.down && down;
 		}
 
 		SDL_Keycode key{};
@@ -106,20 +128,19 @@ namespace lune
 	struct InputActionConditionMouse : public InputActionConditionBase
 	{
 		InputActionConditionMouse() = default;
-		InputActionConditionMouse(SDL_MouseButtonFlags inButton, bool inDown)
+		InputActionConditionMouse(uint8 inButton, bool inDown)
 			: button{inButton}
 			, down{inDown}
 		{
 		}
 
-		virtual bool isActive(InputSystem* input) const override
+		virtual bool shouldActivate(InputSystem* input) const override
 		{
-			if (input->isInMouseFocus())
-				return (input->getMouseState(nullptr, nullptr) & button) == button;
-			return false;
+			const auto mouseState = input->getMouseButtonState(button);
+			return mouseState.down == down;
 		}
 
-		SDL_MouseButtonFlags button{};
+		uint8 button{};
 		bool down{};
 	};
 } // namespace lune

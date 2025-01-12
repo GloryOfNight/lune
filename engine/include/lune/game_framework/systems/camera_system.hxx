@@ -12,7 +12,7 @@ namespace lune
 	class CameraSystem : public RenderSystem
 	{
 	public:
-		virtual void update(const std::vector<std::shared_ptr<Entity>>& entities, double deltaTime) override;
+		virtual void update(class Scene* scene, double deltaTime) override;
 
 		virtual void prepareRender(class Scene* scene) override;
 		virtual void render(class Scene* scene) override {};

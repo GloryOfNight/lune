@@ -2,6 +2,7 @@
 
 #include "lune/core/engine.hxx"
 #include "lune/game_framework/components/input.hxx"
+#include "lune/game_framework/scene.hxx"
 
 std::unordered_map<std::string, lune::UniqueInputActionCondition>& lune::getInputActionMapConfig()
 {
@@ -15,10 +16,10 @@ lune::InputSystem::InputSystem()
 	auto eventSubsystem = Engine::get()->findSubsystem<EventSubsystem>();
 	mBindings.push_back(eventSubsystem->addEventBindingMem(SDL_EVENT_KEY_DOWN, this, &InputSystem::onKeyEvent));
 	mBindings.push_back(eventSubsystem->addEventBindingMem(SDL_EVENT_KEY_UP, this, &InputSystem::onKeyEvent));
-	mBindings.push_back(eventSubsystem->addEventBindingMem(SDL_EVENT_MOUSE_MOTION, this, &InputSystem::onMouseEvent));
-	mBindings.push_back(eventSubsystem->addEventBindingMem(SDL_EVENT_MOUSE_BUTTON_DOWN, this, &InputSystem::onMouseEvent));
-	mBindings.push_back(eventSubsystem->addEventBindingMem(SDL_EVENT_MOUSE_BUTTON_UP, this, &InputSystem::onMouseEvent));
-	mBindings.push_back(eventSubsystem->addEventBindingMem(SDL_EVENT_MOUSE_WHEEL, this, &InputSystem::onMouseEvent));
+	mBindings.push_back(eventSubsystem->addEventBindingMem(SDL_EVENT_MOUSE_BUTTON_DOWN, this, &InputSystem::onMouseButtonEvent));
+	mBindings.push_back(eventSubsystem->addEventBindingMem(SDL_EVENT_MOUSE_BUTTON_UP, this, &InputSystem::onMouseButtonEvent));
+	mBindings.push_back(eventSubsystem->addEventBindingMem(SDL_EVENT_MOUSE_MOTION, this, &InputSystem::onMouseMotionEvent));
+	//mBindings.push_back(eventSubsystem->addEventBindingMem(SDL_EVENT_MOUSE_WHEEL, this, &InputSystem::onMouseButtonEvent));
 
 	// temp; need propert input config map
 	auto& inputConfig = getInputActionMapConfig();
@@ -35,7 +36,7 @@ lune::InputSystem::InputSystem()
 	inputConfig.emplace("pitch_up", std::make_unique<InputActionConditionKey>(SDLK_UP, true));
 	inputConfig.emplace("pitch_down", std::make_unique<InputActionConditionKey>(SDLK_DOWN, true));
 
-	inputConfig.emplace("mouse_left_button_down", std::make_unique<InputActionConditionMouse>(SDL_BUTTON_LMASK, true));
+	inputConfig.emplace("mouse_left_button", std::make_unique<InputActionConditionMouse>(SDL_BUTTON_LEFT, true));
 }
 
 lune::InputSystem::~InputSystem()
@@ -46,8 +47,9 @@ lune::InputSystem::~InputSystem()
 	mBindings.clear();
 }
 
-void lune::InputSystem::update(const std::vector<std::shared_ptr<Entity>>& entities, double deltaTime)
+void lune::InputSystem::update(Scene* scene, double deltaTime)
 {
+	const auto& entities = scene->getEntities();
 	const auto& inputConfig = getInputActionMapConfig();
 	for (auto& entity : entities)
 	{
@@ -60,7 +62,7 @@ void lune::InputSystem::update(const std::vector<std::shared_ptr<Entity>>& entit
 				if (findRes != inputConfig.end())
 				{
 					bool wasActive = action.active;
-					action.active = findRes->second->isActive(this);
+					action.active = findRes->second->shouldActivate(this);
 					if (wasActive != action.active)
 					{
 						LN_LOG(Info, Input, "Action \'{}\' state \'{}\'", action.name, action.active);
@@ -71,29 +73,29 @@ void lune::InputSystem::update(const std::vector<std::shared_ptr<Entity>>& entit
 	}
 }
 
-bool lune::InputSystem::isKeyPressed(const SDL_Keycode key) const
+lune::InputSystem::KeyState lune::InputSystem::getKeyState(const SDL_Keycode key) const
 {
 	const auto& findRes = mKeys.find(key);
-	return findRes != mKeys.end() && findRes->second.down;
+	return findRes != mKeys.end() ? findRes->second : KeyState();
 }
 
-uint32_t lune::InputSystem::getMouseState(uint16* const x, uint16* const y) const
+lune::InputSystem::MouseButtonState lune::InputSystem::getMouseButtonState(uint8 button) const
 {
-	if (x)
-		*x = mMouseState.x;
-	if (y)
-		*y = mMouseState.y;
-	return mMouseState.state;
+	const auto findRes = mMouseButtons.find(button);
+	return findRes != mMouseButtons.end() ? findRes->second : MouseButtonState();
 }
 
-void lune::InputSystem::warpMouse(const uint16 x, const uint16 y)
+lune::InputSystem::MouseMotionState lune::InputSystem::getMouseMotionState() const
+{
+	return mMouseMotionState;
+}
+
+void lune::InputSystem::warpMouse(float x, float y)
 {
 	auto window = SDL_GetWindowFromID(mWindowId);
 	if (window)
 	{
 		SDL_WarpMouseInWindow(window, x, y);
-		mMouseState.x = x;
-		mMouseState.y = y;
 	}
 }
 
@@ -105,38 +107,25 @@ void lune::InputSystem::setShowCursor(const bool state) const
 		SDL_HideCursor();
 }
 
-void lune::InputSystem::setMouseRelativeMode(const bool state) const
-{
-	setShowCursor(!state);
-}
-
-bool lune::InputSystem::isInMouseFocus() const
-{
-	return mHasMouseFocus;
-}
-
 void lune::InputSystem::onKeyEvent(const SDL_Event& event)
 {
-	SDL_Window* focusedWindow = SDL_GetMouseFocus();
-	const uint32 focusedWindowId = focusedWindow ? SDL_GetWindowID(focusedWindow) : 0;
-	mHasMouseFocus = mWindowId == 0 || (mWindowId == focusedWindowId);
-
-	if (!mHasMouseFocus)
+	if (event.key.windowID != mWindowId)
 		return;
-
-	mKeys.insert_or_assign(event.key.key, KeyState(event));
+	mKeys.insert_or_assign(event.key.key, KeyState(event.key));
 }
 
-void lune::InputSystem::onMouseEvent(const SDL_Event& event)
+void lune::InputSystem::onMouseButtonEvent(const SDL_Event& event)
 {
-	SDL_Window* focusedWindow = SDL_GetMouseFocus();
-	const uint32 focusedWindowId = focusedWindow ? SDL_GetWindowID(focusedWindow) : 0;
-	mHasMouseFocus = mWindowId == 0 || (mWindowId == focusedWindowId);
-
-	if (!mHasMouseFocus)
+	if (event.button.windowID != mWindowId)
 		return;
+	mMouseButtons.insert_or_assign(event.button.button, MouseButtonState(event.button));
+}
 
-	mMouseState.state = SDL_GetMouseState(&mMouseState.x, &mMouseState.y);
+void lune::InputSystem::onMouseMotionEvent(const SDL_Event& event)
+{
+	if (event.motion.windowID != mWindowId)
+		return;
+	mMouseMotionState = MouseMotionState(event.motion);
 }
 
 void lune::InputSystem::setWindowId(uint32 windowId)

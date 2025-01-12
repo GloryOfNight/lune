@@ -20,13 +20,16 @@ class CameraEntity : public lune::Entity
 public:
 	CameraEntity()
 	{
-		addComponent<lune::TransformComponent>();
+		auto transform = addComponent<lune::TransformComponent>();
+		transform->mPosition = lnm::vec3(0.f, 0.f, -10.f);
+		//transform->mRotation = lnm::quat(lnm::angleAxis(lnm::radians(180.f), lune::yawAxis));
+
+		addComponent<lune::PerspectiveCameraComponent>();
+
 		addComponent<lune::MoveComponent>();
 		addComponent<lune::RotateComponent>();
-		auto cam = addComponent<lune::PerspectiveCameraComponent>();
-		cam->mPosition = lnm::vec3(0.f, 0.f, -10.f);
-
 		auto inputComp = addComponent<lune::InputComponent>();
+
 		inputComp->actions.push_back({"move_front"});
 		inputComp->actions.push_back({"move_back"});
 		inputComp->actions.push_back({"move_left"});
@@ -39,6 +42,8 @@ public:
 		inputComp->actions.push_back({"yaw_right"});
 		inputComp->actions.push_back({"pitch_up"});
 		inputComp->actions.push_back({"pitch_down"});
+
+		inputComp->actions.push_back({"mouse_left_button"});
 	}
 };
 
@@ -50,6 +55,23 @@ public:
 		addComponent<lune::TransformComponent>();
 		auto sprite = addComponent<lune::SpriteComponent>();
 		sprite->imageName = "lune::scarlet";
+
+		addComponent<lune::MoveComponent>();
+		addComponent<lune::RotateComponent>();
+		auto inputComp = addComponent<lune::InputComponent>();
+
+		// inputComp->actions.push_back({"move_front"});
+		// inputComp->actions.push_back({"move_back"});
+		// inputComp->actions.push_back({"move_left"});
+		// inputComp->actions.push_back({"move_right"});
+		// inputComp->actions.push_back({"move_up"});
+		// inputComp->actions.push_back({"move_down"});
+		// inputComp->actions.push_back({"roll_left"});
+		// inputComp->actions.push_back({"roll_right"});
+		// inputComp->actions.push_back({"yaw_left"});
+		// inputComp->actions.push_back({"yaw_right"});
+		// inputComp->actions.push_back({"pitch_up"});
+		// inputComp->actions.push_back({"pitch_down"});
 	}
 };
 
@@ -82,7 +104,10 @@ public:
 
 		registerSystem<lune::CameraSystem>();
 		registerSystem<lune::SpriteRenderSystem>();
-		registerSystem<lune::InputSystem>();
+
+		auto inputSystem = registerSystem<lune::InputSystem>();
+		inputSystem->setWindowId(ln::Engine::get()->getViewWindowId(0));
+
 		registerSystem<lune::MoveSystem>();
 	}
 };
@@ -98,7 +123,7 @@ int main(int argc, char** argv)
 	if (!engine.initialize(std::move(args)))
 		return 1;
 
-	engine.createWindow("so8", 800, 800);
+	uint32 viewId = engine.createWindow("so8", 800, 800);
 	//engine.createWindow("so8 - 2", 800, 800);
 
 	engine.addScene(std::make_unique<GameScene>());

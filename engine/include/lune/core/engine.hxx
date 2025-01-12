@@ -34,6 +34,7 @@ namespace lune
 		void stop();
 
 		uint32 createWindow(const std::string_view name, const uint32 width, const uint32 height, const uint32 flags = 0);
+		uint32 getViewWindowId(uint32 viewId);
 		void removeWindow(uint32 viewId);
 
 		uint64 addScene(std::unique_ptr<Scene> s);

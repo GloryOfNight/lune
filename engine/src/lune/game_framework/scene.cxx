@@ -6,7 +6,7 @@ void lune::Scene::update(double deltaTime)
 {
 	for (auto s : mSystems)
 	{
-		s->update(mEntities, deltaTime);
+		s->update(this, deltaTime);
 	}
 }
 

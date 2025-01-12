@@ -15,3 +15,14 @@ namespace lune
 }
 
 namespace lnm = lune::math;
+
+namespace lune
+{
+	static constexpr lnm::vec3 frontAxis = lnm::vec3(0.f, 0.f, 1.f);
+	static constexpr lnm::vec3 leftAxis = lnm::vec3(1.f, 0.f, 0.f);
+	static constexpr lnm::vec3 upAxis = lnm::vec3(0.f, -1.f, 0.f);
+
+	static constexpr lnm::vec3 rollAxis = lnm::vec3(0.f, 0.f, -1.f);
+	static constexpr lnm::vec3 pitchAxis = lnm::vec3(-1.f, 0.f, 0.f);
+	static constexpr lnm::vec3 yawAxis = lnm::vec3(0.f, -1.f, 0.f);
+} // namespace lune

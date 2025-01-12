@@ -10,8 +10,12 @@ namespace lune
 	{
 		void translate(const lnm::vec3& translation) { mPosition += translation; }
 		void move(const lnm::vec3& translation) { mPosition += mRotation * translation; }
-		void rotate(const lnm::quat& rotation) { mRotation = rotation * mRotation; }
-		void rotate(float rads, lnm::vec3& axis) { mRotation *= lnm::angleAxis(rads, axis);};
+		void rotate(const lnm::quat& rotation)
+		{
+			mRotation = rotation * mRotation;
+			mRotation = lnm::normalize(mRotation);
+		}
+		void rotate(float rads, const lnm::vec3& axis) { rotate(lnm::angleAxis(rads, glm::normalize(axis))); };
 		void scale(const lnm::vec3& scaling) { mScale *= scaling; }
 
 		void setTransform(const lnm::vec3& position, const lnm::quat& rotation, const lnm::vec3& scale)
