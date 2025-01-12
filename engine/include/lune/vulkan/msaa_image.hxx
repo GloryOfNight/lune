@@ -24,7 +24,6 @@ namespace lune::vulkan
 		void init(class View* view);
 
 		void createImage();
-		void allocateMemory();
 		void createImageView();
 
 		vk::Format mFormat{};

@@ -31,6 +31,9 @@ void lune::vulkan::MsaaImage::init(View* view)
 	mFormat = getVulkanConfig().colorFormat;
 	mExtent = view->getCurrentExtent();
 	mSampleCount = getVulkanConfig().sampleCount;
+
+	createImage();
+	createImageView();
 }
 
 void lune::vulkan::MsaaImage::createImage()
@@ -39,7 +42,7 @@ void lune::vulkan::MsaaImage::createImage()
 		vk::ImageCreateInfo()
 			.setImageType(vk::ImageType::e2D)
 			.setFormat(mFormat)
-			.setExtent(vk::Extent3D(mExtent))
+			.setExtent(vk::Extent3D(mExtent, 1))
 			.setMipLevels(1)
 			.setArrayLayers(1)
 			.setSamples(mSampleCount)
@@ -49,18 +52,10 @@ void lune::vulkan::MsaaImage::createImage()
 			.setQueueFamilyIndices(getVulkanContext().queueFamilyIndices)
 			.setSharingMode(vk::SharingMode::eExclusive);
 
-	mImage = getVulkanContext().device.createImage(imageCreateInfo);
-}
-
-void lune::vulkan::MsaaImage::allocateMemory()
-{
-	const vk::MemoryRequirements memoryRequirements = getVulkanContext().device.getImageMemoryRequirements(mImage);
-
-	const VmaAllocationCreateInfo allocationCreateInfo = {};
-	VmaAllocationInfo allocationInfo = {};
-	vmaAllocateMemory(getVulkanContext().vmaAllocator, reinterpret_cast<const VkMemoryRequirements*>(&memoryRequirements), &allocationCreateInfo, &mVmaAllocation, &allocationInfo);
-
-	vmaBindImageMemory(getVulkanContext().vmaAllocator, mVmaAllocation, mImage);
+	VmaAllocationCreateInfo vmaAllocCreateInfo{};
+	vmaAllocCreateInfo.usage = VMA_MEMORY_USAGE_AUTO;
+	VmaAllocationInfo allocInfo{};
+	vmaCreateImage(getVulkanContext().vmaAllocator, reinterpret_cast<const VkImageCreateInfo*>(&imageCreateInfo), &vmaAllocCreateInfo, reinterpret_cast<VkImage*>(&mImage), &mVmaAllocation, &allocInfo);
 }
 
 void lune::vulkan::MsaaImage::createImageView()

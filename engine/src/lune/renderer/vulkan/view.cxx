@@ -97,9 +97,7 @@ lune::vulkan::UniqueView lune::vulkan::View::create(SDL_Window* window)
 void lune::vulkan::View::init()
 {
 	createSwapchain();
-
 	createImageViews();
-
 	createImageCommandBuffers();
 
 	mDepthImage = DepthImage::create(this);
@@ -229,7 +227,7 @@ void lune::vulkan::View::sumbit()
 
 bool lune::vulkan::View::acquireNextImageIndex()
 {
-	constexpr uint64 timeout = 3 * 1000 * 1000; // ms to us to ns
+	constexpr uint64 timeout = 1 * 1000 * 1000; // ms to us to ns
 	const VkResult aquireRes = vkAcquireNextImageKHR(getVulkanContext().device, mSwapchain, timeout, mSemaphoreImageAvailable, VK_NULL_HANDLE, &mImageIndex);
 
 	if (aquireRes == VK_SUCCESS || aquireRes == VK_SUBOPTIMAL_KHR) [[likely]]
@@ -286,8 +284,6 @@ void lune::vulkan::View::createSwapchain()
 
 void lune::vulkan::View::cleanupSwapchain(vk::SwapchainKHR swapchain)
 {
-	//getVulkanContext().device.waitIdle();
-
 	for (auto frameBuffer : mFramebuffers)
 		getVulkanContext().device.destroyFramebuffer(frameBuffer);
 	mFramebuffers.clear();
@@ -344,8 +340,17 @@ void lune::vulkan::View::createFramebuffers()
 		std::vector<vk::ImageView> attachments;
 		attachments.reserve(3);
 
-		attachments.push_back(mSwapchainImageViews[i]);
-		attachments.push_back(mDepthImage->getImageView());
+		if (mMsaaImage)
+		{
+			attachments.push_back(mMsaaImage->getImageView());
+			attachments.push_back(mDepthImage->getImageView());
+			attachments.push_back(mSwapchainImageViews[i]);
+		}
+		else
+		{
+			attachments.push_back(mSwapchainImageViews[i]);
+			attachments.push_back(mDepthImage->getImageView());
+		}
 
 		const vk::FramebufferCreateInfo framebufferCreateInfo =
 			vk::FramebufferCreateInfo()

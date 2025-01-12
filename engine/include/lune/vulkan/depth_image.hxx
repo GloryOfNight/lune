@@ -26,7 +26,6 @@ namespace lune::vulkan
 		void init(class View* view);
 
 		void createImage();
-		void allocateMemory();
 		void createImageView();
 		void transitionImageLayout(vk::ImageLayout oldLayout, vk::ImageLayout newLayout);
 

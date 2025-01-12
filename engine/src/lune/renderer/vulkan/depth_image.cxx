@@ -35,9 +35,6 @@ void lune::vulkan::DepthImage::init(View* view)
 	mSampleCount = getVulkanConfig().sampleCount;
 
 	createImage();
-
-	allocateMemory();
-
 	createImageView();
 
 	transitionImageLayout(vk::ImageLayout::eUndefined, vk::ImageLayout::eDepthStencilAttachmentOptimal);
@@ -59,18 +56,10 @@ void lune::vulkan::DepthImage::createImage()
 			.setQueueFamilyIndices(getVulkanContext().queueFamilyIndices)
 			.setSharingMode(vk::SharingMode::eExclusive);
 
-	mImage = getVulkanContext().device.createImage(imageCreateInfo);
-}
-
-void lune::vulkan::DepthImage::allocateMemory()
-{
-	const vk::MemoryRequirements memoryRequirements = getVulkanContext().device.getImageMemoryRequirements(mImage);
-
-	const VmaAllocationCreateInfo allocationCreateInfo = {};
-	VmaAllocationInfo allocationInfo = {};
-	vmaAllocateMemory(getVulkanContext().vmaAllocator, reinterpret_cast<const VkMemoryRequirements*>(&memoryRequirements), &allocationCreateInfo, &mVmaAllocation, &allocationInfo);
-
-	vmaBindImageMemory(getVulkanContext().vmaAllocator, mVmaAllocation, mImage);
+	VmaAllocationCreateInfo vmaAllocCreateInfo{};
+	vmaAllocCreateInfo.usage = VMA_MEMORY_USAGE_AUTO;
+	VmaAllocationInfo allocInfo{};
+	vmaCreateImage(getVulkanContext().vmaAllocator, reinterpret_cast<const VkImageCreateInfo*>(&imageCreateInfo), &vmaAllocCreateInfo, reinterpret_cast<VkImage*>(&mImage), &mVmaAllocation, &allocInfo);
 }
 
 void lune::vulkan::DepthImage::createImageView()
