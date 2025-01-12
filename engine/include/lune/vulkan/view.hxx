@@ -33,6 +33,7 @@ namespace lune::vulkan
 		vk::SurfaceKHR getSurface() const { return mSurface; }
 		uint32 getImageCount() const { return mSwapchainImageViews.size(); }
 		uint32 getImageIndex() const { return mImageIndex; }
+		SDL_Window* getWindow() const { return mWindow; }
 
 		vk::CommandBuffer getCurrentImageCmdBuffer()
 		{

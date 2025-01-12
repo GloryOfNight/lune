@@ -43,19 +43,16 @@ namespace lune
 		static void createVmaAllocator(VulkanContext& context);
 	} // namespace vulkan
 
-	class vulkan_subsystem final : public EngineSubsystem
+	class VulkanSubsystem final : public EngineSubsystem
 	{
 	public:
-		static vulkan_subsystem* get();
-
-		vulkan_subsystem() = default;
-		vulkan_subsystem(const EngineSubsystem&) = delete;
-		vulkan_subsystem(EngineSubsystem&&) = delete;
-		virtual ~vulkan_subsystem() = default;
+		VulkanSubsystem() = default;
+		VulkanSubsystem(const EngineSubsystem&) = delete;
+		VulkanSubsystem(EngineSubsystem&&) = delete;
+		virtual ~VulkanSubsystem();
 
 		virtual bool allowInitialize() override;
 		virtual void initialize() override;
-		virtual void shutdown() override;
 
 		uint32 createView(SDL_Window* window);
 		vulkan::View* findView(uint32 viewId);

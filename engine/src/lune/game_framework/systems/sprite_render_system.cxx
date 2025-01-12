@@ -1,5 +1,6 @@
 #include "lune/game_framework/systems/sprite_render_system.hxx"
 
+#include "lune/core/engine.hxx"
 #include "lune/game_framework/components/sprite.hxx"
 #include "lune/game_framework/components/transform.hxx"
 #include "lune/game_framework/entities/entity.hxx"
@@ -17,7 +18,7 @@ void lune::SpriteRenderSystem::update(const std::vector<std::shared_ptr<Entity>>
 void lune::SpriteRenderSystem::prepareRender(Scene* scene)
 {
 	const auto& entities = scene->getEntities();
-	auto vkSubsystem = vulkan_subsystem::get();
+	auto vkSubsystem = Engine::get()->findSubsystem<VulkanSubsystem>();
 	auto [viewId, imageIndex, commandBuffer] = vkSubsystem->getFrameInfo();
 
 	auto cameraSystem = scene->findSystem<CameraSystem>();
@@ -44,7 +45,7 @@ void lune::SpriteRenderSystem::prepareRender(Scene* scene)
 				resources.stagingModelBuffer = vulkan::Buffer::create(vk::BufferUsageFlagBits::eTransferSrc, sizeof(lnm::mat4), VMA_MEMORY_USAGE_AUTO, VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT);
 				resources.modelBuffer = vulkan::Buffer::create(vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eTransferDst, sizeof(lnm::mat4), VMA_MEMORY_USAGE_AUTO, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT);
 
-				resources.descSets = vulkan::DescriptorSets::create(pipeline, 3);
+				resources.descSets = vulkan::DescriptorSets::create(pipeline, 1);
 				resources.descSets->setBufferInfo("viewProj", 0, cameraSystem->getViewProjectionBuffer()->getBuffer(), 0, sizeof(lnm::mat4));
 				resources.descSets->setBufferInfo("model", 0, resources.modelBuffer->getBuffer(), 0, sizeof(lnm::mat4));
 				resources.descSets->setImageInfo("texSampler", 0, resources.texImage->getImageView(), resources.texImage->getSampler());
@@ -65,18 +66,13 @@ void lune::SpriteRenderSystem::prepareRender(Scene* scene)
 
 			model = lnm::translate(model, spriteComp->position);
 
-			bool bUpdateModel = false;
-			{
-				uint8* stageBuffer = res->stagingModelBuffer->map();
-				if (memcmp(stageBuffer, &model, sizeof(model)) != 0)
-				{
-					memcpy(stageBuffer, &model, sizeof(model));
-					bUpdateModel = true;
-				}
-				res->stagingModelBuffer->unmap();
-			}
+			int diff{};
+			uint8* pStageBuffer = res->stagingModelBuffer->map();
+			if (diff = memcmp(pStageBuffer, &model, sizeof(model)); diff != 0)
+				memcpy(pStageBuffer, &model, sizeof(model));
+			res->stagingModelBuffer->unmap();
 
-			if (bUpdateModel)
+			if (diff)
 			{
 				const vk::BufferCopy bufferCopy = vk::BufferCopy().setSize(sizeof(model));
 				commandBuffer.copyBuffer(res->stagingModelBuffer->getBuffer(), res->modelBuffer->getBuffer(), bufferCopy);
@@ -88,7 +84,7 @@ void lune::SpriteRenderSystem::prepareRender(Scene* scene)
 void lune::SpriteRenderSystem::render(Scene* scene)
 {
 	const auto& entities = scene->getEntities();
-	auto vkSubsystem = vulkan_subsystem::get();
+	auto vkSubsystem = Engine::get()->findSubsystem<VulkanSubsystem>();
 	auto [viewId, imageIndex, commandBuffer] = vkSubsystem->getFrameInfo();
 
 	auto cameraSystem = scene->findSystem<CameraSystem>();

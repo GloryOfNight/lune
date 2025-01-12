@@ -1,8 +1,12 @@
 #pragma once
 #include "lune/lune.hxx"
 
+#include <memory>
+
 namespace lune
 {
+	using UniqueEngineSubsystem = std::unique_ptr<class EngineSubsystem>;
+
 	class EngineSubsystem
 	{
 	public:
@@ -13,6 +17,5 @@ namespace lune
 
 		virtual bool allowInitialize() = 0;
 		virtual void initialize() = 0;
-		virtual void shutdown() = 0;
 	};
 } // namespace lune

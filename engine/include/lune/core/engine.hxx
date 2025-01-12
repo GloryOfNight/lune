@@ -1,11 +1,15 @@
 #pragma once
 
+#include "SDL3/SDL_events.h"
 #include "lune/core/engine_subsystem.hxx"
+#include "lune/core/log.hxx"
 #include "lune/game_framework/scene.hxx"
 #include "lune/lune.hxx"
 
 #include <memory>
 #include <string>
+#include <typeindex>
+#include <typeinfo>
 #include <vector>
 
 namespace lune
@@ -27,41 +31,64 @@ namespace lune
 		void shutdown();
 
 		void run();
+		void stop();
 
-		template <typename T, typename... Args>
-		bool addSubsystem(Args&&... args);
-
-		void createWindow(const std::string_view name, const uint32 width, const uint32 height, const uint32 flags = 0);
+		uint32 createWindow(const std::string_view name, const uint32 width, const uint32 height, const uint32 flags = 0);
+		void removeWindow(uint32 viewId);
 
 		uint64 addScene(std::unique_ptr<Scene> s);
 
 		const std::vector<uint32>& getViewIds() const { return mViews; };
 
+		template <typename T, typename... Args>
+		T* addSubsystem(Args&&... args);
+
+		template <typename T>
+		T* findSubsystem();
+
 	private:
+		void onSdlQuitEvent(const SDL_Event& event);
+		void onSdlWindowCloseEvent(const SDL_Event& event);
+
 		std::vector<std::pair<uint64, std::unique_ptr<Scene>>> mScenes{};
 
-		std::vector<std::unique_ptr<EngineSubsystem>> mSubsystems;
+		std::unordered_map<std::type_index, UniqueEngineSubsystem> mSubsystems;
 
 		std::vector<uint32> mViews{};
 
 		std::vector<std::string> mArgs{};
+
+		bool mInitialized{false};
+		bool mRunning{false};
 	};
 
 	template <typename T, typename... Args>
-	inline bool Engine::addSubsystem(Args&&... args)
+	inline T* Engine::addSubsystem(Args&&... args)
 	{
+		std::type_index typeIndex = typeid(T);
+		if (findSubsystem<T>()) [[unlikely]]
+		{
+			LN_LOG(Fatal, Engine, "Subsystem \'{}\' already added", typeIndex.name())
+		}
+
 		auto newSubsystem = std::make_unique<T>(std::forward<Args>(args)...);
-		if (wasInitialized() && newSubsystem->allowInitialize())
+		if (newSubsystem->allowInitialize())
 		{
-			const auto& emplacedSubsystem = mSubsystems.emplace_back(std::move(newSubsystem));
-			emplacedSubsystem->initialize();
-			return true;
+			const auto& [it, result] = mSubsystems.emplace(typeIndex, std::move(newSubsystem));
+			it->second->initialize();
+			return dynamic_cast<T*>(it->second.get());
 		}
-		else if (!wasInitialized())
+		else
 		{
-			mSubsystems.push_back(std::move(newSubsystem));
-			return true;
+			LN_LOG(Fatal, Engine, "Subsystem \'{}\' cannot be initialized ", typeIndex.name())
 		}
-		return false;
+		return nullptr;
+	}
+
+	template <typename T>
+	inline T* Engine::findSubsystem()
+	{
+		auto it = mSubsystems.find(typeid(T));
+		return it != mSubsystems.end() ? dynamic_cast<T*>(it->second.get()) : nullptr;
 	}
 } // namespace lune

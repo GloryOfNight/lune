@@ -35,69 +35,7 @@ vk::Format findSupportedDepthFormat(const vk::PhysicalDevice physicalDevice) noe
 	return vk::Format::eUndefined;
 }
 
-lune::vulkan_subsystem* gVulkanSubsystem{nullptr};
-
-lune::vulkan_subsystem* lune::vulkan_subsystem::get()
-{
-	return gVulkanSubsystem;
-}
-
-bool lune::vulkan_subsystem::allowInitialize()
-{
-	return nullptr != vkGetInstanceProcAddr(VK_NULL_HANDLE, "vkEnumerateInstanceVersion");
-}
-
-void lune::vulkan_subsystem::initialize()
-{
-	gVulkanSubsystem = this;
-
-	mApiVersion = VK_API_VERSION_1_3;
-	LN_LOG(Info, Vulkan, "Vulkan version {0}.{1}.{2}", VK_VERSION_MAJOR(mApiVersion), VK_VERSION_MINOR(mApiVersion), VK_VERSION_PATCH(mApiVersion))
-
-	const vk::ApplicationInfo applicationInfo = vk::ApplicationInfo()
-													.setPApplicationName(lune::getApplicationName().c_str())
-													.setApplicationVersion(lune::getApplicationVersion())
-													.setPEngineName(lune::getEngineName())
-													.setEngineVersion(lune::getEngineVersion())
-													.setApiVersion(mApiVersion);
-
-	uint32_t instanceExtensionsCount{};
-	char const* const* instanceExtensionsSdl = SDL_Vulkan_GetInstanceExtensions(&instanceExtensionsCount);
-
-	std::vector<const char*> instanceExtensions(instanceExtensionsSdl, instanceExtensionsSdl + instanceExtensionsCount);
-	std::vector<const char*> instanceLayers = {"VK_LAYER_KHRONOS_validation"};
-
-	vulkan::createInstance(applicationInfo, instanceExtensions, instanceLayers, getVulkanContext());
-	vulkan::findPhysicalDevice(getVulkanContext());
-
-	if (nullptr == getVulkanContext().physicalDevice)
-	{
-		LN_LOG(Fatal, Vulkan, "Failed to find suitable device for Vulkan");
-		return;
-	}
-
-	getVulkanConfig().colorFormat = vk::Format::eB8G8R8A8Srgb;
-	getVulkanConfig().depthFormat = findSupportedDepthFormat(getVulkanContext().physicalDevice);
-	getVulkanConfig().sampleCount = vk::SampleCountFlagBits::e1;
-
-	const auto mPhysicalDeviceProperies = getVulkanContext().physicalDevice.getProperties();
-
-	const uint32 deviceApiVersion = mPhysicalDeviceProperies.apiVersion;
-	LN_LOG(Info, Vulkan, "Selected device:", mPhysicalDeviceProperies.deviceName.data(), mPhysicalDeviceProperies.deviceID);
-	LN_LOG(Info, Vulkan, "	GPU: {0} (id: {1})", mPhysicalDeviceProperies.deviceName.data(), mPhysicalDeviceProperies.deviceID);
-	LN_LOG(Info, Vulkan, "	API: {0}.{1}.{2}", VK_VERSION_MAJOR(deviceApiVersion), VK_VERSION_MINOR(deviceApiVersion), VK_VERSION_PATCH(deviceApiVersion))
-
-	vulkan::createDevice(getVulkanContext());
-	vulkan::createRenderPass(getVulkanContext());
-	vulkan::createQueues(getVulkanContext());
-	vulkan::createGraphicsCommandPool(getVulkanContext());
-	vulkan::createTransferCommandPool(getVulkanContext());
-	vulkan::createVmaAllocator(getVulkanContext());
-
-	loadDefaultAssets();
-}
-
-void lune::vulkan_subsystem::shutdown()
+lune::VulkanSubsystem::~VulkanSubsystem()
 {
 	getVulkanContext().device.waitIdle();
 
@@ -143,10 +81,62 @@ void lune::vulkan_subsystem::shutdown()
 		getVulkanContext().instance.destroy();
 
 	getVulkanContext() = VulkanContext{};
-	gVulkanSubsystem = nullptr;
 }
 
-uint32 lune::vulkan_subsystem::createView(SDL_Window* window)
+bool lune::VulkanSubsystem::allowInitialize()
+{
+	return nullptr != vkGetInstanceProcAddr(VK_NULL_HANDLE, "vkEnumerateInstanceVersion");
+}
+
+void lune::VulkanSubsystem::initialize()
+{
+	mApiVersion = VK_API_VERSION_1_3;
+	LN_LOG(Info, Vulkan, "Vulkan version {0}.{1}.{2}", VK_VERSION_MAJOR(mApiVersion), VK_VERSION_MINOR(mApiVersion), VK_VERSION_PATCH(mApiVersion))
+
+	const vk::ApplicationInfo applicationInfo = vk::ApplicationInfo()
+													.setPApplicationName(lune::getApplicationName().c_str())
+													.setApplicationVersion(lune::getApplicationVersion())
+													.setPEngineName(lune::getEngineName())
+													.setEngineVersion(lune::getEngineVersion())
+													.setApiVersion(mApiVersion);
+
+	uint32_t instanceExtensionsCount{};
+	char const* const* instanceExtensionsSdl = SDL_Vulkan_GetInstanceExtensions(&instanceExtensionsCount);
+
+	std::vector<const char*> instanceExtensions(instanceExtensionsSdl, instanceExtensionsSdl + instanceExtensionsCount);
+	std::vector<const char*> instanceLayers = {};
+
+	vulkan::createInstance(applicationInfo, instanceExtensions, instanceLayers, getVulkanContext());
+	vulkan::findPhysicalDevice(getVulkanContext());
+
+	if (nullptr == getVulkanContext().physicalDevice)
+	{
+		LN_LOG(Fatal, Vulkan, "Failed to find suitable device for Vulkan");
+		return;
+	}
+
+	getVulkanConfig().colorFormat = vk::Format::eB8G8R8A8Srgb;
+	getVulkanConfig().depthFormat = findSupportedDepthFormat(getVulkanContext().physicalDevice);
+	getVulkanConfig().sampleCount = vk::SampleCountFlagBits::e1;
+
+	const auto mPhysicalDeviceProperies = getVulkanContext().physicalDevice.getProperties();
+
+	const uint32 deviceApiVersion = mPhysicalDeviceProperies.apiVersion;
+	LN_LOG(Info, Vulkan, "Selected device:", mPhysicalDeviceProperies.deviceName.data(), mPhysicalDeviceProperies.deviceID);
+	LN_LOG(Info, Vulkan, "	GPU: {0} (id: {1})", mPhysicalDeviceProperies.deviceName.data(), mPhysicalDeviceProperies.deviceID);
+	LN_LOG(Info, Vulkan, "	API: {0}.{1}.{2}", VK_VERSION_MAJOR(deviceApiVersion), VK_VERSION_MINOR(deviceApiVersion), VK_VERSION_PATCH(deviceApiVersion))
+
+	vulkan::createDevice(getVulkanContext());
+	vulkan::createRenderPass(getVulkanContext());
+	vulkan::createQueues(getVulkanContext());
+	vulkan::createGraphicsCommandPool(getVulkanContext());
+	vulkan::createTransferCommandPool(getVulkanContext());
+	vulkan::createVmaAllocator(getVulkanContext());
+
+	loadDefaultAssets();
+}
+
+uint32 lune::VulkanSubsystem::createView(SDL_Window* window)
 {
 	static uint32 viewIdsCounter = 0;
 
@@ -160,7 +150,7 @@ uint32 lune::vulkan_subsystem::createView(SDL_Window* window)
 	return UINT32_MAX;
 }
 
-lune::vulkan::View* lune::vulkan_subsystem::findView(uint32 viewId)
+lune::vulkan::View* lune::VulkanSubsystem::findView(uint32 viewId)
 {
 	if (const auto it = mViews.find(viewId); it != mViews.end()) [[likely]]
 	{
@@ -170,7 +160,7 @@ lune::vulkan::View* lune::vulkan_subsystem::findView(uint32 viewId)
 	return nullptr;
 }
 
-void lune::vulkan_subsystem::removeView(uint32 viewId)
+void lune::VulkanSubsystem::removeView(uint32 viewId)
 {
 	if (const auto it = mViews.find(viewId); it != mViews.end())
 	{
@@ -179,7 +169,7 @@ void lune::vulkan_subsystem::removeView(uint32 viewId)
 	}
 }
 
-lune::vulkan::SharedShader lune::vulkan_subsystem::loadShader(std::filesystem::path spvPath)
+lune::vulkan::SharedShader lune::VulkanSubsystem::loadShader(std::filesystem::path spvPath)
 {
 	if (auto shader = findShader(spvPath); shader)
 		return shader;
@@ -192,13 +182,13 @@ lune::vulkan::SharedShader lune::vulkan_subsystem::loadShader(std::filesystem::p
 	return shader;
 }
 
-lune::vulkan::SharedShader lune::vulkan_subsystem::findShader(std::filesystem::path spvPath)
+lune::vulkan::SharedShader lune::VulkanSubsystem::findShader(std::filesystem::path spvPath)
 {
 	auto findRes = mShaders.find(spvPath);
 	return findRes != mShaders.end() ? findRes->second : nullptr;
 }
 
-void lune::vulkan_subsystem::addPipeline(std::string name, vulkan::SharedGraphicsPipeline pipeline)
+void lune::VulkanSubsystem::addPipeline(std::string name, vulkan::SharedGraphicsPipeline pipeline)
 {
 	if (mGraphicsPipelines.find(name) != mGraphicsPipelines.end())
 	{
@@ -208,13 +198,13 @@ void lune::vulkan_subsystem::addPipeline(std::string name, vulkan::SharedGraphic
 	mGraphicsPipelines.emplace(name, std::move(pipeline));
 }
 
-lune::vulkan::SharedGraphicsPipeline lune::vulkan_subsystem::findPipeline(const std::string& name)
+lune::vulkan::SharedGraphicsPipeline lune::VulkanSubsystem::findPipeline(const std::string& name)
 {
 	auto findRes = mGraphicsPipelines.find(name);
 	return findRes != mGraphicsPipelines.end() ? findRes->second : nullptr;
 }
 
-void lune::vulkan_subsystem::addPrimitive(std::string name, vulkan::SharedPrimitive primitive)
+void lune::VulkanSubsystem::addPrimitive(std::string name, vulkan::SharedPrimitive primitive)
 {
 	if (mPrimitives.find(name) != mPrimitives.end())
 	{
@@ -224,13 +214,13 @@ void lune::vulkan_subsystem::addPrimitive(std::string name, vulkan::SharedPrimit
 	mPrimitives.emplace(name, std::move(primitive));
 }
 
-lune::vulkan::SharedPrimitive lune::vulkan_subsystem::findPrimitive(const std::string& name)
+lune::vulkan::SharedPrimitive lune::VulkanSubsystem::findPrimitive(const std::string& name)
 {
 	auto findRes = mPrimitives.find(name);
 	return findRes != mPrimitives.end() ? findRes->second : nullptr;
 }
 
-void lune::vulkan_subsystem::addTextureImage(std::string name, vulkan::SharedTextureImage texImage)
+void lune::VulkanSubsystem::addTextureImage(std::string name, vulkan::SharedTextureImage texImage)
 {
 	if (mTextureImages.find(name) != mTextureImages.end())
 	{
@@ -240,13 +230,13 @@ void lune::vulkan_subsystem::addTextureImage(std::string name, vulkan::SharedTex
 	mTextureImages.emplace(name, std::move(texImage));
 }
 
-lune::vulkan::SharedTextureImage lune::vulkan_subsystem::findTextureImage(const std::string& name)
+lune::vulkan::SharedTextureImage lune::VulkanSubsystem::findTextureImage(const std::string& name)
 {
 	auto findRes = mTextureImages.find(name);
 	return findRes != mTextureImages.end() ? findRes->second : nullptr;
 }
 
-bool lune::vulkan_subsystem::beginNextFrame(uint32 viewId)
+bool lune::VulkanSubsystem::beginNextFrame(uint32 viewId)
 {
 	if (const auto it = mViews.find(viewId); it != mViews.end()) [[likely]]
 	{
@@ -257,7 +247,7 @@ bool lune::vulkan_subsystem::beginNextFrame(uint32 viewId)
 	return false;
 }
 
-lune::FrameInfo lune::vulkan_subsystem::getFrameInfo()
+lune::FrameInfo lune::VulkanSubsystem::getFrameInfo()
 {
 	if (const auto it = mViews.find(mCurrentFrameViewId); it != mViews.end()) [[likely]]
 	{
@@ -273,7 +263,7 @@ lune::FrameInfo lune::vulkan_subsystem::getFrameInfo()
 	return FrameInfo();
 }
 
-void lune::vulkan_subsystem::beginRenderPass()
+void lune::VulkanSubsystem::beginRenderPass()
 {
 	if (const auto it = mViews.find(mCurrentFrameViewId); it != mViews.end()) [[likely]]
 	{
@@ -282,7 +272,7 @@ void lune::vulkan_subsystem::beginRenderPass()
 	}
 }
 
-void lune::vulkan_subsystem::sumbitFrame()
+void lune::VulkanSubsystem::sumbitFrame()
 {
 	if (const auto it = mViews.find(mCurrentFrameViewId); it != mViews.end()) [[likely]]
 	{
@@ -295,7 +285,7 @@ void lune::vulkan_subsystem::sumbitFrame()
 #include "SDL3_image/SDL_image.h"
 #include "lune/vulkan/texture_image.hxx"
 
-void lune::vulkan_subsystem::loadDefaultAssets()
+void lune::VulkanSubsystem::loadDefaultAssets()
 {
 	auto spriteShVert = loadShader(*EngineShaderPath("sprite.vert.spv"));
 	auto spriteShFrag = loadShader(*EngineShaderPath("sprite.frag.spv"));

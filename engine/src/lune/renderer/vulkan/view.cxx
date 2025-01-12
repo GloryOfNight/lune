@@ -42,6 +42,8 @@ lune::vulkan::View::View(SDL_Window* window, vk::SurfaceKHR surface)
 
 lune::vulkan::View::~View()
 {
+	SDL_DestroyWindow(mWindow);
+
 	const auto cleanSwapchainLam = [framebuffers = mFramebuffers, imageViews = mSwapchainImageViews, swapchain = mSwapchain]() -> bool
 	{
 		for (auto framebuffer : framebuffers)

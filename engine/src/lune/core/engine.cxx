@@ -2,6 +2,7 @@
 
 #include "SDL3/SDL.h"
 #include "SDL3/SDL_vulkan.h"
+#include "lune/core/event_subsystem.hxx"
 #include "lune/core/log.hxx"
 #include "lune/lune.hxx"
 #include "lune/vulkan/vulkan_subsystem.hxx"
@@ -32,40 +33,26 @@ bool lune::Engine::initialize(std::vector<std::string> args)
 	LN_LOG(Info, Engine, "Engine: \'{0}\', version {1}.{2}.{3}", lune::getEngineName(), major, minor, patch);
 
 	mArgs = std::move(args);
-
-	addSubsystem<vulkan_subsystem>();
-
 	gEngine = this;
 
-	for (auto it = mSubsystems.begin(); it != mSubsystems.end(); it++)
-	{
-		if (it->get()->allowInitialize())
-		{
-			it->get()->initialize();
-		}
-		else
-		{
-			auto eraseIt = it;
-			--it;
-			mSubsystems.erase(eraseIt);
-		}
-	}
+	auto eventSubsystem = addSubsystem<EventSubsystem>();
+	eventSubsystem->addEventBindingMem(SDL_EVENT_QUIT, this, &Engine::onSdlQuitEvent);
+	eventSubsystem->addEventBindingMem(SDL_EVENT_WINDOW_CLOSE_REQUESTED, this, &Engine::onSdlWindowCloseEvent);
 
+	addSubsystem<VulkanSubsystem>();
+
+	mInitialized = true;
 	return true;
 }
 
 bool lune::Engine::wasInitialized() const
 {
-	return gEngine == this;
+	return mInitialized;
 }
 
 void lune::Engine::shutdown()
 {
 	mScenes.clear();
-
-	for (auto& engineSubsystem : mSubsystems)
-		engineSubsystem->shutdown();
-
 	mSubsystems.clear();
 	mViews.clear();
 	mArgs.clear();
@@ -73,18 +60,22 @@ void lune::Engine::shutdown()
 	if (gEngine == this)
 		gEngine = nullptr;
 
+	mInitialized = false;
 	SDL_Quit();
 }
 
 void lune::Engine::run()
 {
-	constexpr int32 frameTimeMs = 1000 / 480;
+	LN_LOG(Info, Engine, "Starting main loop");
+
+	constexpr int32 frameTimeMs = 1000 / 10;
 
 	uint32 nowTicks = SDL_GetTicks();
 	uint32 nextTick = nowTicks;
 	uint32 prevTick = nowTicks;
 
-	while (true)
+	mRunning = true;
+	while (mRunning)
 	{
 		uint32_t nowTicks = SDL_GetTicks();
 		if (nextTick > nowTicks)
@@ -101,21 +92,15 @@ void lune::Engine::run()
 		prevTick = nowTicks;
 		nextTick += frameTimeMs;
 
-		SDL_Event event;
-		while (SDL_PollEvent(&event))
-		{
-			if (event.type == SDL_EVENT_QUIT)
-			{
-				return;
-			}
-		}
+		auto eventSubsystem = findSubsystem<EventSubsystem>();
+		eventSubsystem->processEvents();
 
 		for (auto& [sId, s] : mScenes)
 		{
 			s->update(deltaSeconds);
 		}
 
-		auto vkSubsystem = vulkan_subsystem::get();
+		auto vkSubsystem = findSubsystem<VulkanSubsystem>();
 
 		for (uint32 viewId : mViews)
 		{
@@ -141,16 +126,39 @@ void lune::Engine::run()
 	}
 }
 
-void lune::Engine::createWindow(const std::string_view name, const uint32 width, const uint32 height, const uint32 flags)
+void lune::Engine::stop()
 {
-	auto subsystem = vulkan_subsystem::get();
+	LN_LOG(Info, Engine, "Stopping main loop");
+	mRunning = false;
+}
+
+uint32 lune::Engine::createWindow(const std::string_view name, const uint32 width, const uint32 height, const uint32 flags)
+{
+	auto subsystem = findSubsystem<VulkanSubsystem>();
 	if (subsystem)
 	{
 		auto newWindow = SDL_CreateWindow(name.data(), width, height, SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE | flags);
-
 		const uint32 newViewId = subsystem->createView(newWindow);
 		if (newViewId != UINT32_MAX)
 			mViews.emplace_back(newViewId);
+		else
+			SDL_DestroyWindow(newWindow);
+		return newViewId;
+	}
+	return UINT32_MAX;
+}
+
+void lune::Engine::removeWindow(uint32 viewId)
+{
+	for (auto it = mViews.begin(); it != mViews.end(); it++)
+	{
+		if (*it == viewId)
+		{
+			if (auto subsystem = findSubsystem<VulkanSubsystem>(); subsystem)
+				subsystem->removeView(viewId);
+			mViews.erase(it);
+			break;
+		}
 	}
 }
 
@@ -160,4 +168,25 @@ uint64 lune::Engine::addScene(std::unique_ptr<Scene> s)
 	if (s) [[likely]]
 		return mScenes.emplace_back(std::pair<uint64, std::unique_ptr<Scene>>{++sIdCounter, std::move(s)}).first;
 	return uint64();
+}
+
+void lune::Engine::onSdlQuitEvent(const SDL_Event& event)
+{
+	LN_LOG(Info, Engine, "Requesting stop (SDL_EVENT_QUIT)");
+	stop();
+}
+
+void lune::Engine::onSdlWindowCloseEvent(const SDL_Event& event)
+{
+	auto subsystem = findSubsystem<VulkanSubsystem>();
+	for (auto viewId : mViews)
+	{
+		auto windowId = SDL_GetWindowID(subsystem->findView(viewId)->getWindow());
+		if (event.window.windowID == windowId)
+		{
+			LN_LOG(Info, Engine, "Removing view \'{}\' (SDL_EVENT_WINDOW_CLOSE_REQUESTED)", viewId);
+			removeWindow(viewId);
+			break;
+		}
+	}
 }

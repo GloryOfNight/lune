@@ -49,7 +49,7 @@ void lune::CameraSystem::update(const std::vector<std::shared_ptr<lune::Entity>>
 			const auto& direction = persCam->mDirection;
 			const auto& up = persCam->mUp;
 
-			auto vkSubsystem = vulkan_subsystem::get();
+			auto vkSubsystem = Engine::get()->findSubsystem<VulkanSubsystem>();
 			const auto& viewIds = Engine::get()->getViewIds();
 			for (uint32 viewId : viewIds)
 			{
@@ -73,7 +73,7 @@ void lune::CameraSystem::update(const std::vector<std::shared_ptr<lune::Entity>>
 void lune::CameraSystem::prepareRender(Scene* scene)
 {
 	const auto& entities = scene->getEntities();
-	auto vkSubsystem = vulkan_subsystem::get();
+	auto vkSubsystem = Engine::get()->findSubsystem<VulkanSubsystem>();
 	auto [viewId, imageIndex, commandBuffer] = vkSubsystem->getFrameInfo();
 
 	if (!mStagingCameraBuffer)
@@ -88,11 +88,9 @@ void lune::CameraSystem::prepareRender(Scene* scene)
 		viewProj = findRes->second.viewProj;
 
 	int diff{};
-	uint8* stageBuffer = mStagingCameraBuffer->map();
-	if (diff = memcmp(stageBuffer, &viewProj, sizeof(viewProj)); diff != 0)
-	{
-		memcpy(stageBuffer, &viewProj, sizeof(viewProj));
-	}
+	uint8* pStageBuffer = mStagingCameraBuffer->map();
+	if (diff = memcmp(pStageBuffer, &viewProj, sizeof(viewProj)); diff != 0)
+		memcpy(pStageBuffer, &viewProj, sizeof(viewProj));
 	mStagingCameraBuffer->unmap();
 
 	if (diff)
