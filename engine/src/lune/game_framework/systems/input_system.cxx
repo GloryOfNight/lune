@@ -28,6 +28,13 @@ lune::InputSystem::InputSystem()
 	inputConfig.emplace("move_right", std::make_unique<InputActionConditionKey>(SDLK_D, true));
 	inputConfig.emplace("move_up", std::make_unique<InputActionConditionKey>(SDLK_SPACE, true));
 	inputConfig.emplace("move_down", std::make_unique<InputActionConditionKey>(SDLK_LCTRL, true));
+	inputConfig.emplace("roll_left", std::make_unique<InputActionConditionKey>(SDLK_Q, true));
+	inputConfig.emplace("roll_right", std::make_unique<InputActionConditionKey>(SDLK_E, true));
+	inputConfig.emplace("yaw_left", std::make_unique<InputActionConditionKey>(SDLK_LEFT, true));
+	inputConfig.emplace("yaw_right", std::make_unique<InputActionConditionKey>(SDLK_RIGHT, true));
+	inputConfig.emplace("pitch_up", std::make_unique<InputActionConditionKey>(SDLK_UP, true));
+	inputConfig.emplace("pitch_down", std::make_unique<InputActionConditionKey>(SDLK_DOWN, true));
+
 	inputConfig.emplace("mouse_left_button_down", std::make_unique<InputActionConditionMouse>(SDL_BUTTON_LMASK, true));
 }
 

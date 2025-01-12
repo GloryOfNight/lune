@@ -308,7 +308,6 @@ void lune::VulkanSubsystem::loadDefaultAssets()
 
 	{
 		std::vector<vulkan::Vertex> vertices = {
-
 			{{-1.0f, -1.0f, 1.0f}, {1.0f, 0.0f, 0.0f, 1.0f}, {0.0f, 0.0f}},	 // Front face; Bottom-left
 			{{1.0f, -1.0f, 1.0f}, {0.0f, 1.0f, 0.0f, 1.0f}, {1.0f, 0.0f}},	 // Bottom-right
 			{{1.0f, 1.0f, 1.0f}, {0.0f, 0.0f, 1.0f, 1.0f}, {1.0f, 1.0f}},	 // Top-right

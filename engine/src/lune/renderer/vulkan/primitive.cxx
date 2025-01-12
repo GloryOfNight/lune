@@ -21,7 +21,11 @@ void lune::vulkan::Primitive::init(const std::vector<Vertex>& vertices, const st
 	mVerticesSize = vertices.size() * sizeof(Vertex);
 	mIndeciesSize = indices.size() * sizeof(Index);
 
-	mBuffer = Buffer::create(vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eTransferDst, mVerticesSize + mIndeciesSize, VmaMemoryUsage::VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE, {});
+	vk::BufferUsageFlags bufferUsageBits = vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eTransferDst;
+	if (indices.size())
+		bufferUsageBits |= vk::BufferUsageFlagBits::eIndexBuffer;
+
+	mBuffer = Buffer::create(bufferUsageBits, mVerticesSize + mIndeciesSize, VmaMemoryUsage::VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE, {});
 
 	mBuffer->copyTransfer(vertices.data(), 0, mVerticesSize);
 	if (mIndeciesSize)
@@ -50,6 +54,6 @@ void lune::vulkan::Primitive::cmdDraw(vk::CommandBuffer commandBuffer, uint32 in
 	}
 	else
 	{
-		commandBuffer.drawIndexed(mIndeciesSize / sizeof(Index), instanceCount, 0, mVerticesSize, firstInstance);
+		commandBuffer.drawIndexed(mIndeciesSize / sizeof(Index), instanceCount, 0, 0, firstInstance);
 	}
 }

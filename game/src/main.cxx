@@ -2,6 +2,7 @@
 #include "lune/game_framework/components/camera.hxx"
 #include "lune/game_framework/components/input.hxx"
 #include "lune/game_framework/components/move.hxx"
+#include "lune/game_framework/components/rotate.hxx"
 #include "lune/game_framework/components/sprite.hxx"
 #include "lune/game_framework/components/transform.hxx"
 #include "lune/game_framework/systems/camera_system.hxx"
@@ -21,6 +22,7 @@ public:
 	{
 		addComponent<lune::TransformComponent>();
 		addComponent<lune::MoveComponent>();
+		addComponent<lune::RotateComponent>();
 		auto cam = addComponent<lune::PerspectiveCameraComponent>();
 		cam->mPosition = lnm::vec3(0.f, 0.f, -10.f);
 
@@ -31,6 +33,12 @@ public:
 		inputComp->actions.push_back({"move_right"});
 		inputComp->actions.push_back({"move_up"});
 		inputComp->actions.push_back({"move_down"});
+		inputComp->actions.push_back({"roll_left"});
+		inputComp->actions.push_back({"roll_right"});
+		inputComp->actions.push_back({"yaw_left"});
+		inputComp->actions.push_back({"yaw_right"});
+		inputComp->actions.push_back({"pitch_up"});
+		inputComp->actions.push_back({"pitch_down"});
 	}
 };
 
@@ -91,7 +99,7 @@ int main(int argc, char** argv)
 		return 1;
 
 	engine.createWindow("so8", 800, 800);
-	engine.createWindow("so8 - 2", 800, 800);
+	//engine.createWindow("so8 - 2", 800, 800);
 
 	engine.addScene(std::make_unique<GameScene>());
 

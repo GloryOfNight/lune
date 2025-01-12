@@ -83,9 +83,9 @@ void lune::vulkan::Buffer::copyTransfer(const void* data, size_t offset, size_t 
 	commandBuffer.begin(commandBufferBeginInfo);
 
 	const vk::BufferCopy copyRegion = vk::BufferCopy()
+										  .setSrcOffset(0)
 										  .setDstOffset(offset)
-										  .setSize(size)
-										  .setSrcOffset(0);
+										  .setSize(size);
 
 	commandBuffer.copyBuffer(stagingBuffer->getBuffer(), getBuffer(), copyRegion);
 
