@@ -1,5 +1,6 @@
 #include "lune/core/event_subsystem.hxx"
 
+#include "backends/imgui_impl_sdl3.h"
 #include "lune/core/log.hxx"
 
 void lune::EventSubsystem::processEvents()
@@ -7,6 +8,9 @@ void lune::EventSubsystem::processEvents()
 	SDL_Event event;
 	while (SDL_PollEvent(&event))
 	{
+		if (ImGui::GetCurrentContext())
+			ImGui_ImplSDL3_ProcessEvent(&event);
+
 		if (const auto bindIt = mEventBindings.find(event.type); bindIt != mEventBindings.end())
 		{
 			for (auto bindFunc : bindIt->second)

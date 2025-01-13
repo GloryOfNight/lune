@@ -1,7 +1,11 @@
 #include "lune/vulkan/view.hxx"
 
+#include "backends/imgui_impl_sdl3.h"
+#include "backends/imgui_impl_vulkan.h"
 #include "lune/core/log.hxx"
 #include "lune/vulkan/vulkan_subsystem.hxx"
+
+#include "imgui.h"
 
 #include <SDL3/SDL_video.h>
 #include <SDL3/SDL_vulkan.h>
@@ -43,6 +47,8 @@ lune::vulkan::View::View(SDL_Window* window, vk::SurfaceKHR surface)
 lune::vulkan::View::~View()
 {
 	SDL_DestroyWindow(mWindow);
+
+	shutdownImGui();
 
 	const auto cleanSwapchainLam = [framebuffers = mFramebuffers, imageViews = mSwapchainImageViews, swapchain = mSwapchain]() -> bool
 	{
@@ -108,6 +114,7 @@ void lune::vulkan::View::init()
 	createFramebuffers();
 	createFences();
 	createSemaphores();
+	createImGui();
 }
 
 void lune::vulkan::View::recreateSwapchain()
@@ -127,6 +134,9 @@ void lune::vulkan::View::recreateSwapchain()
 		mMsaaImage = MsaaImage::create(this);
 
 	createFramebuffers();
+
+	shutdownImGui();
+	createImGui();
 }
 
 bool lune::vulkan::View::updateExtent()
@@ -144,6 +154,9 @@ bool lune::vulkan::View::beginNextFrame()
 {
 	if (!acquireNextImageIndex())
 		return false;
+
+	ImGui::SetCurrentContext(mImGuiContext);
+	ImGui::Render();
 
 	vk::CommandBuffer commandBuffer = mImageCommandBuffers[mImageIndex];
 
@@ -178,6 +191,11 @@ void lune::vulkan::View::beginRenderPass()
 void lune::vulkan::View::sumbit()
 {
 	auto commandBuffer = getCurrentImageCmdBuffer();
+
+	ImGui::SetCurrentContext(mImGuiContext);
+	auto drawData = ImGui::GetDrawData();
+	ImGui_ImplVulkan_RenderDrawData(drawData, commandBuffer);
+
 	if (!commandBuffer) [[unlikely]]
 	{
 		LN_LOG(Error, Vulkan::View, "Submit called while no frame avaible!")
@@ -223,6 +241,10 @@ void lune::vulkan::View::sumbit()
 	const std::array<vk::Fence, 1> waitFences{mSubmitQueueFences[mImageIndex]};
 	const vk::Result waitFencesResult = getVulkanContext().device.waitForFences(waitFences, true, UINT32_MAX);
 	getVulkanContext().device.resetFences(waitFences);
+
+	ImGui::SetCurrentContext(mImGuiContext);
+	ImGui_ImplVulkan_NewFrame();
+	ImGui::NewFrame();
 }
 
 bool lune::vulkan::View::acquireNextImageIndex()
@@ -256,12 +278,12 @@ void lune::vulkan::View::createSwapchain()
 	if (presentMode == vk::PresentModeKHR())
 		LN_LOG(Error, Vulkan::View, "Failed to to find preffered present mode!");
 
-	const uint32_t minImageCount = surfaceCapabilities.maxImageCount >= 3 ? 3 : surfaceCapabilities.minImageCount;
+	mMinImageCount = surfaceCapabilities.maxImageCount >= 3 ? 3 : surfaceCapabilities.minImageCount;
 
 	const vk::SwapchainCreateInfoKHR swapchainCreateInfo =
 		vk::SwapchainCreateInfoKHR()
 			.setSurface(mSurface)
-			.setMinImageCount(minImageCount)
+			.setMinImageCount(mMinImageCount)
 			.setImageFormat(surfaceFormat.format)
 			.setImageColorSpace(surfaceFormat.colorSpace)
 			.setImageExtent(mCurrentExtent)
@@ -388,4 +410,42 @@ void lune::vulkan::View::createSemaphores()
 {
 	mSemaphoreImageAvailable = getVulkanContext().device.createSemaphore(vk::SemaphoreCreateInfo());
 	mSemaphoreRenderFinished = getVulkanContext().device.createSemaphore(vk::SemaphoreCreateInfo());
+}
+
+void lune::vulkan::View::createImGui()
+{
+	mImGuiContext = ImGui::CreateContext();
+	ImGui::SetCurrentContext(mImGuiContext);
+	ImGui::StyleColorsDark();
+	ImGui_ImplSDL3_InitForVulkan(mWindow);
+
+	auto& context = getVulkanContext();
+	ImGui_ImplVulkan_InitInfo Info{};
+	Info.Instance = context.instance;
+	Info.PhysicalDevice = context.physicalDevice;
+	Info.Device = context.device;
+	Info.QueueFamily = context.graphicsQueueIndex;
+	Info.Queue = context.graphicsQueue;
+	Info.RenderPass = context.renderPass;
+	Info.MinImageCount = mMinImageCount;
+	Info.ImageCount = mSwapchainImageViews.size();
+	Info.MSAASamples = static_cast<VkSampleCountFlagBits>(getVulkanConfig().sampleCount);
+	Info.DescriptorPoolSize = 16;
+	ImGui_ImplVulkan_Init(&Info);
+
+	ImGui_ImplVulkan_CreateFontsTexture();
+
+	ImGui_ImplVulkan_NewFrame();
+	ImGui_ImplSDL3_NewFrame();
+	ImGui::NewFrame();
+}
+
+void lune::vulkan::View::shutdownImGui()
+{
+	if (mImGuiContext)
+	{
+		ImGui_ImplVulkan_Shutdown();
+		ImGui_ImplSDL3_Shutdown();
+		ImGui::DestroyContext(mImGuiContext);
+	}
 }

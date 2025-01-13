@@ -8,6 +8,8 @@
 #include <vector>
 
 struct SDL_Window;
+struct ImGui_ImplVulkanH_Window;
+struct ImGuiContext;
 
 namespace lune::vulkan
 {
@@ -34,6 +36,7 @@ namespace lune::vulkan
 		uint32 getImageCount() const { return mSwapchainImageViews.size(); }
 		uint32 getImageIndex() const { return mImageIndex; }
 		SDL_Window* getWindow() const { return mWindow; }
+		ImGui_ImplVulkanH_Window* getImGuiWindow() { return mImGuiWindow; }
 
 		vk::CommandBuffer getCurrentImageCmdBuffer()
 		{
@@ -64,9 +67,16 @@ namespace lune::vulkan
 
 		void createSemaphores();
 
+		void createImGui();
+		void shutdownImGui();
+
 		bool acquireNextImageIndex();
 
 		SDL_Window* mWindow{nullptr};
+
+		ImGuiContext* mImGuiContext{};
+
+		ImGui_ImplVulkanH_Window* mImGuiWindow{};
 
 		uint32 mImageIndex{};
 
@@ -81,6 +91,8 @@ namespace lune::vulkan
 		vk::Extent2D mCurrentExtent;
 
 		std::vector<vk::ImageView> mSwapchainImageViews;
+		uint32 mMinImageCount{};
+
 		std::vector<vk::CommandBuffer> mImageCommandBuffers;
 
 		std::vector<vk::Framebuffer> mFramebuffers;

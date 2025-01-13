@@ -8,9 +8,9 @@ vk::Format sdlFormatToVulkan(SDL_PixelFormat format)
 	switch (format)
 	{
 	case SDL_PIXELFORMAT_RGBA32:
-		return vk::Format::eR8G8B8A8Srgb;
+		return vk::Format::eR8G8B8A8Unorm;
 	case SDL_PIXELFORMAT_RGB24:
-		return vk::Format::eR8G8B8Srgb;
+		return vk::Format::eR8G8B8Unorm;
 	case SDL_PIXELFORMAT_BGRA8888:
 		return vk::Format::eB8G8R8A8Unorm;
 	default:

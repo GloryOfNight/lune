@@ -115,7 +115,7 @@ void lune::VulkanSubsystem::initialize()
 		return;
 	}
 
-	getVulkanConfig().colorFormat = vk::Format::eB8G8R8A8Srgb;
+	getVulkanConfig().colorFormat = vk::Format::eB8G8R8A8Unorm;
 	getVulkanConfig().depthFormat = findSupportedDepthFormat(getVulkanContext().physicalDevice);
 	getVulkanConfig().sampleCount = vk::SampleCountFlagBits::e1;
 
