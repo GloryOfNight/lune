@@ -31,7 +31,7 @@ namespace lune
 		}
 
 		lnm::vec3 mPosition = lnm::vec3(0.0f);
-		lnm::quat mRotation = lnm::quat(1.0f, 0.0f, 0.0f, 0.0f);
+		lnm::quat mRotation = lnm::quat(1.0f, lnm::vec3());
 		lnm::vec3 mScale = lnm::vec3(1.0f);
 	};
 } // namespace lune

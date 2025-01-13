@@ -18,9 +18,6 @@ namespace lune
 		}
 
 		lnm::vec3 mPosition = lnm::vec3(0.f, 0.f, 1.f);
-		lnm::vec3 mRotation = lnm::vec3();
-		lnm::vec3 mDirection = lnm::vec3(0.f, 0.f, 1.f);
-		lnm::vec3 mUp = lnm::vec3(0.f, 1.f, 0.f);
 
 		float mFov{45.f};
 		float mAspectRatio{1.f};

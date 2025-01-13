@@ -10,7 +10,7 @@
 void lune::CameraSystem::update(Scene* scene, double deltaTime)
 {
 	const auto& entities = scene->getEntities();
-	
+
 	mViewsProjs.clear();
 	for (const auto& e : entities)
 	{
@@ -44,12 +44,12 @@ void lune::CameraSystem::update(Scene* scene, double deltaTime)
 		if (persCam)
 		{
 			lnm::vec3 position = persCam->mPosition;
-			lnm::quat rotation = glm::quat(glm::radians(persCam->mRotation));
+			lnm::quat rotation = glm::quat(1.f, 0.f, 0.f, 0.f);
 			auto transformComp = e->findComponent<TransformComponent>();
 			if (transformComp)
 			{
 				position += transformComp->mPosition;
-				rotation *= transformComp->mRotation;
+				rotation = transformComp->mRotation;
 			}
 
 			auto vkSubsystem = Engine::get()->findSubsystem<VulkanSubsystem>();
@@ -65,10 +65,10 @@ void lune::CameraSystem::update(Scene* scene, double deltaTime)
 				float fov, aspectRatio, nearPlane, farPlane;
 				persCam->getPerspective(fov, aspectRatio, nearPlane, farPlane);
 
-				const lnm::vec3 forward = rotation * persCam->mDirection;
-				const lnm::vec3 up = rotation * persCam->mUp;
+				const lnm::vec3 forward = rotation * frontAxis;
+				const lnm::vec3 up = rotation * -upAxis;
 
-				viewProj.view = lnm::lookAt(position, (position + forward), up);
+				viewProj.view = lnm::lookAtRH(position, (position + forward), up);
 				//viewProj.view = glm::scale(glm::mat4(1.0f), glm::vec3(1.0f, -1.0f, -1.0f)) * viewProj.view;
 				viewProj.proj = lnm::perspective(lnm::radians(fov), aspectRatio * viewAspectRatio, nearPlane, farPlane);
 				viewProj.viewProj = viewProj.proj * viewProj.view;
