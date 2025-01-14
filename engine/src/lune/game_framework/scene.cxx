@@ -4,6 +4,11 @@
 
 void lune::Scene::update(double deltaTime)
 {
+	for (auto& e : mEntities)
+	{
+		e->update(this, deltaTime);
+	}
+
 	for (auto s : mSystems)
 	{
 		s->update(this, deltaTime);

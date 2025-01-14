@@ -25,6 +25,8 @@ void lune::MoveSystem::update(Scene* scene, double deltaTime)
 		auto transformComp = entity->findComponent<TransformComponent>();
 		if (moveComp && inputComp && transformComp)
 		{
+			const float beforeZ = transformComp->mOrientation.z;
+
 			const double speed = moveComp->speed * deltaTime;
 			for (auto& [action, active] : inputComp->actions)
 			{
@@ -40,21 +42,16 @@ void lune::MoveSystem::update(Scene* scene, double deltaTime)
 					const float halfW = static_cast<float>(w) * 0.5f;
 					const float halfH = static_cast<float>(h) * 0.5f;
 
-					const float beforeZ = transformComp->mRotation.z;
-
 					if (mouseState.x && mouseState.x != halfW)
 					{
 						const auto coefDist = lnm::clamp(halfW / mouseState.x - 1, -0.1f, 0.1f);
-						transformComp->rotate(-lnm::radians(rotComp->speed * coefDist), transformComp->mRotation * upAxis);
+						transformComp->rotate(-lnm::radians(rotComp->speed * coefDist), transformComp->mOrientation * upAxis);
 					}
 					if (mouseState.y && mouseState.y != halfH)
 					{
 						const auto coefDist = lnm::clamp(halfH / mouseState.y - 1, -0.1f, 0.1f);
-						transformComp->rotate(lnm::radians(rotComp->speed * coefDist), transformComp->mRotation * rightAxis);
+						transformComp->rotate(lnm::radians(rotComp->speed * coefDist), transformComp->mOrientation * rightAxis);
 					}
-
-					transformComp->mRotation.z = beforeZ;
-					transformComp->mRotation = lnm::normalize(transformComp->mRotation);
 
 					inputSystem->setShowCursor(false);
 					inputSystem->warpMouse(halfW, halfH);
@@ -68,14 +65,14 @@ void lune::MoveSystem::update(Scene* scene, double deltaTime)
 					continue;
 
 				if (action == "move_front")
-					transformComp->move(frontAxis * lnm::vec3(speed));
+					transformComp->move(forwardAxis * lnm::vec3(speed));
 				else if (action == "move_back")
-					transformComp->move(-(frontAxis * lnm::vec3(speed)));
-				else if (action == "move_left")
+					transformComp->move(-(forwardAxis * lnm::vec3(speed)));
+				if (action == "move_left")
 					transformComp->move(rightAxis * lnm::vec3(speed));
 				else if (action == "move_right")
 					transformComp->move(-(rightAxis * lnm::vec3(speed)));
-				else if (action == "move_up")
+				if (action == "move_up")
 					transformComp->translate(upAxis * lnm::vec3(speed));
 				else if (action == "move_down")
 					transformComp->translate(-(upAxis * lnm::vec3(speed)));
@@ -83,19 +80,22 @@ void lune::MoveSystem::update(Scene* scene, double deltaTime)
 				if (rotComp)
 				{
 					if (action == "yaw_left")
-						transformComp->rotate(lnm::radians(-rotComp->speed * deltaTime), transformComp->mRotation * upAxis);
+						transformComp->rotate(-lnm::radians(rotComp->speed * deltaTime), transformComp->mOrientation * upAxis);
 					else if (action == "yaw_right")
-						transformComp->rotate(lnm::radians(rotComp->speed * deltaTime), transformComp->mRotation * upAxis);
+						transformComp->rotate(lnm::radians(rotComp->speed * deltaTime), transformComp->mOrientation * upAxis);
 					if (action == "pitch_up")
-						transformComp->rotate(lnm::radians(rotComp->speed * deltaTime), transformComp->mRotation * rightAxis);
+						transformComp->rotate(lnm::radians(rotComp->speed * deltaTime), transformComp->mOrientation * rightAxis);
 					else if (action == "pitch_down")
-						transformComp->rotate(lnm::radians(-rotComp->speed * deltaTime), transformComp->mRotation * rightAxis);
-					else if (action == "roll_left")
-						transformComp->rotate(lnm::radians(rotComp->speed * deltaTime), transformComp->mRotation * frontAxis);
+						transformComp->rotate(-lnm::radians(rotComp->speed * deltaTime), transformComp->mOrientation * rightAxis);
+					if (action == "roll_left")
+						transformComp->rotate(lnm::radians(rotComp->speed * deltaTime), transformComp->mOrientation * forwardAxis);
 					else if (action == "roll_right")
-						transformComp->rotate(lnm::radians(-rotComp->speed * deltaTime), transformComp->mRotation * frontAxis);
+						transformComp->rotate(-lnm::radians(rotComp->speed * deltaTime), transformComp->mOrientation * forwardAxis);
 				}
 			}
+			// lock Z axis of a rotation
+			transformComp->mOrientation.z = beforeZ;
+			transformComp->mOrientation = lnm::normalize(transformComp->mOrientation);
 		}
 	}
 }

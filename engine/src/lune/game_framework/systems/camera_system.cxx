@@ -49,7 +49,7 @@ void lune::CameraSystem::update(Scene* scene, double deltaTime)
 			if (transformComp)
 			{
 				position += transformComp->mPosition;
-				rotation = transformComp->mRotation;
+				rotation = transformComp->mOrientation;
 			}
 
 			auto vkSubsystem = Engine::get()->findSubsystem<VulkanSubsystem>();
@@ -65,7 +65,7 @@ void lune::CameraSystem::update(Scene* scene, double deltaTime)
 				float fov, aspectRatio, nearPlane, farPlane;
 				persCam->getPerspective(fov, aspectRatio, nearPlane, farPlane);
 
-				const lnm::vec3 forward = rotation * frontAxis;
+				const lnm::vec3 forward = rotation * forwardAxis;
 				const lnm::vec3 up = rotation * -upAxis;
 
 				viewProj.view = lnm::lookAtRH(position, (position + forward), up);

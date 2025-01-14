@@ -18,7 +18,7 @@ namespace lnm = lune::math;
 
 namespace lune
 {
-	static constexpr lnm::vec3 frontAxis = lnm::vec3(0.f, 0.f, 1.f);
+	static constexpr lnm::vec3 forwardAxis = lnm::vec3(0.f, 0.f, 1.f);
 	static constexpr lnm::vec3 rightAxis = lnm::vec3(1.f, 0.f, 0.f);
 	static constexpr lnm::vec3 upAxis = lnm::vec3(0.f, -1.f, 0.f);
 } // namespace lune

@@ -45,6 +45,8 @@ public:
 
 		inputComp->actions.push_back({"mouse_left_button"});
 	}
+
+	void update(lune::Scene* scene, double deltaTime) override {}
 };
 
 class ScarletSprite : public lune::Entity
@@ -73,6 +75,8 @@ public:
 		// inputComp->actions.push_back({"pitch_up"});
 		// inputComp->actions.push_back({"pitch_down"});
 	}
+
+	virtual void update(lune::Scene* scene, double deltaTime) override {};
 };
 
 class GameScene : public lune::Scene

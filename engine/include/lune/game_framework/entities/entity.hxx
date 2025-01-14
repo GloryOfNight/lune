@@ -18,6 +18,8 @@ namespace lune
 		Entity(Entity&&) = default;
 		virtual ~Entity() = default;
 
+		virtual void update(class Scene* scene, double deltaTime) = 0;
+
 		template <typename T, typename... Args>
 		T* addComponent(Args&&... args)
 		{
