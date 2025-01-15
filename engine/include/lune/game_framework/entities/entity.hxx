@@ -13,7 +13,7 @@ namespace lune
 	class Entity
 	{
 	public:
-		Entity() = default;
+		Entity();
 		Entity(const Entity&) = delete;
 		Entity(Entity&&) = default;
 		virtual ~Entity() = default;
@@ -68,13 +68,6 @@ namespace lune
 		}
 
 		uint64 getId() const { return mId; }
-
-		void assignId(uint64 eId)
-		{
-			if (mId != 0) [[unlikely]]
-				LN_LOG(Fatal, Entity, "Do not reassign eId");
-			mId = eId;
-		}
 
 	private:
 		uint64 mId{};

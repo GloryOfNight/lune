@@ -4,8 +4,7 @@
 
 namespace lune
 {
-    extern "C++" std::filesystem::path& getEngineAssetsRootDir();
-    extern "C++" std::filesystem::path& getEngineShadersRootDir();
+	extern "C++" std::filesystem::path& getEngineAssetsRootDir();
 
 	struct EngineAssetPath
 	{
@@ -28,10 +27,33 @@ namespace lune
 		EngineShadersBinaryDir();
 	};
 
-    struct EngineShaderPath : public EngineAssetPath
-    {
-        EngineShaderPath() = default;
-        EngineShaderPath(std::string_view relativeAssetPath);
-    };
+	struct EngineShaderPath : public EngineAssetPath
+	{
+		EngineShaderPath() = default;
+		EngineShaderPath(std::string_view relativeAssetPath);
+	};
+} // namespace lune
 
+namespace lune // app paths
+{
+	extern "C++" std::filesystem::path& getAppAssetsRootDir();
+	struct AppAssetPath : EngineAssetPath
+	{
+		AppAssetPath(std::string_view relativeAssetPath);
+	};
+
+	struct AppShadersSourceDir : public EngineAssetPath
+	{
+		AppShadersSourceDir();
+	};
+
+	struct AppShadersBinaryDir : public EngineAssetPath
+	{
+		AppShadersBinaryDir();
+	};
+
+	struct AppAssetShaderPath : EngineAssetPath
+	{
+		AppAssetShaderPath(std::string_view relativeAssetPath);
+	};
 } // namespace lune

@@ -49,11 +49,6 @@ public:
 
 	void update(lune::Scene* scene, double deltaTime) override
 	{
-		if (ImGui::GetCurrentContext())
-		{
-			ImGui::Begin("transform");
-			ImGui::End();
-		}
 	}
 };
 
@@ -128,7 +123,7 @@ int main(int argc, char** argv)
 {
 	std::vector<std::string> args(argv, argv + argc);
 
-	ln::getApplicationName() = "so8";
+	ln::getApplicationName() = "game";
 	ln::getApplicationVersion() = ln::makeVersion(1, 0, 0);
 
 	ln::Engine engine = ln::Engine();

@@ -6,6 +6,7 @@
 #include "lune/vulkan/vulkan_core.hxx"
 
 #include <memory>
+#include <set>
 #include <unordered_map>
 #include <vector>
 
@@ -15,8 +16,9 @@ namespace lune
 	{
 		struct Registry
 		{
-			std::unordered_map<uint64, std::shared_ptr<Entity>> entitiesIds{};
-			std::unordered_map<std::type_index, std::shared_ptr<SystemBase>> systemsIds{};
+			std::unordered_map<uint64, std::weak_ptr<Entity>> entitiesIds{};
+			std::unordered_map<std::type_index, SystemBase*> systemsIds{};
+			std::unordered_map<std::type_index, std::set<std::weak_ptr<Entity>>> componentEntities{}; // todo;
 		};
 
 	public:
@@ -31,63 +33,53 @@ namespace lune
 		virtual void render();
 
 		template <typename T, typename... Args>
-		std::shared_ptr<Entity> addEntity(Args&&... args)
-		{
-			static uint64 eIdCounter = 0;
-
-			auto newEntity = mEntities.emplace_back(std::make_shared<T>(std::forward<Args>(args)...));
-			newEntity->assignId(++eIdCounter);
-
-			mRegistry.entitiesIds.emplace(newEntity->getId(), newEntity);
-
-			return newEntity;
-		}
-
-		bool detachEntity(uint64 eId)
-		{
-			auto findRes = mRegistry.entitiesIds.find(eId);
-			if (findRes != mRegistry.entitiesIds.end())
-			{
-				mEntities.erase(std::find(mEntities.begin(), mEntities.end(), findRes->second));
-				mRegistry.entitiesIds.erase(findRes);
-				return true;
-			}
-			return false;
-		}
-
-		std::shared_ptr<Entity> findEntity(uint64 eId) const
-		{
-			auto findRes = mRegistry.entitiesIds.find(eId);
-			return findRes != mRegistry.entitiesIds.end() ? findRes->second : nullptr;
-		}
+		std::shared_ptr<Entity> addEntity(Args&&... args);
+		bool attachEntity(std::shared_ptr<Entity> entity);
+		std::shared_ptr<Entity> detachEntity(uint64 eId);
+		std::shared_ptr<Entity> findEntity(uint64 eId) const;
 
 		template <typename T, typename... Args>
-		T* registerSystem(Args&&... args)
-		{
-			std::type_index typeId = typeid(T);
-			const auto findRes = mRegistry.systemsIds.find(typeId);
-			if (findRes != mRegistry.systemsIds.end()) [[unlikely]]
-				return nullptr;
-
-			auto newSystem = mSystems.emplace_back(std::make_unique<T>(std::forward<Args>(args)...));
-			const auto& [it, bAdded] = mRegistry.systemsIds.emplace(std::move(typeId), newSystem);
-
-			return dynamic_cast<T*>(newSystem.get());
-		}
-
+		T* registerSystem(Args&&... args);
 		template <typename T>
-		T* findSystem() const
-		{
-			auto it = mRegistry.systemsIds.find(typeid(T));
-			return it != mRegistry.systemsIds.end() ? dynamic_cast<T*>(it->second.get()) : nullptr;
-		}
+		T* findSystem() const;
 
 		const std::vector<std::shared_ptr<Entity>>& getEntities() const { return mEntities; }
-		const std::vector<std::shared_ptr<SystemBase>>& getSystems() const { return mSystems; }
+		const std::vector<std::unique_ptr<SystemBase>>& getSystems() const { return mSystems; }
 
 	private:
 		std::vector<std::shared_ptr<Entity>> mEntities{};
-		std::vector<std::shared_ptr<SystemBase>> mSystems{};
+		std::vector<std::unique_ptr<SystemBase>> mSystems{};
 		Registry mRegistry{};
 	};
+
+	template <typename T, typename... Args>
+	inline std::shared_ptr<Entity> Scene::addEntity(Args&&... args)
+	{
+		auto newEntity = std::make_shared<T>(std::forward<Args>(args)...);
+		if (attachEntity(newEntity)) [[likely]]
+			return newEntity;
+		LN_LOG(Fatal, Engine::Scene, "Failed to attach newly created entity!");
+		return nullptr;
+	}
+
+	template <typename T, typename... Args>
+	inline T* Scene::registerSystem(Args&&... args)
+	{
+		std::type_index typeId = typeid(T);
+		const auto findRes = mRegistry.systemsIds.find(typeId);
+		if (findRes != mRegistry.systemsIds.end()) [[unlikely]]
+			return nullptr;
+
+		auto& newSystem = mSystems.emplace_back(std::make_unique<T>(std::forward<Args>(args)...));
+		const auto& [it, bAdded] = mRegistry.systemsIds.emplace(std::move(typeId), newSystem.get());
+
+		return dynamic_cast<T*>(newSystem.get());
+	}
+
+	template <typename T>
+	inline T* Scene::findSystem() const
+	{
+		auto it = mRegistry.systemsIds.find(typeid(T));
+		return it != mRegistry.systemsIds.end() ? dynamic_cast<T*>(it->second) : nullptr;
+	}
 } // namespace lune
