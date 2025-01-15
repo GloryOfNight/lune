@@ -1,12 +1,14 @@
 #include "lune/vulkan/vulkan_subsystem.hxx"
 
 #include "SDL3/SDL_vulkan.h"
+#include "SDL3_image/SDL_image.h"
 #include "lune/core/assets.hxx"
 #include "lune/core/log.hxx"
 #include "lune/lune.hxx"
 #include "lune/vulkan/pipeline.hxx"
 #include "lune/vulkan/primitive.hxx"
 #include "lune/vulkan/shader.hxx"
+#include "lune/vulkan/texture_image.hxx"
 
 #include <vector>
 
@@ -282,9 +284,6 @@ void lune::VulkanSubsystem::sumbitFrame()
 	mCurrentFrameViewId = UINT32_MAX;
 }
 
-#include "SDL3_image/SDL_image.h"
-#include "lune/vulkan/texture_image.hxx"
-
 void lune::VulkanSubsystem::loadDefaultAssets()
 {
 	auto spriteShVert = loadShader(*EngineShaderPath("sprite.vert.spv"));
@@ -295,30 +294,30 @@ void lune::VulkanSubsystem::loadDefaultAssets()
 	addTextureImage("lune::scarlet", vulkan::TextureImage::create(*scarlet));
 
 	{
-		std::vector<vulkan::Vertex> vertices = {
-			{{-1.0f, 1.0f, 0.0f}, {1.0f, 0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}}, // Top-left
-			{{1.0f, 1.0f, 0.0f}, {0.0f, 1.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},  // Top-right
-			{{1.0f, -1.0f, 0.0f}, {0.0f, 0.0f, 1.0f, 1.0f}, {1.0f, 0.0f}}, // Bottom-right
-			{{-1.0f, 1.0f, 0.0f}, {1.0f, 0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}}, // Top-left
-			{{1.0f, -1.0f, 0.0f}, {0.0f, 0.0f, 1.0f, 1.0f}, {1.0f, 0.0f}}, // Bottom-right
-			{{-1.0f, -1.0f, 0.0f}, {1.0f, 1.0f, 0.0f, 1.0f}, {0.0f, 0.0f}} // Bottom-left
+		std::vector<Vertex32> vertices = {
+			{{-1.0f, 1.0f, 0.0f}, {0.0f, 1.0f}}, // Top-left
+			{{1.0f, 1.0f, 0.0f}, {1.0f, 1.0f}},	 // Top-right
+			{{1.0f, -1.0f, 0.0f}, {1.0f, 0.0f}}, // Bottom-right
+			{{-1.0f, 1.0f, 0.0f}, {0.0f, 1.0f}}, // Top-left
+			{{1.0f, -1.0f, 0.0f}, {1.0f, 0.0f}}, // Bottom-right
+			{{-1.0f, -1.0f, 0.0f}, {0.0f, 0.0f}} // Bottom-left
 		};
-		addPrimitive("lune::plane", vulkan::Primitive::create(vertices, {}));
+		addPrimitive("lune::plane", vulkan::Primitive::create<Vertex32>(vertices));
 	}
 
 	{
-		std::vector<vulkan::Vertex> vertices = {
-			{{-1.0f, -1.0f, 1.0f}, {1.0f, 0.0f, 0.0f, 1.0f}, {0.0f, 0.0f}},	 // Front face; Bottom-left
-			{{1.0f, -1.0f, 1.0f}, {0.0f, 1.0f, 0.0f, 1.0f}, {1.0f, 0.0f}},	 // Bottom-right
-			{{1.0f, 1.0f, 1.0f}, {0.0f, 0.0f, 1.0f, 1.0f}, {1.0f, 1.0f}},	 // Top-right
-			{{-1.0f, 1.0f, 1.0f}, {1.0f, 1.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},	 // Top-left
-			{{-1.0f, -1.0f, -1.0f}, {1.0f, 0.0f, 1.0f, 1.0f}, {0.0f, 0.0f}}, // Back face; Bottom-left
-			{{1.0f, -1.0f, -1.0f}, {0.0f, 1.0f, 1.0f, 1.0f}, {1.0f, 0.0f}},	 // Bottom-right
-			{{1.0f, 1.0f, -1.0f}, {1.0f, 1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}},	 // Top-right
-			{{-1.0f, 1.0f, -1.0f}, {0.5f, 0.5f, 0.5f, 1.0f}, {0.0f, 1.0f}}	 // Top-left
+		std::vector<Vertex32> vertices = {
+			{{-1.0f, -1.0f, 1.0f}, {0.0f, 0.0f}},  // Front face; Bottom-left
+			{{1.0f, -1.0f, 1.0f}, {1.0f, 0.0f}},   // Bottom-right
+			{{1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}},	   // Top-right
+			{{-1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}},   // Top-left
+			{{-1.0f, -1.0f, -1.0f}, {0.0f, 0.0f}}, // Back face; Bottom-left
+			{{1.0f, -1.0f, -1.0f}, {1.0f, 0.0f}},  // Bottom-right
+			{{1.0f, 1.0f, -1.0f}, {1.0f, 1.0f}},   // Top-right
+			{{-1.0f, 1.0f, -1.0f}, {0.0f, 1.0f}}   // Top-left
 		};
 
-		std::vector<uint32_t> indices = {
+		std::vector<Index16> indices = {
 			0, 1, 2, 0, 2, 3, // Front face
 			4, 5, 6, 4, 6, 7, // Back face
 			4, 0, 3, 4, 3, 7, // Left face
@@ -326,7 +325,7 @@ void lune::VulkanSubsystem::loadDefaultAssets()
 			3, 2, 6, 3, 6, 7, // Top face
 			4, 5, 1, 4, 1, 0  // Bottom face
 		};
-		addPrimitive("lune::box", vulkan::Primitive::create(vertices, indices));
+		addPrimitive("lune::box", vulkan::Primitive::create<Vertex32, Index16>(vertices, indices));
 	}
 }
 

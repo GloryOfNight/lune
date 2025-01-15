@@ -11,6 +11,7 @@
 #include "lune/game_framework/systems/sprite_render_system.hxx"
 #include "lune/lune.hxx"
 
+#include <imgui.h>
 #include <iostream>
 #include <string>
 #include <vector>
@@ -46,7 +47,14 @@ public:
 		inputComp->actions.push_back({"mouse_left_button"});
 	}
 
-	void update(lune::Scene* scene, double deltaTime) override {}
+	void update(lune::Scene* scene, double deltaTime) override
+	{
+		if (ImGui::GetCurrentContext())
+		{
+			ImGui::Begin("transform");
+			ImGui::End();
+		}
+	}
 };
 
 class ScarletSprite : public lune::Entity
@@ -128,7 +136,7 @@ int main(int argc, char** argv)
 		return 1;
 
 	uint32 viewId = engine.createWindow("so8", 800, 800);
-	//engine.createWindow("so8 - 2", 800, 800);
+	engine.createWindow("so8 - 2", 800, 800);
 
 	engine.addScene(std::make_unique<GameScene>());
 

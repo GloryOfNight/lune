@@ -2,10 +2,16 @@
 
 #include "SDL3/SDL.h"
 #include "SDL3/SDL_vulkan.h"
+#include "lune/core/assets.hxx"
 #include "lune/core/event_subsystem.hxx"
 #include "lune/core/log.hxx"
 #include "lune/lune.hxx"
 #include "lune/vulkan/vulkan_subsystem.hxx"
+
+#include <filesystem>
+#if HAVE_SHADER_COMPILER_TOOL
+#include "shader_compiler_tool/shader_compiler.hxx"
+#endif
 
 static lune::Engine* gEngine{nullptr};
 
@@ -24,6 +30,10 @@ bool lune::Engine::initialize(std::vector<std::string> args)
 
 	if (!SDL_Vulkan_LoadLibrary(NULL))
 		return false;
+
+#if HAVE_SHADER_COMPILER_TOOL
+	shader_compiler::attemptCompileShaders((*EngineShadersSourceDir()).generic_string(), (*EngineShadersBinaryDir()).generic_string());
+#endif
 
 	uint32 major{}, minor{}, patch{};
 	lune::getVersion(lune::getApplicationVersion(), major, minor, patch);

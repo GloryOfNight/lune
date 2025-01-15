@@ -442,6 +442,7 @@ void lune::vulkan::View::createImGui()
 
 void lune::vulkan::View::shutdownImGui()
 {
+	ImGui::SetCurrentContext(mImGuiContext);
 	if (mImGuiContext)
 	{
 		ImGui_ImplVulkan_Shutdown();

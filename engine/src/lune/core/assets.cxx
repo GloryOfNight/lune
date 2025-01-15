@@ -31,10 +31,22 @@ lune::EngineAssetPath::EngineAssetPath(std::string_view relativeAssetPath)
 		LN_LOG(Warning, Engine::Assets, "Assets missing: {}", mPath.generic_string());
 }
 
+lune::EngineShadersSourceDir::EngineShadersSourceDir()
+	: EngineAssetPath()
+{
+	mPath = getEngineAssetsRootDir() / "shaders" / "src";
+}
+
+lune::EngineShadersBinaryDir::EngineShadersBinaryDir()
+	: EngineAssetPath()
+{
+	mPath = getEngineAssetsRootDir() / "shaders" / "bin";
+}
+
 lune::EngineShaderPath::EngineShaderPath(std::string_view relativeAssetPath)
 	: EngineAssetPath()
 {
-	mPath = getEngineAssetsRootDir() / "shaders" / "bin" / std::filesystem::path(relativeAssetPath.data());
+	mPath = std::filesystem::path(*EngineShadersBinaryDir()) / std::filesystem::path(relativeAssetPath.data());
 	if (!std::filesystem::is_regular_file(mPath)) [[unlikely]]
 		LN_LOG(Warning, Engine::Assets, "Shader missing: {}", mPath.generic_string());
 }

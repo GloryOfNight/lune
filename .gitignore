@@ -21,5 +21,6 @@ _deps
 build/*
 out/*
 install/*
-src/secrets/youtube-secret.h
-src/secrets/twitch-secret.h
+
+# Other files
+*.spv

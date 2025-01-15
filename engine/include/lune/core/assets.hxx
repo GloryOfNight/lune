@@ -18,6 +18,16 @@ namespace lune
 		std::filesystem::path mPath{};
 	};
 
+	struct EngineShadersSourceDir : public EngineAssetPath
+	{
+		EngineShadersSourceDir();
+	};
+
+	struct EngineShadersBinaryDir : public EngineAssetPath
+	{
+		EngineShadersBinaryDir();
+	};
+
     struct EngineShaderPath : public EngineAssetPath
     {
         EngineShaderPath() = default;

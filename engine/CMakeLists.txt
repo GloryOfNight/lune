@@ -21,6 +21,11 @@ find_package(VulkanMemoryAllocator CONFIG REQUIRED)
 target_link_libraries(${PROJECT_NAME}-static PUBLIC spirv-reflect-static Vulkan::Vulkan GPUOpen::VulkanMemoryAllocator)
 # vulkan end #
 
+# modules #
+add_subdirectory(modules)
+target_link_libraries(${PROJECT_NAME}-static PUBLIC Lune::ShaderCompilerTool)
+# modules end#
+
 # other packages #
 find_package(SDL3 REQUIRED)
 find_package(SDL3_image REQUIRED)

@@ -8,18 +8,10 @@
 #include "buffer.hxx"
 
 #include <memory>
+#include <span>
 
 namespace lune::vulkan
 {
-	struct Vertex
-	{
-		lnm::vec3 position;
-		lnm::vec4 color;
-		lnm::vec2 uv;
-	};
-
-	using Index = uint32;
-
 	class Primitive final
 	{
 	public:
@@ -28,7 +20,13 @@ namespace lune::vulkan
 		Primitive(Primitive&&) = default;
 		~Primitive() = default;
 
-		static SharedPrimitive create(const std::vector<Vertex>& vertices, const std::vector<Index>& indices);
+		template <typename Vert, typename Indx = Index>
+		static SharedPrimitive create(std::span<Vert> verticies, std::span<Indx> indices = {})
+		{
+			return create(verticies.data(), verticies.size(), sizeof(typename decltype(verticies)::element_type), indices.data(), indices.size(), sizeof(typename decltype(indices)::element_type));
+		}
+
+		static SharedPrimitive create(const void* vertData, uint32 vertDataSize, uint32 vertSizeof, const void* indexData, uint32 indexDataSize, uint32 indexSizeof);
 
 		void destroy() {};
 
@@ -37,10 +35,14 @@ namespace lune::vulkan
 		void cmdDraw(vk::CommandBuffer commandBuffer, uint32 instanceCount = 1, uint32 firstInstance = 0);
 
 	private:
-		void init(const std::vector<Vertex>& vertexies, const std::vector<Index>& indices);
+		void init(const void* vertData, uint32 vertDataSize, uint32 vertSizeof, const void* indexData, uint32 indexDataSize, uint32 indexSizeof);
 
-		uint32 mVerticesSize{};
-		uint32 mIndeciesSize{};
+		uint32 mVerticiesSize{};
+		uint32 mVerticiesCount{};
+
+		uint32 mIndicesSize{};
+		uint32 mIndicesCount{};
+		vk::IndexType mIndicesType{};
 
 		UniqueBuffer mBuffer{};
 	};
