@@ -4,6 +4,7 @@
 
 namespace lune
 {
+	// first-person like movement
 	class MoveSystem : public SystemBase
 	{
 	public:

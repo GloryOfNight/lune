@@ -7,8 +7,6 @@
 
 namespace lune
 {
-	class Entity;
-
 	class SystemBase
 	{
 	public:
@@ -18,5 +16,17 @@ namespace lune
 		virtual ~SystemBase() = default;
 
 		virtual void update(class Scene* scene, double deltaTime) = 0;
+	};
+
+	class PrepareRenderSystemInterface
+	{
+	public:
+		virtual void prepareRender(class Scene* scene) = 0;
+	};
+
+	class RenderSystemInterface
+	{
+	public:
+		virtual void render(class Scene* scene) = 0;
 	};
 } // namespace lune

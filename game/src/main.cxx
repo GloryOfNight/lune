@@ -131,7 +131,7 @@ int main(int argc, char** argv)
 		return 1;
 
 	uint32 viewId = engine.createWindow("so8", 800, 800);
-	engine.createWindow("so8 - 2", 800, 800);
+	//engine.createWindow("so8 - 2", 800, 800);
 
 	engine.addScene(std::make_unique<GameScene>());
 

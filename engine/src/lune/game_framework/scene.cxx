@@ -1,7 +1,5 @@
 #include "lune/game_framework/scene.hxx"
 
-#include "lune/game_framework/systems/render_system.hxx"
-
 void lune::Scene::update(double deltaTime)
 {
 	for (auto& entity : mEntities)
@@ -19,7 +17,7 @@ void lune::Scene::prepareRender()
 {
 	for (auto& system : mSystems)
 	{
-		if (auto renderSystem = dynamic_cast<RenderSystem*>(system.get()); renderSystem)
+		if (auto renderSystem = dynamic_cast<PrepareRenderSystemInterface*>(system.get()); renderSystem)
 		{
 			renderSystem->prepareRender(this);
 		}
@@ -30,7 +28,7 @@ void lune::Scene::render()
 {
 	for (auto& system : mSystems)
 	{
-		if (auto renderSystem = dynamic_cast<RenderSystem*>(system.get()); renderSystem)
+		if (auto renderSystem = dynamic_cast<RenderSystemInterface*>(system.get()); renderSystem)
 		{
 			renderSystem->render(this);
 		}

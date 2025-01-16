@@ -3,11 +3,14 @@
 #include "lune/vulkan/descriptor_sets.hxx"
 #include "lune/vulkan/vulkan_core.hxx"
 
-#include "render_system.hxx"
+#include "system.hxx"
 
 namespace lune
 {
-	class SpriteRenderSystem : public RenderSystem
+	class SpriteRenderSystem
+		: public SystemBase,
+		  public PrepareRenderSystemInterface,
+		  public RenderSystemInterface
 	{
 	public:
 		virtual void update(class Scene* scene, double deltaTime) override;

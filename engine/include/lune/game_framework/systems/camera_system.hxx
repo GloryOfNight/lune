@@ -3,19 +3,20 @@
 #include "lune/core/math.hxx"
 #include "lune/vulkan/buffer.hxx"
 
-#include "render_system.hxx"
+#include "system.hxx"
 
 #include <map>
 
 namespace lune
 {
-	class CameraSystem : public RenderSystem
+	class CameraSystem
+		: public SystemBase,
+		  public PrepareRenderSystemInterface
 	{
 	public:
 		virtual void update(class Scene* scene, double deltaTime) override;
 
 		virtual void prepareRender(class Scene* scene) override;
-		virtual void render(class Scene* scene) override {};
 
 		const vulkan::UniqueBuffer& getViewProjectionBuffer() const { return mCameraBuffer; }
 
