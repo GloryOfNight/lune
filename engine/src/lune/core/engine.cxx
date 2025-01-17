@@ -9,6 +9,7 @@
 #include "lune/vulkan/vulkan_subsystem.hxx"
 
 #include <filesystem>
+
 #if HAVE_SHADER_COMPILER_TOOL
 #include "shader_compiler_tool/shader_compiler.hxx"
 #endif
@@ -32,7 +33,9 @@ bool lune::Engine::initialize(std::vector<std::string> args)
 		return false;
 
 #if HAVE_SHADER_COMPILER_TOOL
-	shader_compiler::attemptCompileShaders((*EngineShadersSourceDir()).generic_string(), (*EngineShadersBinaryDir()).generic_string());
+	const ShaderCompiler::Result sctRes = ShaderCompiler::compileShaders(*EngineShadersSourceDir(), *EngineShadersBinaryDir(), ShaderCompiler::TargetVkVersion::Vulkan13);
+	if (sctRes != ShaderCompiler::Result::Success)
+		return false;
 #endif
 
 	uint32 major{}, minor{}, patch{};

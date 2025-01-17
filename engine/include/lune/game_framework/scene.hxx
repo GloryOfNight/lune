@@ -55,6 +55,7 @@ namespace lune
 	template <typename T, typename... Args>
 	inline std::shared_ptr<Entity> Scene::addEntity(Args&&... args)
 	{
+		static_assert(std::is_base_of_v<Entity, T>, "T must be base of Entity");
 		auto newEntity = std::make_shared<T>(std::forward<Args>(args)...);
 		if (attachEntity(newEntity)) [[likely]]
 			return newEntity;
@@ -65,6 +66,7 @@ namespace lune
 	template <typename T, typename... Args>
 	inline T* Scene::registerSystem(Args&&... args)
 	{
+		static_assert(std::is_base_of_v<SystemBase, T>, "T must be base of SystemBase");
 		std::type_index typeId = typeid(T);
 		const auto findRes = mRegistry.systemsIds.find(typeId);
 		if (findRes != mRegistry.systemsIds.end()) [[unlikely]]
@@ -79,6 +81,7 @@ namespace lune
 	template <typename T>
 	inline T* Scene::findSystem() const
 	{
+		static_assert(std::is_base_of_v<SystemBase, T>, "T must be base of SystemBase");
 		auto it = mRegistry.systemsIds.find(typeid(T));
 		return it != mRegistry.systemsIds.end() ? dynamic_cast<T*>(it->second) : nullptr;
 	}

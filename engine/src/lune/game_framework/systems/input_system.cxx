@@ -63,10 +63,6 @@ void lune::InputSystem::update(Scene* scene, double deltaTime)
 				{
 					bool wasActive = action.active;
 					action.active = findRes->second->shouldActivate(this);
-					if (wasActive != action.active)
-					{
-						LN_LOG(Info, Input, "Action \'{}\' state \'{}\'", action.name, action.active);
-					}
 				}
 			}
 		}

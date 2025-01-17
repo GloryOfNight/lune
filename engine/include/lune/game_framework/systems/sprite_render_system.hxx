@@ -16,6 +16,7 @@ namespace lune
 		virtual void update(class Scene* scene, double deltaTime) override;
 
 		virtual void prepareRender(class Scene* scene) override;
+
 		virtual void render(class Scene* scene) override;
 
 	private:

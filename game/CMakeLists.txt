@@ -10,7 +10,8 @@ target_link_libraries(${PROJECT_NAME} PUBLIC lune-static)
 set_target_properties(${PROJECT_NAME} PROPERTIES        C_STANDARD 17
                                                         CXX_STANDARD 20
                                                         CXX_STANDARD_REQUIRED ON
-                                                        EXPORT_COMPILE_COMMANDS ON)
+                                                        EXPORT_COMPILE_COMMANDS ON
+                                                        POSITION_INDEPENDENT_CODE ON)
 
 find_program(CLANG_TIDY_EXE NAMES "clang-tidy")
 if(CLANG_TIDY_EXE)

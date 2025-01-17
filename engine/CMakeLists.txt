@@ -13,7 +13,8 @@ target_include_directories(${PROJECT_NAME}-static PUBLIC        "include")
 set_target_properties(${PROJECT_NAME}-static PROPERTIES         C_STANDARD 17
                                                                 CXX_STANDARD 20
                                                                 CXX_STANDARD_REQUIRED ON
-                                                                EXPORT_COMPILE_COMMANDS ON)
+                                                                EXPORT_COMPILE_COMMANDS ON
+                                                                POSITION_INDEPENDENT_CODE ON)
 
 # vulkan #
 find_package(Vulkan)

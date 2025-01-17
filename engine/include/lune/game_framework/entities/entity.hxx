@@ -5,6 +5,7 @@
 #include "lune/lune.hxx"
 
 #include <memory>
+#include <type_traits>
 #include <typeindex>
 #include <unordered_map>
 
@@ -23,6 +24,7 @@ namespace lune
 		template <typename T, typename... Args>
 		T* addComponent(Args&&... args)
 		{
+			static_assert(std::is_base_of_v<ComponentBase, T>, "T must be base of ComponentBase");
 			std::type_index typeId = typeid(T);
 			const auto findRes = mComponents.find(typeId);
 			if (findRes != mComponents.end()) [[unlikely]]
@@ -34,6 +36,7 @@ namespace lune
 		template <typename T>
 		T* attachComponent(std::unique_ptr<T> c)
 		{
+			static_assert(std::is_base_of_v<ComponentBase, T>, "T must be base of ComponentBase");
 			std::type_index typeId = typeid(T);
 			const auto findRes = mComponents.find(typeId);
 			if (c == nullptr || findRes != mComponents.end()) [[unlikely]]
@@ -46,6 +49,7 @@ namespace lune
 		template <typename T>
 		std::unique_ptr<ComponentBase> detachComponent()
 		{
+			static_assert(std::is_base_of_v<ComponentBase, T>, "T must be base of ComponentBase");
 			std::type_index typeId = typeid(T);
 			const auto findRes = mComponents.find(typeId);
 			if (findRes == mComponents.end()) [[unlikely]]
@@ -57,12 +61,14 @@ namespace lune
 		template <typename T>
 		bool removeComponent()
 		{
+			static_assert(std::is_base_of_v<ComponentBase, T>, "T must be base of ComponentBase");
 			return detachComponent<T>() != nullptr;
 		}
 
 		template <typename T>
 		T* findComponent() const
 		{
+			static_assert(std::is_base_of_v<ComponentBase, T>, "T must be base of ComponentBase");
 			auto it = mComponents.find(typeid(T));
 			return it != mComponents.end() ? dynamic_cast<T*>(it->second.get()) : nullptr;
 		}
