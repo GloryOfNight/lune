@@ -22,13 +22,13 @@ namespace lune
 	private:
 		struct SpriteResources
 		{
-			vulkan::SharedPrimitive primitive{};
 			vulkan::SharedTextureImage texImage{};
 			vulkan::UniqueDescriptorSets descSets{};
 			vulkan::UniqueBuffer stagingModelBuffer{};
 			vulkan::UniqueBuffer modelBuffer{};
 		};
 
+		vulkan::SharedPrimitive mPrimitive{};
 		std::unordered_map<class SpriteComponent*, SpriteResources> mResources{};
 	};
 } // namespace lune

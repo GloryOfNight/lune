@@ -25,6 +25,9 @@ void lune::SpriteRenderSystem::prepareRender(Scene* scene)
 	if (!cameraSystem)
 		return;
 
+	if (!mPrimitive)
+		mPrimitive = vkSubsystem->findPrimitive("lune::plane");
+
 	for (auto& entity : entities)
 	{
 		auto spriteComp = entity->findComponent<SpriteComponent>();
@@ -35,8 +38,7 @@ void lune::SpriteRenderSystem::prepareRender(Scene* scene)
 			{
 				SpriteResources resources{};
 
-				resources.primitive = vkSubsystem->findPrimitive("lune::plane");
-				auto pipeline = vkSubsystem->findPipeline("lune::sprite");
+								auto pipeline = vkSubsystem->findPipeline("lune::sprite");
 
 				resources.texImage = vkSubsystem->findTextureImage(spriteComp->imageName);
 				if (pipeline == nullptr || resources.texImage == nullptr)
@@ -102,8 +104,8 @@ void lune::SpriteRenderSystem::render(Scene* scene)
 
 				res.descSets->getPipeline()->cmdBind(commandBuffer);
 				res.descSets->cmdBind(commandBuffer, 0);
-				res.primitive->cmdBind(commandBuffer);
-				res.primitive->cmdDraw(commandBuffer);
+				mPrimitive->cmdBind(commandBuffer);
+				mPrimitive->cmdDraw(commandBuffer);
 			}
 		}
 	}

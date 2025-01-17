@@ -2,7 +2,7 @@
 
 static uint64 entityIdCounter{};
 
-lune::Entity::Entity()
+lune::EntityBase::EntityBase()
 	: mId{++entityIdCounter}
 	, mComponents{}
 {

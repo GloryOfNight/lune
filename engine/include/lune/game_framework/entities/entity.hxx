@@ -7,19 +7,17 @@
 #include <memory>
 #include <type_traits>
 #include <typeindex>
-#include <unordered_map>
+#include <map>
 
 namespace lune
 {
-	class Entity
+	class EntityBase
 	{
 	public:
-		Entity();
-		Entity(const Entity&) = delete;
-		Entity(Entity&&) = default;
-		virtual ~Entity() = default;
-
-		virtual void update(class Scene* scene, double deltaTime) = 0;
+		EntityBase();
+		EntityBase(const EntityBase&) = delete;
+		EntityBase(EntityBase&&) = default;
+		virtual ~EntityBase() = default;
 
 		template <typename T, typename... Args>
 		T* addComponent(Args&&... args)
@@ -78,6 +76,6 @@ namespace lune
 	private:
 		uint64 mId{};
 
-		std::unordered_map<std::type_index, std::unique_ptr<ComponentBase>> mComponents{};
+		std::map<std::type_index, std::unique_ptr<ComponentBase>> mComponents{};
 	};
 } // namespace lune
