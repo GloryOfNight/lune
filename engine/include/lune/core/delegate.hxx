@@ -11,7 +11,7 @@ namespace lune
 	using DelegateHandle = uint32_t;
 
 	template <typename... Args>
-	class Delegate
+	struct DelegateBase
 	{
 	public:
 		using Func = std::function<void(Args...)>;
@@ -54,6 +54,9 @@ namespace lune
 		// Unbind all from specific object
 		void unbind(void* object)
 		{
+			if (!object)
+				return;
+
 			std::set<DelegateHandle> handles{};
 			for (const auto& [handle, funcWrap] : mBindings)
 			{
@@ -71,17 +74,40 @@ namespace lune
 			mBindings.clear();
 		}
 
+	protected:
+		std::map<DelegateHandle, FuncWrapper> mBindings{};
+
+	private:
+		DelegateHandle mBindCounter{};
+	};
+
+	// Delegate bound functions of which could be executed by anyone
+	template <typename... Args>
+	struct Delegate final : public DelegateBase<Args...>
+	{
 		// Execute all bound functions
 		void execute(Args&&... args) const
 		{
-			for (const auto& [binding, funcWrap] : mBindings)
+			for (const auto& [binding, funcWrap] : this->mBindings)
 			{
 				funcWrap(std::forward<Args>(args)...);
 			}
 		}
+	};
 
-	private:
-		DelegateHandle mBindCounter{};
-		std::map<DelegateHandle, FuncWrapper> mBindings{};
+	// Delegate bound functions of which could only be executed in Owner
+	template <typename Owner, typename... Args>
+	struct DelegateOwned final : public DelegateBase<Args...>
+	{
+	protected:
+		// Execute all bound functions
+		void execute(Args&&... args) const
+		{
+			for (const auto& [binding, funcWrap] : this->mBindings)
+			{
+				funcWrap(std::forward<Args>(args)...);
+			}
+		}
+		friend Owner;
 	};
 } // namespace lune

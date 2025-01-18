@@ -15,7 +15,7 @@ namespace lune
 	class EntityBase
 	{
 	public:
-		using ComponentDelegate = Delegate<const EntityBase*, ComponentBase*>;
+		using ComponentDelegate = DelegateOwned<EntityBase, const EntityBase*, ComponentBase*>;
 
 		EntityBase();
 		EntityBase(const EntityBase&) = delete;

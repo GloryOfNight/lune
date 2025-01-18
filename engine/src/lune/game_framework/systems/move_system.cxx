@@ -29,7 +29,6 @@ void lune::MoveSystem::update(Scene* scene, double deltaTime)
 		auto transformComp = entity->findComponent<TransformComponent>();
 		if (moveComp && inputComp && transformComp)
 		{
-			const float beforeZ = transformComp->mOrientation.z;
 			const double speed = moveComp->speed * deltaTime;
 			for (auto& [action, active] : inputComp->actions)
 			{
@@ -90,11 +89,12 @@ void lune::MoveSystem::update(Scene* scene, double deltaTime)
 						transformComp->rotate(lnm::radians(rotComp->speed * deltaTime), transformComp->mOrientation * rightAxis);
 					else if (action == "pitch_down")
 						transformComp->rotate(-lnm::radians(rotComp->speed * deltaTime), transformComp->mOrientation * rightAxis);
+					if (action == "roll_left")
+						transformComp->rotate(lnm::radians(rotComp->speed * deltaTime), transformComp->mOrientation * forwardAxis);
+					else if (action == "roll_right")
+						transformComp->rotate(-lnm::radians(rotComp->speed * deltaTime), transformComp->mOrientation * forwardAxis);
 				}
 			}
-			// lock Z axis of a rotation
-			transformComp->mOrientation.z = beforeZ;
-			transformComp->mOrientation = lnm::normalize(transformComp->mOrientation);
 		}
 	}
 }

@@ -9,7 +9,16 @@ void lune::EventSubsystem::processEvents()
 	while (SDL_PollEvent(&event))
 	{
 		if (ImGui::GetCurrentContext())
-			ImGui_ImplSDL3_ProcessEvent(&event);
+		{
+			const bool bMouseEvent = event.type == SDL_EVENT_MOUSE_MOTION || event.type == SDL_EVENT_MOUSE_BUTTON_DOWN || event.type == SDL_EVENT_MOUSE_BUTTON_UP || event.type == SDL_EVENT_MOUSE_MOTION;
+			const bool bKeyBoardEvent = event.type == SDL_EVENT_KEY_UP || event.type == SDL_EVENT_KEY_DOWN;
+			const auto& io = ImGui::GetIO();
+			const bool bInputCaptured = ImGui_ImplSDL3_ProcessEvent(&event);
+			if (bInputCaptured && io.WantCaptureMouse && bMouseEvent)
+				continue;
+			else if (bInputCaptured && io.WantCaptureKeyboard && bKeyBoardEvent)
+				continue;
+		}
 
 		if (const auto bindIt = mEventBindings.find(event.type); bindIt != mEventBindings.end())
 		{
