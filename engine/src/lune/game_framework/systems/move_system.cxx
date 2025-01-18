@@ -16,9 +16,13 @@ void lune::MoveSystem::update(Scene* scene, double deltaTime)
 	if (!inputSystem)
 		return;
 
-	const auto& entities = scene->getEntities();
-	for (auto& entity : entities)
+	const auto& eIds = scene->getComponentEntities<MoveComponent>();
+	for (auto eId : eIds)
 	{
+		auto entity = scene->findEntity(eId);
+		if (!entity)
+			continue;
+
 		auto moveComp = entity->findComponent<MoveComponent>();
 		auto rotComp = entity->findComponent<RotateComponent>();
 		auto inputComp = entity->findComponent<InputComponent>();

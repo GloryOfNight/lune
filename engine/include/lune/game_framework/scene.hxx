@@ -18,7 +18,7 @@ namespace lune
 		{
 			std::unordered_map<uint64, std::set<std::unique_ptr<EntityBase>>::iterator> entitiesIds{};
 			std::unordered_map<std::type_index, std::set<std::unique_ptr<SystemBase>>::iterator> systemsIds{};
-			std::unordered_map<std::type_index, std::set<EntityBase*>> componentEntities{}; // todo;
+			std::unordered_map<std::type_index, std::set<uint64>> componentEntities{};
 		};
 
 	public:
@@ -50,6 +50,9 @@ namespace lune
 
 		const std::set<std::unique_ptr<EntityBase>>& getEntities() const { return mEntities; }
 		const std::set<std::unique_ptr<SystemBase>>& getSystems() const { return mSystems; }
+
+		template <typename T>
+		const std::set<uint64>& getComponentEntities();
 
 	private:
 		std::set<std::unique_ptr<EntityBase>> mEntities{};
@@ -106,5 +109,12 @@ namespace lune
 		static_assert(std::is_base_of_v<SystemBase, T>, "T must be base of SystemBase");
 		auto it = mRegistry.systemsIds.find(typeid(T));
 		return it != mRegistry.systemsIds.end() ? dynamic_cast<T*>(it->second->get()) : nullptr;
+	}
+	template <typename T>
+	inline const std::set<uint64>& Scene::getComponentEntities()
+	{
+		static const std::set<uint64> emptySet;
+		auto findRes = mRegistry.componentEntities.find(typeid(T));
+		return findRes != mRegistry.componentEntities.end() ? findRes->second : emptySet;
 	}
 } // namespace lune

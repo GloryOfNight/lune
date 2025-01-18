@@ -49,21 +49,26 @@ lune::InputSystem::~InputSystem()
 
 void lune::InputSystem::update(Scene* scene, double deltaTime)
 {
-	const auto& entities = scene->getEntities();
 	const auto& inputConfig = getInputActionMapConfig();
-	for (auto& entity : entities)
+
+	const auto& eIds = scene->getComponentEntities<InputComponent>();
+	for (auto eId : eIds)
 	{
+		auto entity = scene->findEntity(eId);
+		if (!entity) [[unlikely]]
+			continue;
+
 		auto inputComp = entity->findComponent<InputComponent>();
-		if (inputComp)
+		if (!inputComp) [[unlikely]]
+			continue;
+
+		for (auto& action : inputComp->actions)
 		{
-			for (auto& action : inputComp->actions)
+			auto findRes = inputConfig.find(action.name);
+			if (findRes != inputConfig.end())
 			{
-				auto findRes = inputConfig.find(action.name);
-				if (findRes != inputConfig.end())
-				{
-					bool wasActive = action.active;
-					action.active = findRes->second->shouldActivate(this);
-				}
+				bool wasActive = action.active;
+				action.active = findRes->second->shouldActivate(this);
 			}
 		}
 	}

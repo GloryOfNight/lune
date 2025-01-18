@@ -9,70 +9,48 @@
 
 void lune::CameraSystem::update(Scene* scene, double deltaTime)
 {
-	const auto& entities = scene->getEntities();
-
 	mViewsProjs.clear();
-	for (const auto& e : entities)
+
+	const auto& eIds = scene->getComponentEntities<PerspectiveCameraComponent>();
+	for (auto eId : eIds)
 	{
-		auto isoCam = e->findComponent<IsometricCameraComponent>();
-		if (isoCam)
+		auto entity = scene->findEntity(eId);
+		if (!entity)
+			continue;
+
+		auto persCam = entity->findComponent<PerspectiveCameraComponent>();
+		if (!persCam)
+			continue;
+
+		lnm::vec3 position = persCam->mPosition;
+		lnm::quat rotation = glm::quat(1.f, 0.f, 0.f, 0.f);
+		auto transformComp = entity->findComponent<TransformComponent>();
+		if (transformComp)
 		{
-			lnm::vec3 position = isoCam->mPosition;
-			auto transformComp = e->findComponent<TransformComponent>();
-			if (transformComp)
-				position += transformComp->mPosition;
-
-			const auto& direction = isoCam->mDirection;
-			const auto& up = isoCam->mUp;
-
-			float left, right, bottom, top, near, far;
-			isoCam->getOrtho(left, right, bottom, top, near, far);
-
-			const auto& viewIds = Engine::get()->getViewIds();
-			for (uint32 viewId : viewIds)
-			{
-				auto [it, result] = mViewsProjs.try_emplace(viewId, ViewProj());
-				auto& viewProj = it->second;
-				viewProj.view = lnm::lookAt(position, position - direction, up);
-				viewProj.proj = lnm::ortho(left, right, bottom, top, near, far);
-				viewProj.viewProj = viewProj.proj * viewProj.view;
-			}
-			break;
+			position += transformComp->mPosition;
+			rotation = transformComp->mOrientation;
 		}
 
-		auto persCam = e->findComponent<PerspectiveCameraComponent>();
-		if (persCam)
+		auto vkSubsystem = Engine::get()->findSubsystem<VulkanSubsystem>();
+		const auto& viewIds = Engine::get()->getViewIds();
+		for (uint32 viewId : viewIds)
 		{
-			lnm::vec3 position = persCam->mPosition;
-			lnm::quat rotation = glm::quat(1.f, 0.f, 0.f, 0.f);
-			auto transformComp = e->findComponent<TransformComponent>();
-			if (transformComp)
-			{
-				position += transformComp->mPosition;
-				rotation = transformComp->mOrientation;
-			}
+			auto [it, result] = mViewsProjs.try_emplace(viewId, ViewProj());
+			auto& viewProj = it->second;
 
-			auto vkSubsystem = Engine::get()->findSubsystem<VulkanSubsystem>();
-			const auto& viewIds = Engine::get()->getViewIds();
-			for (uint32 viewId : viewIds)
-			{
-				auto [it, result] = mViewsProjs.try_emplace(viewId, ViewProj());
-				auto& viewProj = it->second;
+			auto currentExtent = vkSubsystem->findView(viewId)->getCurrentExtent();
+			float viewAspectRatio = static_cast<float>(currentExtent.width) / static_cast<float>(currentExtent.height);
 
-				auto currentExtent = vkSubsystem->findView(viewId)->getCurrentExtent();
-				float viewAspectRatio = static_cast<float>(currentExtent.width) / static_cast<float>(currentExtent.height);
+			float fov, aspectRatio, nearPlane, farPlane;
+			persCam->getPerspective(fov, aspectRatio, nearPlane, farPlane);
 
-				float fov, aspectRatio, nearPlane, farPlane;
-				persCam->getPerspective(fov, aspectRatio, nearPlane, farPlane);
+			const lnm::vec3 forward = rotation * forwardAxis;
+			const lnm::vec3 up = rotation * -upAxis;
 
-				const lnm::vec3 forward = rotation * forwardAxis;
-				const lnm::vec3 up = rotation * -upAxis;
-
-				viewProj.view = lnm::lookAtRH(position, (position + forward), up);
-				//viewProj.view = glm::scale(glm::mat4(1.0f), glm::vec3(1.0f, -1.0f, -1.0f)) * viewProj.view;
-				viewProj.proj = lnm::perspective(lnm::radians(fov), aspectRatio * viewAspectRatio, nearPlane, farPlane);
-				viewProj.viewProj = viewProj.proj * viewProj.view;
-			}
+			viewProj.view = lnm::lookAtRH(position, (position + forward), up);
+			//viewProj.view = glm::scale(glm::mat4(1.0f), glm::vec3(1.0f, -1.0f, -1.0f)) * viewProj.view;
+			viewProj.proj = lnm::perspective(lnm::radians(fov), aspectRatio * viewAspectRatio, nearPlane, farPlane);
+			viewProj.viewProj = viewProj.proj * viewProj.view;
 		}
 	}
 }

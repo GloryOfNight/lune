@@ -2,6 +2,17 @@
 
 void lune::Scene::update(double deltaTime)
 {
+	mRegistry.componentEntities.clear();
+	for (auto& entity : mEntities)
+	{
+		const auto& comps = entity->getComponents();
+		for (const auto& comp : comps)
+		{
+			auto [it, res] = mRegistry.componentEntities.try_emplace(comp.first, std::set<uint64>{});
+			it->second.emplace(entity->getId());
+		}
+	}
+
 	for (auto& system : mSystems)
 	{
 		system->update(this, deltaTime);

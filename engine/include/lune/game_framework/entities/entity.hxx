@@ -4,10 +4,10 @@
 #include "lune/game_framework/components/component.hxx"
 #include "lune/lune.hxx"
 
+#include <map>
 #include <memory>
 #include <type_traits>
 #include <typeindex>
-#include <map>
 
 namespace lune
 {
@@ -72,6 +72,8 @@ namespace lune
 		}
 
 		uint64 getId() const { return mId; }
+
+		const std::map<std::type_index, std::unique_ptr<ComponentBase>>& getComponents() const { return mComponents; }
 
 	private:
 		uint64 mId{};
