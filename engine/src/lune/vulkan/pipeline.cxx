@@ -46,7 +46,7 @@ vk::PipelineShaderStageCreateInfo reflShaderStage(const std::shared_ptr<lune::vu
 
 std::vector<std::vector<vk::DescriptorSetLayoutBinding>> relfDescriptorSetBindings(const SpvReflectShaderModule& reflModule)
 {
-	std::vector<std::vector<vk::DescriptorSetLayoutBinding>> result(reflModule.descriptor_set_count, {});
+	std::vector<std::vector<vk::DescriptorSetLayoutBinding>> result{reflModule.descriptor_set_count, std::vector<vk::DescriptorSetLayoutBinding>()};
 
 	for (uint32 i = 0; i < reflModule.descriptor_set_count; i++)
 	{
