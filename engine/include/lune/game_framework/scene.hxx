@@ -58,6 +58,9 @@ namespace lune
 		const std::set<uint64>& getComponentEntities();
 
 	private:
+		void onEntityComponentAdded(const EntityBase* entity, ComponentBase* comp);
+		void onEntityComponentRemoved(const EntityBase* entity, ComponentBase* comp);
+
 		std::set<std::unique_ptr<EntityBase>> mEntities{};
 		std::set<std::unique_ptr<SystemBase>> mSystems{};
 
@@ -88,6 +91,11 @@ namespace lune
 		if (findRes == mRegistry.entitiesIds.end()) [[likely]]
 		{
 			auto ePtr = entity.get();
+			ePtr->onComponentAddedDelegate.bindObject(this, &Scene::onEntityComponentAdded, std::placeholders::_1, std::placeholders::_2);
+			ePtr->onComponentRemovedDelegate.bindObject(this, &Scene::onEntityComponentRemoved, std::placeholders::_1, std::placeholders::_2);
+			const auto& comps = ePtr->getComponents();
+			for (const auto& comp : comps)
+				onEntityComponentAdded(ePtr, comp.second.get());
 			const auto& [it, res] = mEntities.emplace(std::move(entity));
 			mRegistry.entitiesIds.emplace(it->get()->getId(), it);
 			return dynamic_cast<T*>(ePtr);

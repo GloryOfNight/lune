@@ -1,5 +1,6 @@
 #pragma once
 
+#include "lune/core/delegate.hxx"
 #include "lune/core/log.hxx"
 #include "lune/game_framework/components/component.hxx"
 #include "lune/lune.hxx"
@@ -14,10 +15,15 @@ namespace lune
 	class EntityBase
 	{
 	public:
+		using ComponentDelegate = Delegate<const EntityBase*, ComponentBase*>;
+
 		EntityBase();
 		EntityBase(const EntityBase&) = delete;
 		EntityBase(EntityBase&&) = default;
 		virtual ~EntityBase() = default;
+
+		ComponentDelegate onComponentAddedDelegate;
+		ComponentDelegate onComponentRemovedDelegate;
 
 		template <typename T, typename... Args>
 		T* addComponent(Args&&... args)
@@ -28,39 +34,21 @@ namespace lune
 			if (findRes != mComponents.end()) [[unlikely]]
 				return nullptr;
 			const auto& [it, bAdded] = mComponents.emplace(std::move(typeId), std::make_unique<T>(std::forward<Args>(args)...));
+			onComponentAddedDelegate.execute(this, it->second.get());
 			return dynamic_cast<T*>(it->second.get());
-		}
-
-		template <typename T>
-		T* attachComponent(std::unique_ptr<T> c)
-		{
-			static_assert(std::is_base_of_v<ComponentBase, T>, "T must be base of ComponentBase");
-			std::type_index typeId = typeid(T);
-			const auto findRes = mComponents.find(typeId);
-			if (c == nullptr || findRes != mComponents.end()) [[unlikely]]
-				return nullptr;
-
-			const auto& [it, bAdded] = mComponents.emplace(std::move(typeId), std::move(c));
-			return dynamic_cast<T*>(it->second.get());
-		}
-
-		template <typename T>
-		std::unique_ptr<ComponentBase> detachComponent()
-		{
-			static_assert(std::is_base_of_v<ComponentBase, T>, "T must be base of ComponentBase");
-			std::type_index typeId = typeid(T);
-			const auto findRes = mComponents.find(typeId);
-			if (findRes == mComponents.end()) [[unlikely]]
-				return nullptr;
-
-			return std::move(mComponents.extract(findRes).mapped());
 		}
 
 		template <typename T>
 		bool removeComponent()
 		{
 			static_assert(std::is_base_of_v<ComponentBase, T>, "T must be base of ComponentBase");
-			return detachComponent<T>() != nullptr;
+			std::type_index typeId = typeid(T);
+			const auto findRes = mComponents.find(typeId);
+			if (findRes == mComponents.end()) [[unlikely]]
+				return false;
+			auto comp = std::move(mComponents.extract(findRes).mapped());
+			onComponentRemovedDelegate.execute(this, comp.get());
+			return true;
 		}
 
 		template <typename T>

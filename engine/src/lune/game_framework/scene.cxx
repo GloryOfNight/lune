@@ -2,17 +2,6 @@
 
 void lune::Scene::update(double deltaTime)
 {
-	mRegistry.componentEntities.clear();
-	for (auto& entity : mEntities)
-	{
-		const auto& comps = entity->getComponents();
-		for (const auto& comp : comps)
-		{
-			auto [it, res] = mRegistry.componentEntities.try_emplace(comp.first, std::set<uint64>{});
-			it->second.emplace(entity->getId());
-		}
-	}
-
 	mSystemGraph.generateOrderedSystems();
 	const auto systems = mSystemGraph.getOrderedSystems();
 	for (auto system : systems)
@@ -52,7 +41,31 @@ std::unique_ptr<lune::EntityBase> lune::Scene::detachEntity(uint64 eId)
 	{
 		auto evictedEntitiy = std::move(mEntities.extract(findRes->second).value());
 		mRegistry.entitiesIds.erase(findRes);
+
+		evictedEntitiy->onComponentAddedDelegate.unbind(this);
+		evictedEntitiy->onComponentRemovedDelegate.unbind(this);
+
+		const auto& comps = evictedEntitiy->getComponents();
+		for (const auto& comp : comps)
+			onEntityComponentRemoved(evictedEntitiy.get(), comp.second.get());
+
 		return std::move(evictedEntitiy);
 	}
 	return nullptr;
+}
+
+void lune::Scene::onEntityComponentAdded(const EntityBase* entity, ComponentBase* comp)
+{
+	auto [it, res] = mRegistry.componentEntities.try_emplace(typeid(*comp), std::set<uint64>{});
+	it->second.emplace(entity->getId());
+}
+
+void lune::Scene::onEntityComponentRemoved(const EntityBase* entity, ComponentBase* comp)
+{
+	const std::type_index type = typeid(*comp);
+	auto findRes = mRegistry.componentEntities.find(type);
+	if (findRes != mRegistry.componentEntities.end()) [[likely]]
+	{
+		mRegistry.componentEntities.at(type).erase(entity->getId());
+	}
 }
