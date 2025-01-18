@@ -3,6 +3,8 @@
 #include "lune/lune.hxx"
 
 #include <memory>
+#include <set>
+#include <typeindex>
 #include <vector>
 
 namespace lune
@@ -16,6 +18,18 @@ namespace lune
 		virtual ~SystemBase() = default;
 
 		virtual void update(class Scene* scene, double deltaTime) = 0;
+
+		const std::set<std::type_index>& getDependecies() const { return mDependecies; }
+
+	protected:
+		template <typename T>
+		void addDependecy()
+		{
+			mDependecies.emplace(typeid(T));
+		}
+
+	private:
+		std::set<std::type_index> mDependecies{};
 	};
 
 	class PrepareRenderSystemInterface

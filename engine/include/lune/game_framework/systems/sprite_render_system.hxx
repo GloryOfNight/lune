@@ -3,6 +3,7 @@
 #include "lune/vulkan/descriptor_sets.hxx"
 #include "lune/vulkan/vulkan_core.hxx"
 
+#include "camera_system.hxx"
 #include "system.hxx"
 
 namespace lune
@@ -13,6 +14,11 @@ namespace lune
 		  public RenderSystemInterface
 	{
 	public:
+		SpriteRenderSystem()
+		{
+			addDependecy<CameraSystem>();
+		}
+
 		virtual void update(class Scene* scene, double deltaTime) override;
 
 		virtual void prepareRender(class Scene* scene) override;

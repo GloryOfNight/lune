@@ -13,7 +13,9 @@ void lune::Scene::update(double deltaTime)
 		}
 	}
 
-	for (auto& system : mSystems)
+	mSystemGraph.generateOrderedSystems();
+	const auto systems = mSystemGraph.getOrderedSystems();
+	for (auto system : systems)
 	{
 		system->update(this, deltaTime);
 	}
@@ -21,9 +23,10 @@ void lune::Scene::update(double deltaTime)
 
 void lune::Scene::prepareRender()
 {
-	for (auto& system : mSystems)
+	const auto systems = mSystemGraph.getOrderedSystems();
+	for (auto system : systems)
 	{
-		if (auto renderSystem = dynamic_cast<PrepareRenderSystemInterface*>(system.get()); renderSystem)
+		if (auto renderSystem = dynamic_cast<PrepareRenderSystemInterface*>(system); renderSystem)
 		{
 			renderSystem->prepareRender(this);
 		}
@@ -32,9 +35,10 @@ void lune::Scene::prepareRender()
 
 void lune::Scene::render()
 {
-	for (auto& system : mSystems)
+	const auto systems = mSystemGraph.getOrderedSystems();
+	for (auto system : systems)
 	{
-		if (auto renderSystem = dynamic_cast<RenderSystemInterface*>(system.get()); renderSystem)
+		if (auto renderSystem = dynamic_cast<RenderSystemInterface*>(system); renderSystem)
 		{
 			renderSystem->render(this);
 		}

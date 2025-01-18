@@ -5,6 +5,9 @@
 #include "lune/game_framework/systems/system.hxx"
 #include "lune/vulkan/vulkan_core.hxx"
 
+#include "system_graph.hxx"
+
+#include <map>
 #include <memory>
 #include <set>
 #include <unordered_map>
@@ -17,7 +20,7 @@ namespace lune
 		struct Registry
 		{
 			std::unordered_map<uint64, std::set<std::unique_ptr<EntityBase>>::iterator> entitiesIds{};
-			std::unordered_map<std::type_index, std::set<std::unique_ptr<SystemBase>>::iterator> systemsIds{};
+			std::map<std::type_index, std::set<std::unique_ptr<SystemBase>>::iterator> systemsOrdered{};
 			std::unordered_map<std::type_index, std::set<uint64>> componentEntities{};
 		};
 
@@ -57,6 +60,8 @@ namespace lune
 	private:
 		std::set<std::unique_ptr<EntityBase>> mEntities{};
 		std::set<std::unique_ptr<SystemBase>> mSystems{};
+
+		SystemGraph mSystemGraph{};
 		Registry mRegistry{};
 	};
 
@@ -95,20 +100,17 @@ namespace lune
 	{
 		static_assert(std::is_base_of_v<SystemBase, T>, "T must be base of SystemBase");
 		std::type_index typeId = typeid(T);
-		const auto findRes = mRegistry.systemsIds.find(typeId);
-		if (findRes != mRegistry.systemsIds.end()) [[unlikely]]
-			return nullptr;
 		const auto& [it, res] = mSystems.emplace(std::make_unique<T>(std::forward<Args>(args)...));
-		mRegistry.systemsIds.emplace(std::move(typeId), it);
-		return dynamic_cast<T*>(it->get());
+		if (mSystemGraph.addSystem(it)) [[likely]]
+			return dynamic_cast<T*>(it->get());
+		return nullptr;
 	}
 
 	template <typename T>
 	inline T* Scene::findSystem() const
 	{
 		static_assert(std::is_base_of_v<SystemBase, T>, "T must be base of SystemBase");
-		auto it = mRegistry.systemsIds.find(typeid(T));
-		return it != mRegistry.systemsIds.end() ? dynamic_cast<T*>(it->second->get()) : nullptr;
+		return dynamic_cast<T*>(mSystemGraph.findSystem(typeid(T)));
 	}
 	template <typename T>
 	inline const std::set<uint64>& Scene::getComponentEntities()
