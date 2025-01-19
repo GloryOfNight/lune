@@ -2,6 +2,7 @@
 
 #include "SDL3/SDL.h"
 #include "SDL3/SDL_vulkan.h"
+#include "SDL3_ttf/SDL_ttf.h"
 #include "lune/core/assets.hxx"
 #include "lune/core/event_subsystem.hxx"
 #include "lune/core/log.hxx"
@@ -31,6 +32,9 @@ bool lune::Engine::initialize(std::vector<std::string> args)
 		return false;
 
 	if (!SDL_Vulkan_LoadLibrary(NULL))
+		return false;
+
+	if (!TTF_Init())
 		return false;
 
 #if HAVE_SHADER_COMPILER_TOOL
@@ -76,6 +80,7 @@ void lune::Engine::shutdown()
 		gEngine = nullptr;
 
 	mInitialized = false;
+	TTF_Quit();
 	SDL_Quit();
 }
 
@@ -147,12 +152,12 @@ void lune::Engine::stop()
 	mRunning = false;
 }
 
-uint32 lune::Engine::createWindow(const std::string_view name, const uint32 width, const uint32 height, const uint32 flags)
+uint32 lune::Engine::createWindow(std::string_view name, uint32 width, uint32 height)
 {
 	auto subsystem = findSubsystem<VulkanSubsystem>();
 	if (subsystem)
 	{
-		auto newWindow = SDL_CreateWindow(name.data(), width, height, SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE | flags);
+		auto newWindow = SDL_CreateWindow(name.data(), width, height, SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE);
 		const uint32 newViewId = subsystem->createView(newWindow);
 		if (newViewId != UINT32_MAX)
 			mViews.emplace_back(newViewId);

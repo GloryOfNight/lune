@@ -2,7 +2,7 @@
 
 void lune::TimerManager::tick(double deltaTime)
 {
-	for (auto& timer : mTimers)
+	for (auto& [handle, timer] : mTimers)
 	{
 		if (!timer.active)
 			continue;
@@ -24,49 +24,36 @@ void lune::TimerManager::tick(double deltaTime)
 lune::TimerHandle lune::TimerManager::addTimer(double seconds, TimerCallback callback, bool loop)
 {
 	Timer newTimer{};
-	newTimer.handle = ++mHandleCount;
 	newTimer.seconds = seconds;
 	newTimer.remainingSeconds = seconds;
 	newTimer.callback = callback;
 	newTimer.loop = loop;
 	newTimer.active = true;
-
-	return mTimers.emplace_back(std::move(newTimer)).handle;
+	mTimers.emplace(++mHandleCount, std::move(newTimer));
+	return mHandleCount;
 }
 
 void lune::TimerManager::resetTimer(TimerHandle handle)
 {
-	if (handle == TimerHandle())
-		return;
-
-	auto iter = std::find_if(mTimers.begin(), mTimers.end(), [handle](const Timer& timer)
-		{ return timer.handle == handle; });
-
-	const bool bFind = iter != mTimers.end();
-	if (bFind)
-	{
-		iter->remainingSeconds = iter->seconds;
-	}
+	auto findRes = mTimers.find(handle);
+	if (findRes != mTimers.end())
+		findRes->second.remainingSeconds = findRes->second.seconds;
 }
 
 void lune::TimerManager::clearTimer(TimerHandle handle)
 {
-	if (handle == TimerHandle())
-		return;
-
-	auto iter = std::find_if(mTimers.begin(), mTimers.end(), [handle](const Timer& timer)
-		{ return timer.handle == handle; });
-
-	const bool bFind = iter != mTimers.end();
-	if (bFind)
-	{
-		iter->active = false;
-	}
+	auto findRes = mTimers.find(handle);
+	if (findRes != mTimers.end())
+		findRes->second.active = false;
 }
 
 void lune::TimerManager::clearInactive()
 {
-	const auto removeIf = [](const Timer& timer)
-	{ return !timer.active; };
-	mTimers.erase(std::remove_if(mTimers.begin(), mTimers.end(), removeIf), mTimers.end());
+	for (auto it = mTimers.begin(); it != mTimers.end();)
+	{
+		if (!it->second.active)
+			it = mTimers.erase(it);
+		else
+			++it;
+	}
 }

@@ -5,6 +5,7 @@
 #include "engine_subsystem.hxx"
 
 #include <functional>
+#include <map>
 
 namespace lune
 {
@@ -26,14 +27,13 @@ namespace lune
 
 		struct Timer
 		{
-			uint32_t handle{};
 			double seconds{};
 			double remainingSeconds{};
 			TimerCallback callback{};
 			bool loop{};
 			bool active{};
 		};
-		std::vector<Timer> mTimers{};
+		std::map<TimerHandle, Timer> mTimers{};
 		uint32 mHandleCount{};
 	};
 

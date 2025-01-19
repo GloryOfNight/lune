@@ -24,14 +24,7 @@ void lune::EventSubsystem::processEvents()
 		{
 			for (auto bindFunc : bindIt->second)
 			{
-				try
-				{
-					std::invoke(bindFunc, event);
-				}
-				catch (std::bad_function_call badFuncCall)
-				{
-					LN_LOG(Error, EventSubsystem::ProcessEvents, "BadFunctuonCall: {}", badFuncCall.what());
-				}
+				bindFunc(event);
 			}
 		}
 	}

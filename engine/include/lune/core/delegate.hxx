@@ -54,7 +54,7 @@ namespace lune
 		// Unbind all from specific object
 		void unbind(void* object)
 		{
-			if (!object)
+			if (object == nullptr)
 				return;
 
 			std::set<DelegateHandle> handles{};
