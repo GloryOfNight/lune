@@ -5,6 +5,7 @@
 #include "lune/core/assets.hxx"
 #include "lune/core/event_subsystem.hxx"
 #include "lune/core/log.hxx"
+#include "lune/core/timer_subsystem.hxx"
 #include "lune/lune.hxx"
 #include "lune/vulkan/vulkan_subsystem.hxx"
 
@@ -52,6 +53,7 @@ bool lune::Engine::initialize(std::vector<std::string> args)
 	eventSubsystem->addEventBindingMem(SDL_EVENT_QUIT, this, &Engine::onSdlQuitEvent);
 	eventSubsystem->addEventBindingMem(SDL_EVENT_WINDOW_CLOSE_REQUESTED, this, &Engine::onSdlWindowCloseEvent);
 
+	addSubsystem<TimerSubsystem>();
 	addSubsystem<VulkanSubsystem>();
 
 	mInitialized = true;
@@ -105,8 +107,8 @@ void lune::Engine::run()
 		prevTick = nowTicks;
 		nextTick += frameTimeMs;
 
-		auto eventSubsystem = findSubsystem<EventSubsystem>();
-		eventSubsystem->processEvents();
+		findSubsystem<EventSubsystem>()->processEvents();
+		findSubsystem<TimerSubsystem>()->tick(deltaSeconds);
 
 		for (auto& [sId, s] : mScenes)
 		{
