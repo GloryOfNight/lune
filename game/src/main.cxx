@@ -3,11 +3,13 @@
 #include "lune/game_framework/components/input.hxx"
 #include "lune/game_framework/components/move.hxx"
 #include "lune/game_framework/components/rotate.hxx"
+#include "lune/game_framework/components/skybox.hxx"
 #include "lune/game_framework/components/sprite.hxx"
 #include "lune/game_framework/components/transform.hxx"
 #include "lune/game_framework/systems/camera_system.hxx"
 #include "lune/game_framework/systems/input_system.hxx"
 #include "lune/game_framework/systems/move_system.hxx"
+#include "lune/game_framework/systems/skybox_system.hxx"
 #include "lune/game_framework/systems/sprite_render_system.hxx"
 #include "lune/lune.hxx"
 
@@ -48,6 +50,16 @@ public:
 	}
 };
 
+class SkyboxEntity : public lune::EntityBase
+{
+public:
+	SkyboxEntity()
+	{
+		auto skybox = addComponent<lune::SkyboxComponent>();
+		skybox->imageName = "lune::skyboxes::sea";
+	}
+};
+
 class ScarletSprite : public lune::EntityBase
 {
 public:
@@ -82,6 +94,7 @@ public:
 	GameScene()
 	{
 		addEntity<CameraEntity>();
+		addEntity<SkyboxEntity>();
 
 		auto scarlet1 = addEntity<ScarletSprite>();
 
@@ -105,6 +118,7 @@ public:
 
 		registerSystem<lune::CameraSystem>();
 		registerSystem<lune::SpriteRenderSystem>();
+		registerSystem<lune::SkyboxSystem>();
 
 		auto inputSystem = registerSystem<lune::InputSystem>();
 		inputSystem->setWindowId(ln::Engine::get()->getViewWindowId(0));

@@ -61,26 +61,61 @@ void lune::CameraSystem::prepareRender(Scene* scene)
 	auto vkSubsystem = Engine::get()->findSubsystem<VulkanSubsystem>();
 	auto [viewId, imageIndex, commandBuffer] = vkSubsystem->getFrameInfo();
 
-	if (!mStagingCameraBuffer)
-		mStagingCameraBuffer = vulkan::Buffer::create(vk::BufferUsageFlagBits::eTransferSrc, sizeof(lnm::mat4), VMA_MEMORY_USAGE_AUTO, VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT);
-	if (!mCameraBuffer)
-		mCameraBuffer = vulkan::Buffer::create(vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eTransferDst, sizeof(lnm::mat4), VMA_MEMORY_USAGE_AUTO, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT);
+	if (!mViewProjStagingBuffer)
+		mViewProjStagingBuffer = vulkan::Buffer::create(vk::BufferUsageFlagBits::eTransferSrc, sizeof(ViewProj), VMA_MEMORY_USAGE_AUTO, VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT);
 
-	lnm::mat4 viewProj = lnm::mat4(1.f);
+	if (!mViewProjBuffer)
+		mViewProjBuffer = vulkan::Buffer::create(vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eTransferDst, sizeof(lnm::mat4), VMA_MEMORY_USAGE_AUTO, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT);
+	if (!mViewBuffer)
+		mViewBuffer = vulkan::Buffer::create(vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eTransferDst, sizeof(lnm::mat4), VMA_MEMORY_USAGE_AUTO, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT);
+	if (!mProjBuffer)
+		mProjBuffer = vulkan::Buffer::create(vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eTransferDst, sizeof(lnm::mat4), VMA_MEMORY_USAGE_AUTO, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT);
 
 	auto findRes = mViewsProjs.find(viewId);
-	if (findRes != mViewsProjs.end())
-		viewProj = findRes->second.viewProj;
+	if (findRes == mViewsProjs.end())
+		return;
 
-	int diff{};
-	uint8* pStageBuffer = mStagingCameraBuffer->map();
-	if (diff = memcmp(pStageBuffer, &viewProj, sizeof(viewProj)); diff != 0)
-		memcpy(pStageBuffer, &viewProj, sizeof(viewProj));
-	mStagingCameraBuffer->unmap();
+	uint32 diff{};
+
+	uint8* pStageBuffer = mViewProjStagingBuffer->map();
+
+	if (uint32 memdiff = memcmp(pStageBuffer, &findRes->second.viewProj, sizeof(lnm::mat4)); memdiff != 0)
+	{
+		memcpy(pStageBuffer, &findRes->second.viewProj, sizeof(lnm::mat4));
+		diff += memdiff;
+	}
+	if (uint32 memdiff = memcmp(pStageBuffer + offsetof(ViewProj, view), &findRes->second.view, sizeof(lnm::mat4)); memdiff != 0)
+	{
+		memcpy(pStageBuffer + offsetof(ViewProj, view), &findRes->second.view, sizeof(lnm::mat4));
+		diff += memdiff;
+	}
+	if (uint32 memdiff = memcmp(pStageBuffer + offsetof(ViewProj, proj), &findRes->second.proj, sizeof(lnm::mat4)); memdiff != 0)
+	{
+		memcpy(pStageBuffer + offsetof(ViewProj, proj), &findRes->second.proj, sizeof(lnm::mat4));
+		diff += memdiff;
+	}
+
+	mViewProjStagingBuffer->unmap();
 
 	if (diff)
 	{
-		const vk::BufferCopy bufferCopy = vk::BufferCopy().setSize(sizeof(viewProj));
-		commandBuffer.copyBuffer(mStagingCameraBuffer->getBuffer(), mCameraBuffer->getBuffer(), bufferCopy);
+		{
+			const vk::BufferCopy bufferCopy = vk::BufferCopy()
+												  .setSrcOffset(0)
+												  .setSize(sizeof(lnm::mat4));
+			commandBuffer.copyBuffer(mViewProjStagingBuffer->getBuffer(), mViewProjBuffer->getBuffer(), bufferCopy);
+		}
+		{
+			const vk::BufferCopy bufferCopy = vk::BufferCopy()
+												  .setSrcOffset(offsetof(ViewProj, view))
+												  .setSize(sizeof(lnm::mat4));
+			commandBuffer.copyBuffer(mViewProjStagingBuffer->getBuffer(), mViewBuffer->getBuffer(), bufferCopy);
+		}
+		{
+			const vk::BufferCopy bufferCopy = vk::BufferCopy()
+												  .setSrcOffset(offsetof(ViewProj, proj))
+												  .setSize(sizeof(lnm::mat4));
+			commandBuffer.copyBuffer(mViewProjStagingBuffer->getBuffer(), mProjBuffer->getBuffer(), bufferCopy);
+		}
 	}
 }

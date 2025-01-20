@@ -286,12 +286,31 @@ void lune::VulkanSubsystem::sumbitFrame()
 
 void lune::VulkanSubsystem::loadDefaultAssets()
 {
-	auto spriteShVert = loadShader(*EngineShaderPath("sprite.vert.spv"));
-	auto spriteShFrag = loadShader(*EngineShaderPath("sprite.frag.spv"));
-	addPipeline("lune::sprite", vulkan::GraphicsPipeline::create(spriteShVert, spriteShFrag));
+	{
+		auto shVert = loadShader(*EngineShaderPath("sprite.vert.spv"));
+		auto shFrag = loadShader(*EngineShaderPath("sprite.frag.spv"));
+		addPipeline("lune::sprite", vulkan::GraphicsPipeline::create(shVert, shFrag));
+	}
+	{
+		auto shVert = loadShader(*EngineShaderPath("skybox.vert.spv"));
+		auto shFrag = loadShader(*EngineShaderPath("skybox.frag.spv"));
+		addPipeline("lune::skybox", vulkan::GraphicsPipeline::create(shVert, shFrag));
+	}
 
-	SDL_Surface* scarlet = IMG_Load((*EngineAssetPath("scarlet.png")).generic_string().data());
-	addTextureImage("lune::scarlet", vulkan::TextureImage::create(*scarlet));
+	{
+		SDL_Surface* scarlet = IMG_Load((*EngineAssetPath("scarlet.png")).generic_string().data());
+		addTextureImage("lune::scarlet", vulkan::TextureImage::create(scarlet));
+	}
+	{
+		SDL_Surface* right = IMG_Load((*EngineAssetPath("skyboxes/sea/right.png")).generic_string().data());
+		SDL_Surface* left = IMG_Load((*EngineAssetPath("skyboxes/sea/left.png")).generic_string().data());
+		SDL_Surface* top = IMG_Load((*EngineAssetPath("skyboxes/sea/top.png")).generic_string().data());
+		SDL_Surface* bottom = IMG_Load((*EngineAssetPath("skyboxes/sea/bottom.png")).generic_string().data());
+		SDL_Surface* front = IMG_Load((*EngineAssetPath("skyboxes/sea/front.png")).generic_string().data());
+		SDL_Surface* back = IMG_Load((*EngineAssetPath("skyboxes/sea/back.png")).generic_string().data());
+		std::array<const SDL_Surface*, 6> surfaces = {right, left, top, bottom, front, back};
+		addTextureImage("lune::skyboxes::sea", vulkan::TextureImage::create(std::span<const SDL_Surface*, 6>(surfaces)));
+	}
 
 	{
 		std::vector<Vertex32> vertices = {
@@ -326,6 +345,47 @@ void lune::VulkanSubsystem::loadDefaultAssets()
 			4, 5, 1, 4, 1, 0  // Bottom face
 		};
 		addPrimitive("lune::box", vulkan::Primitive::create<Vertex32, Index16>(vertices, indices));
+	}
+
+	{
+		std::vector<Vertex3> vertices = {
+			{{-1.0f, 1.0f, -1.0f}},
+			{{-1.0f, -1.0f, -1.0f}},
+			{{1.0f, -1.0f, -1.0f}},
+			{{1.0f, -1.0f, -1.0f}},
+			{{1.0f, 1.0f, -1.0f}},
+			{{-1.0f, 1.0f, -1.0f}},
+			{{-1.0f, -1.0f, 1.0f}},
+			{{-1.0f, -1.0f, -1.0f}},
+			{{-1.0f, 1.0f, -1.0f}},
+			{{-1.0f, 1.0f, -1.0f}},
+			{{-1.0f, 1.0f, 1.0f}},
+			{{-1.0f, -1.0f, 1.0f}},
+			{{1.0f, -1.0f, -1.0f}},
+			{{1.0f, -1.0f, 1.0f}},
+			{{1.0f, 1.0f, 1.0f}},
+			{{1.0f, 1.0f, 1.0f}},
+			{{1.0f, 1.0f, -1.0f}},
+			{{1.0f, -1.0f, -1.0f}},
+			{{-1.0f, -1.0f, 1.0f}},
+			{{-1.0f, 1.0f, 1.0f}},
+			{{1.0f, 1.0f, 1.0f}},
+			{{1.0f, 1.0f, 1.0f}},
+			{{1.0f, -1.0f, 1.0f}},
+			{{-1.0f, -1.0f, 1.0f}},
+			{{-1.0f, 1.0f, -1.0f}},
+			{{1.0f, 1.0f, -1.0f}},
+			{{1.0f, 1.0f, 1.0f}},
+			{{1.0f, 1.0f, 1.0f}},
+			{{-1.0f, 1.0f, 1.0f}},
+			{{-1.0f, 1.0f, -1.0f}},
+			{{-1.0f, -1.0f, -1.0f}},
+			{{-1.0f, -1.0f, 1.0f}},
+			{{1.0f, -1.0f, -1.0f}},
+			{{1.0f, -1.0f, -1.0f}},
+			{{-1.0f, -1.0f, 1.0f}},
+			{{1.0f, -1.0f, 1.0f}}};
+		addPrimitive("lune::skybox", vulkan::Primitive::create<Vertex3>(vertices));
 	}
 }
 

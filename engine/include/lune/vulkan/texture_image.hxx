@@ -1,11 +1,13 @@
 #pragma once
 
+#include "lune/lune.hxx"
 #include "vulkan/vulkan.hpp"
 
-#include "vk_mem_alloc.h"
+#include "vma.hxx"
 
 #include <SDL3_image/SDL_image.h>
 #include <memory>
+#include <span>
 
 namespace lune::vulkan
 {
@@ -19,7 +21,9 @@ namespace lune::vulkan
 		TextureImage(TextureImage&&) = delete;
 		~TextureImage();
 
-		static UniqueTextureImage create(const SDL_Surface& surface);
+		static UniqueTextureImage create(std::span<const SDL_Surface*, 6> cubeSurfaces);
+
+		static UniqueTextureImage create(const SDL_Surface* surface);
 
 		void destroy();
 
@@ -29,18 +33,15 @@ namespace lune::vulkan
 		vk::Sampler getSampler() const { return mSampler; }
 
 	private:
-		void init(const SDL_Surface& surface);
+		void init(std::span<const SDL_Surface*> surfaces);
 
-		void createImage();
-		void createImageView();
+		void createImage(vk::ImageCreateFlagBits flags, uint32 layerCount, vk::Extent3D extent);
+		void createImageView(vk::ImageViewType type, uint32 layerCount);
 		void createSampler();
 
-		void copyPixelsToImage(const SDL_Surface& surface);
+		void copyPixelsToImage(std::span<const SDL_Surface*> surfaces, uint32 layerCount, vk::Extent3D extent);
 
 		vk::Format mFormat{};
-		vk::Extent2D mExtent{};
-		vk::SampleCountFlagBits mSampleCount{vk::SampleCountFlagBits::e1};
-
 		vk::Image mImage{};
 		VmaAllocation mVmaAllocation{};
 		vk::ImageView mImageView{};

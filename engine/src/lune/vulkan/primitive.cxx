@@ -21,7 +21,7 @@ void lune::vulkan::Primitive::init(const void* vertData, uint32 vertDataSize, ui
 	mVerticiesCount = mVerticiesSize / vertSize;
 
 	mIndicesSize = indexDataSize * indexSize;
-	mIndicesCount = mIndicesCount / indexSize;
+	mIndicesCount = mIndicesSize / indexSize;
 	mIndicesType = indexSize == sizeof(Index32) ? vk::IndexType::eUint32 : vk::IndexType::eUint16;
 
 	vk::BufferUsageFlags bufferUsageBits = vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eTransferDst;

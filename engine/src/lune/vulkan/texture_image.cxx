@@ -9,11 +9,10 @@ vk::Format sdlFormatToVulkan(SDL_PixelFormat format)
 	{
 	case SDL_PIXELFORMAT_RGBA32:
 		return vk::Format::eR8G8B8A8Unorm;
-	case SDL_PIXELFORMAT_RGB24:
-		return vk::Format::eR8G8B8Unorm;
 	case SDL_PIXELFORMAT_BGRA8888:
 		return vk::Format::eB8G8R8A8Unorm;
 	default:
+		LN_LOG(Fatal, Vulkan::Image, "Unsupported format detected!");
 		return vk::Format::eUndefined;
 	}
 }
@@ -40,42 +39,46 @@ lune::vulkan::TextureImage::~TextureImage()
 	getVulkanDeleteQueue().push(cleanImageAlloc);
 }
 
-lune::vulkan::UniqueTextureImage lune::vulkan::TextureImage::create(const SDL_Surface& surface)
+lune::vulkan::UniqueTextureImage lune::vulkan::TextureImage::create(std::span<const SDL_Surface*, 6> cubeSurfaces)
 {
 	auto newTexImage = std::make_unique<TextureImage>();
-	newTexImage->init(surface);
+	newTexImage->init(cubeSurfaces);
 	return newTexImage;
 }
 
-void lune::vulkan::TextureImage::init(const SDL_Surface& surface)
+lune::vulkan::UniqueTextureImage lune::vulkan::TextureImage::create(const SDL_Surface* surface)
 {
-	mFormat = sdlFormatToVulkan(surface.format);
-	if (mFormat == vk::Format::eUndefined)
-	{
-		LN_LOG(Fatal, Vulkan::TextureImage, "Unsupported SDL pixel format");
-		return;
-	}
-
-	mExtent = vk::Extent2D(static_cast<uint32_t>(surface.w), static_cast<uint32_t>(surface.h));
-	mSampleCount = vk::SampleCountFlagBits::e1;
-
-	createImage();
-	createImageView();
-	createSampler();
-
-	copyPixelsToImage(surface);
+	auto newTexImage = std::make_unique<TextureImage>();
+	newTexImage->init(std::span<const SDL_Surface*>(&(surface), 1));
+	return newTexImage;
 }
 
-void lune::vulkan::TextureImage::createImage()
+void lune::vulkan::TextureImage::init(std::span<const SDL_Surface*> surfaces)
+{
+	const auto imageCreateFlags = surfaces.size() == 6 ? vk::ImageCreateFlagBits::eCubeCompatible : vk::ImageCreateFlagBits();
+	const uint32 layerCount = surfaces.size();
+	const auto extent = vk::Extent3D(static_cast<uint32>(surfaces[0]->w), static_cast<uint32>(surfaces[0]->h), 1);
+	const auto imageViewType = surfaces.size() == 6 ? vk::ImageViewType::eCube : vk::ImageViewType::e2D;
+
+	mFormat = sdlFormatToVulkan(surfaces[0]->format);
+	createImage(imageCreateFlags, layerCount, extent);
+	createImageView(imageViewType, layerCount);
+	createSampler();
+
+	copyPixelsToImage(surfaces, layerCount, extent);
+}
+
+void lune::vulkan::TextureImage::createImage(vk::ImageCreateFlagBits flags, uint32 arrayLayers, vk::Extent3D extent)
 {
 	const vk::ImageCreateInfo imageCreateInfo =
 		vk::ImageCreateInfo()
+			.setFlags(flags)
 			.setImageType(vk::ImageType::e2D)
 			.setFormat(mFormat)
-			.setExtent(vk::Extent3D(mExtent, 1))
+			.setExtent(extent)
 			.setMipLevels(1)
-			.setArrayLayers(1)
-			.setSamples(mSampleCount)
+			.setArrayLayers(arrayLayers)
+			.setSamples(vk::SampleCountFlagBits::e1)
 			.setTiling(vk::ImageTiling::eOptimal)
 			.setUsage(vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst)
 			.setInitialLayout(vk::ImageLayout::eUndefined)
@@ -90,7 +93,7 @@ void lune::vulkan::TextureImage::createImage()
 	vmaCreateImage(getVulkanContext().vmaAllocator, reinterpret_cast<const VkImageCreateInfo*>(&imageCreateInfo), &allocationCreateInfo, reinterpret_cast<VkImage*>(&mImage), &mVmaAllocation, &allocationInfo);
 }
 
-void lune::vulkan::TextureImage::createImageView()
+void lune::vulkan::TextureImage::createImageView(vk::ImageViewType type, uint32 layerCount)
 {
 	const vk::ImageSubresourceRange subresourceRange =
 		vk::ImageSubresourceRange()
@@ -98,12 +101,12 @@ void lune::vulkan::TextureImage::createImageView()
 			.setBaseMipLevel(0)
 			.setLevelCount(1)
 			.setBaseArrayLayer(0)
-			.setLayerCount(1);
+			.setLayerCount(layerCount);
 
 	const vk::ImageViewCreateInfo imageViewCreateInfo =
 		vk::ImageViewCreateInfo()
 			.setImage(mImage)
-			.setViewType(vk::ImageViewType::e2D)
+			.setViewType(type)
 			.setFormat(mFormat)
 			.setSubresourceRange(subresourceRange);
 
@@ -123,7 +126,7 @@ void lune::vulkan::TextureImage::createSampler()
 			.setMaxAnisotropy(1)
 			.setBorderColor(vk::BorderColor::eIntOpaqueBlack)
 			.setUnnormalizedCoordinates(VK_FALSE)
-			.setCompareEnable(VK_FALSE)
+			.setCompareEnable(VK_TRUE)
 			.setCompareOp(vk::CompareOp::eAlways)
 			.setMipmapMode(vk::SamplerMipmapMode::eLinear)
 			.setMipLodBias(0)
@@ -133,16 +136,14 @@ void lune::vulkan::TextureImage::createSampler()
 	mSampler = getVulkanContext().device.createSampler(samplerCreateInfo);
 }
 
-void lune::vulkan::TextureImage::copyPixelsToImage(const SDL_Surface& surface)
+void lune::vulkan::TextureImage::copyPixelsToImage(std::span<const SDL_Surface*> surfaces, uint32 layerCount, vk::Extent3D extent)
 {
-	const auto size = surface.h * surface.pitch;
-
 	VkBuffer stagingBuffer;
 	VmaAllocation stagingAllocation;
 	{ // Create staging buffer
 		vk::BufferCreateInfo bufferCreateInfo =
 			vk::BufferCreateInfo()
-				.setSize(size)
+				.setSize(vma::getAllocationSize(mVmaAllocation))
 				.setUsage(vk::BufferUsageFlagBits::eTransferSrc)
 				.setSharingMode(vk::SharingMode::eExclusive);
 
@@ -156,10 +157,16 @@ void lune::vulkan::TextureImage::copyPixelsToImage(const SDL_Surface& surface)
 	}
 
 	{ // Copy pixels to staging buffer
-		const auto pixels = static_cast<const uint8_t*>(surface.pixels);
-		void* data;
+		void* data{};
 		vmaMapMemory(getVulkanContext().vmaAllocator, stagingAllocation, &data);
-		std::memcpy(data, pixels, size);
+		const uint32 size = surfaces[0]->w * surfaces[0]->pitch;
+		uint32 offset = 0;
+		for (const SDL_Surface* surface : surfaces)
+		{
+			const uint8* pixels = static_cast<const uint8*>(surface->pixels);
+			std::memcpy(static_cast<uint8*>(data) + offset, pixels, size);
+			offset += size;
+		}
 		vmaUnmapMemory(getVulkanContext().vmaAllocator, stagingAllocation);
 	}
 
@@ -185,7 +192,7 @@ void lune::vulkan::TextureImage::copyPixelsToImage(const SDL_Surface& surface)
 				.setBaseMipLevel(0)
 				.setLevelCount(1)
 				.setBaseArrayLayer(0)
-				.setLayerCount(1);
+				.setLayerCount(layerCount);
 
 		const vk::ImageMemoryBarrier imageMemoryBarrier =
 			vk::ImageMemoryBarrier()
@@ -200,14 +207,21 @@ void lune::vulkan::TextureImage::copyPixelsToImage(const SDL_Surface& surface)
 
 		commandBuffer.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTransfer, {}, {}, {}, imageMemoryBarrier);
 
+		const vk::ImageSubresourceLayers imageSubresourceLayers =
+			vk::ImageSubresourceLayers()
+				.setAspectMask(vk::ImageAspectFlagBits::eColor)
+				.setMipLevel(0)
+				.setBaseArrayLayer(0)
+				.setLayerCount(layerCount);
+
 		const vk::BufferImageCopy bufferImageCopy =
 			vk::BufferImageCopy()
 				.setBufferOffset(0)
 				.setBufferRowLength(0)
 				.setBufferImageHeight(0)
-				.setImageSubresource(vk::ImageSubresourceLayers(vk::ImageAspectFlagBits::eColor, 0, 0, 1))
+				.setImageSubresource(imageSubresourceLayers)
 				.setImageOffset(vk::Offset3D(0, 0, 0))
-				.setImageExtent(vk::Extent3D(mExtent, 1));
+				.setImageExtent(extent);
 
 		commandBuffer.copyBufferToImage(stagingBuffer, mImage, vk::ImageLayout::eTransferDstOptimal, bufferImageCopy);
 	}
@@ -219,7 +233,7 @@ void lune::vulkan::TextureImage::copyPixelsToImage(const SDL_Surface& surface)
 				.setBaseMipLevel(0)
 				.setLevelCount(1)
 				.setBaseArrayLayer(0)
-				.setLayerCount(1);
+				.setLayerCount(layerCount);
 
 		const vk::ImageMemoryBarrier imageMemoryBarrier =
 			vk::ImageMemoryBarrier()
