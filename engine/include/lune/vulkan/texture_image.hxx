@@ -30,14 +30,12 @@ namespace lune::vulkan
 		vk::Format getFormat() const { return mFormat; }
 		vk::Image getImage() const { return mImage; }
 		vk::ImageView getImageView() const { return mImageView; }
-		vk::Sampler getSampler() const { return mSampler; }
 
 	private:
 		void init(std::span<const SDL_Surface*> surfaces);
 
 		void createImage(vk::ImageCreateFlagBits flags, uint32 layerCount, vk::Extent3D extent);
 		void createImageView(vk::ImageViewType type, uint32 layerCount);
-		void createSampler();
 
 		void copyPixelsToImage(std::span<const SDL_Surface*> surfaces, uint32 layerCount, vk::Extent3D extent);
 

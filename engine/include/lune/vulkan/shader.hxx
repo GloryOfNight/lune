@@ -15,11 +15,9 @@ namespace lune::vulkan
 		Shader() = default;
 		Shader(Shader&) = delete;
 		Shader(Shader&&) = default;
-		~Shader() = default;
+		~Shader();
 
 		static SharedShader create(const std::filesystem::path spvPath);
-
-		void destroy();
 
 		vk::ShaderModule getShaderModule() const { return mShaderModule; }
 

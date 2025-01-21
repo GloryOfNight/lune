@@ -26,6 +26,10 @@ namespace lune
 		virtual void render(class Scene* scene) override;
 
 	private:
+		vulkan::SharedPrimitive mPrimitive{};
+		vulkan::SharedGraphicsPipeline mPipeline{};
+		vulkan::SharedSampler mSampler{};
+
 		struct SpriteResources
 		{
 			vulkan::SharedTextureImage texImage{};
@@ -33,8 +37,6 @@ namespace lune
 			vulkan::UniqueBuffer stagingModelBuffer{};
 			vulkan::UniqueBuffer modelBuffer{};
 		};
-
-		vulkan::SharedPrimitive mPrimitive{};
 		std::unordered_map<class SpriteComponent*, SpriteResources> mResources{};
 	};
 } // namespace lune

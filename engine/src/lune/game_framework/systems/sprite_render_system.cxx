@@ -8,6 +8,7 @@
 #include "lune/game_framework/systems/camera_system.hxx"
 #include "lune/vulkan/pipeline.hxx"
 #include "lune/vulkan/primitive.hxx"
+#include "lune/vulkan/sampler.hxx"
 #include "lune/vulkan/texture_image.hxx"
 #include "lune/vulkan/vulkan_subsystem.hxx"
 
@@ -28,6 +29,12 @@ void lune::SpriteRenderSystem::prepareRender(Scene* scene)
 	if (!mPrimitive)
 		mPrimitive = vkSubsystem->findPrimitive("lune::plane");
 
+	if (!mPipeline)
+		mPipeline = vkSubsystem->findPipeline("lune::sprite");
+
+	if (!mSampler)
+		mSampler = vkSubsystem->findSampler("lune::nearest");
+
 	const auto& eIds = scene->getComponentEntities<SpriteComponent>();
 	for (auto eId : eIds)
 	{
@@ -47,7 +54,7 @@ void lune::SpriteRenderSystem::prepareRender(Scene* scene)
 			auto pipeline = vkSubsystem->findPipeline("lune::sprite");
 
 			resources.texImage = vkSubsystem->findTextureImage(spriteComp->imageName);
-			if (pipeline == nullptr || resources.texImage == nullptr)
+			if (!resources.texImage)
 				continue;
 
 			resources.stagingModelBuffer = vulkan::Buffer::create(vk::BufferUsageFlagBits::eTransferSrc, sizeof(lnm::mat4), VMA_MEMORY_USAGE_AUTO, VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT);
@@ -56,7 +63,7 @@ void lune::SpriteRenderSystem::prepareRender(Scene* scene)
 			resources.descSets = vulkan::DescriptorSets::create(pipeline, 1);
 			resources.descSets->setBufferInfo("viewProj", 0, cameraSystem->getViewProjectionBuffer()->getBuffer(), 0, sizeof(lnm::mat4));
 			resources.descSets->setBufferInfo("model", 0, resources.modelBuffer->getBuffer(), 0, sizeof(lnm::mat4));
-			resources.descSets->setImageInfo("texSampler", 0, resources.texImage->getImageView(), resources.texImage->getSampler());
+			resources.descSets->setImageInfo("texSampler", 0, resources.texImage->getImageView(), mSampler->getSampler());
 			resources.descSets->updateSets(0);
 
 			const auto [it, result] = mResources.emplace(spriteComp, std::move(resources));
@@ -70,7 +77,7 @@ void lune::SpriteRenderSystem::prepareRender(Scene* scene)
 		lnm::mat4 model = lnm::mat4(1.f);
 		auto transformComp = entity->findComponent<TransformComponent>();
 		if (transformComp)
-			model = transformComp->getTransform();
+			model = lnm::translate(model, transformComp->mPosition) * lnm::mat4(transformComp->mOrientation) * lnm::scale(model, transformComp->mScale);
 
 		model = lnm::translate(model, spriteComp->position);
 

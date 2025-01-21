@@ -47,7 +47,7 @@ void lune::MoveSystem::update(Scene* scene, double deltaTime)
 					if (mouseState.x && mouseState.x != halfW)
 					{
 						const auto coefDist = lnm::clamp(halfW / mouseState.x - 1, -0.1f, 0.1f);
-						transformComp->rotate(-lnm::radians(rotComp->speed * coefDist), transformComp->mOrientation * upAxis);
+						transformComp->rotate(-lnm::radians(rotComp->speed * coefDist), upAxis);
 					}
 					if (mouseState.y && mouseState.y != halfH)
 					{

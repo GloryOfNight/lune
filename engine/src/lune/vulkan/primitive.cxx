@@ -46,7 +46,6 @@ void lune::vulkan::Primitive::cmdBind(vk::CommandBuffer commandBuffer)
 	if (mIndicesSize)
 	{
 		commandBuffer.bindIndexBuffer(mBuffer->getBuffer(), mVerticiesSize, mIndicesType);
-		static_assert(sizeof(Index32) == sizeof(uint32), "Fix index buffer bind ^^^^^^^^^^^^^^^^^^^^");
 	}
 }
 

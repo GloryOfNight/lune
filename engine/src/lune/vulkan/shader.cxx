@@ -24,6 +24,17 @@ std::string readFile(const std::filesystem::path& path)
 	return fileContent;
 }
 
+lune::vulkan::Shader::~Shader()
+{
+	spvReflectDestroyShaderModule(&mReflectModule);
+	const auto cleanShaderModuleLam = [shaderModule = mShaderModule]() -> bool
+	{
+		getVulkanContext().device.destroyShaderModule(shaderModule);
+		return true;
+	};
+	getVulkanDeleteQueue().push(cleanShaderModuleLam);
+}
+
 lune::vulkan::SharedShader lune::vulkan::Shader::create(const std::filesystem::path spvPath)
 {
 	if (!std::filesystem::is_regular_file(spvPath)) [[unlikely]]
@@ -67,15 +78,4 @@ bool lune::vulkan::Shader::init(const std::string& spvCode)
 		return false;
 	}
 	return true;
-}
-
-void lune::vulkan::Shader::destroy()
-{
-	if (mShaderModule)
-	{
-		getVulkanContext().device.destroyShaderModule(mShaderModule);
-	}
-	spvReflectDestroyShaderModule(&mReflectModule);
-
-	new (this) Shader();
 }

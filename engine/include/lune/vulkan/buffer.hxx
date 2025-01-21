@@ -14,11 +14,9 @@ namespace lune::vulkan
 		Buffer() = default;
 		Buffer(const Buffer&) = delete;
 		Buffer(Buffer&&) = default;
-		~Buffer() { destroy(); };
+		~Buffer();
 
 		static UniqueBuffer create(vk::BufferUsageFlags usage, vk::DeviceSize size, VmaMemoryUsage vmaUsage, VmaAllocationCreateFlags vmaFlags);
-
-		void destroy();
 
 		vk::Buffer getBuffer() const { return mBuffer; }
 

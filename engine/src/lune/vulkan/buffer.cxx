@@ -2,6 +2,16 @@
 
 #include "lune/core/log.hxx"
 
+lune::vulkan::Buffer::~Buffer()
+{
+	const auto cleanBufferLam = [buffer = mBuffer, allocation = mVmaAllocation]() -> bool
+	{
+		vmaDestroyBuffer(getVulkanContext().vmaAllocator, buffer, allocation);
+		return true;
+	};
+	getVulkanDeleteQueue().push(cleanBufferLam);
+}
+
 lune::vulkan::UniqueBuffer lune::vulkan::Buffer::create(vk::BufferUsageFlags usage, vk::DeviceSize size, VmaMemoryUsage vmaUsage, VmaAllocationCreateFlags vmaFlags)
 {
 	auto newBuffer = std::make_unique<Buffer>();
@@ -24,13 +34,6 @@ void lune::vulkan::Buffer::init(vk::BufferUsageFlags usage, vk::DeviceSize size,
 
 	VmaAllocationInfo info{};
 	vmaCreateBuffer(getVulkanContext().vmaAllocator, reinterpret_cast<const VkBufferCreateInfo*>(&bufferCreateInfo), &vmaCreateInfo, reinterpret_cast<VkBuffer*>(&mBuffer), &mVmaAllocation, &info);
-}
-
-void lune::vulkan::Buffer::destroy()
-{
-	if (mBuffer)
-		vmaDestroyBuffer(getVulkanContext().vmaAllocator, mBuffer, mVmaAllocation);
-	new (this) Buffer();
 }
 
 uint8* lune::vulkan::Buffer::map() const

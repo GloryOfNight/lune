@@ -6,6 +6,7 @@
 #include "lune/game_framework/systems/camera_system.hxx"
 #include "lune/vulkan/pipeline.hxx"
 #include "lune/vulkan/primitive.hxx"
+#include "lune/vulkan/sampler.hxx"
 #include "lune/vulkan/texture_image.hxx"
 #include "lune/vulkan/vulkan_subsystem.hxx"
 
@@ -25,6 +26,9 @@ void lune::SkyboxSystem::prepareRender(class Scene* scene)
 	if (!mPipeline)
 		mPipeline = vkSubsystem->findPipeline("lune::skybox");
 
+	if (!mSampler)
+		mSampler = vkSubsystem->findSampler("lune::linear");
+
 	const auto& eIds = scene->getComponentEntities<SkyboxComponent>();
 	for (uint64 eId : eIds)
 	{
@@ -39,7 +43,7 @@ void lune::SkyboxSystem::prepareRender(class Scene* scene)
 			resources.mDescriptorSets = vulkan::DescriptorSets::create(mPipeline, 1);
 			resources.mDescriptorSets->setBufferInfo("view", 0, cameraSystem->getViewBuffer()->getBuffer(), 0, sizeof(lnm::mat4));
 			resources.mDescriptorSets->setBufferInfo("proj", 0, cameraSystem->getProjectionBuffer()->getBuffer(), 0, sizeof(lnm::mat4));
-			resources.mDescriptorSets->setImageInfo("cubemap", 0, resources.mTextureImage->getImageView(), resources.mTextureImage->getSampler());
+			resources.mDescriptorSets->setImageInfo("cubemap", 0, resources.mTextureImage->getImageView(), mSampler->getSampler());
 			resources.mDescriptorSets->updateSets(0);
 
 			mSkyboxes.emplace(eId, std::move(resources));

@@ -7,6 +7,7 @@
 #include "lune/lune.hxx"
 #include "lune/vulkan/pipeline.hxx"
 #include "lune/vulkan/primitive.hxx"
+#include "lune/vulkan/sampler.hxx"
 #include "lune/vulkan/shader.hxx"
 #include "lune/vulkan/texture_image.hxx"
 
@@ -42,23 +43,9 @@ lune::VulkanSubsystem::~VulkanSubsystem()
 	getVulkanContext().device.waitIdle();
 
 	mTextureImages.clear();
-
-	for (auto& [path, shader] : mShaders)
-	{
-		shader->destroy();
-	}
-	mShaders.clear();
-
-	for (auto& [name, pipeline] : mGraphicsPipelines)
-	{
-		pipeline->destroy();
-	}
+	mSamplers.clear();
 	mGraphicsPipelines.clear();
-
-	for (auto& [name, primitive] : mPrimitives)
-	{
-		primitive->destroy();
-	}
+	mShaders.clear();
 	mPrimitives.clear();
 	mViews.clear();
 
@@ -238,6 +225,22 @@ lune::vulkan::SharedTextureImage lune::VulkanSubsystem::findTextureImage(const s
 	return findRes != mTextureImages.end() ? findRes->second : nullptr;
 }
 
+void lune::VulkanSubsystem::addSampler(std::string name, vulkan::SharedSampler sampler)
+{
+	if (mSamplers.find(name) != mSamplers.end())
+	{
+		LN_LOG(Fatal, Vulkan, "Can't emplace new primitive, name already taken: {}", name);
+		return;
+	}
+	mSamplers.emplace(name, std::move(sampler));
+}
+
+lune::vulkan::SharedSampler lune::VulkanSubsystem::findSampler(const std::string& name)
+{
+	auto findRes = mSamplers.find(name);
+	return findRes != mSamplers.end() ? findRes->second : nullptr;
+}
+
 bool lune::VulkanSubsystem::beginNextFrame(uint32 viewId)
 {
 	if (const auto it = mViews.find(viewId); it != mViews.end()) [[likely]]
@@ -309,7 +312,17 @@ void lune::VulkanSubsystem::loadDefaultAssets()
 		SDL_Surface* front = IMG_Load((*EngineAssetPath("skyboxes/sea/front.png")).generic_string().data());
 		SDL_Surface* back = IMG_Load((*EngineAssetPath("skyboxes/sea/back.png")).generic_string().data());
 		std::array<const SDL_Surface*, 6> surfaces = {right, left, top, bottom, front, back};
-		addTextureImage("lune::skyboxes::sea", vulkan::TextureImage::create(std::span<const SDL_Surface*, 6>(surfaces)));
+		addTextureImage("lune::skyboxes::sea", vulkan::TextureImage::create(surfaces));
+	}
+
+	{
+		addSampler("lune::linear", vulkan::Sampler::create(vulkan::Sampler::defaultCreateInfo()));
+
+		auto createInfo = vulkan::Sampler::defaultCreateInfo()
+							  .setMagFilter(vk::Filter::eNearest)
+							  .setMinFilter(vk::Filter::eNearest)
+							  .setMipmapMode(vk::SamplerMipmapMode::eNearest);
+		addSampler("lune::nearest", vulkan::Sampler::create(createInfo));
 	}
 
 	{

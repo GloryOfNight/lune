@@ -90,9 +90,9 @@ void lune::Engine::run()
 
 	constexpr int32 frameTimeMs = 1000 / 500;
 
-	uint32 nowTicks = SDL_GetTicks();
-	uint32 nextTick = nowTicks;
-	uint32 prevTick = nowTicks;
+	uint64 nowTicks = SDL_GetTicks();
+	uint64 nextTick = nowTicks;
+	uint64 prevTick = nowTicks;
 
 	mRunning = true;
 	while (mRunning)
@@ -104,10 +104,10 @@ void lune::Engine::run()
 		}
 		nowTicks = SDL_GetTicks();
 
-		const uint32_t elapsedMs = nowTicks - prevTick;
+		const uint64 elapsedMs = nowTicks - prevTick;
 		double deltaSeconds = elapsedMs / 1000.f;
-		if (deltaSeconds > 0.16)
-			deltaSeconds = 0.16;
+		if (deltaSeconds > 0.1666)
+			deltaSeconds = 0.1666;
 
 		prevTick = nowTicks;
 		nextTick += frameTimeMs;

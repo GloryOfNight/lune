@@ -5,6 +5,27 @@
 
 #include <utility>
 
+lune::vulkan::GraphicsPipeline::~GraphicsPipeline()
+{
+	const auto cleanPipelineLam = [pipeline = mPipeline, pipelineLayout = mPipelineLayout]() -> bool
+	{
+		getVulkanContext().device.destroyPipeline(pipeline);
+		getVulkanContext().device.destroyPipelineLayout(pipelineLayout);
+		return true;
+	};
+	const auto cleanDescriptorLayouts = [layouts = mDescriptorSetLayouts]() -> bool
+	{
+		for (const auto& layout : layouts)
+		{
+			getVulkanContext().device.destroyDescriptorSetLayout(layout);
+		}
+		return true;
+	};
+
+	getVulkanDeleteQueue().push(cleanPipelineLam);
+	getVulkanDeleteQueue().push(cleanDescriptorLayouts);
+}
+
 std::pair<std::vector<vk::VertexInputAttributeDescription>, std::vector<vk::VertexInputBindingDescription>> reflVertexInput(const SpvReflectShaderModule& reflModule)
 {
 	std::vector<vk::VertexInputAttributeDescription> vertAttrs = std::vector<vk::VertexInputAttributeDescription>(reflModule.input_variable_count, vk::VertexInputAttributeDescription());
@@ -115,19 +136,6 @@ void lune::vulkan::GraphicsPipeline::init(std::shared_ptr<Shader> vertShader, st
 	createDescriptorLayoutsAndPoolSizes();
 	createPipelineLayout();
 	createPipeline();
-}
-
-void lune::vulkan::GraphicsPipeline::destroy()
-{
-	getVulkanContext().device.destroyPipeline(mPipeline);
-	getVulkanContext().device.destroyPipelineLayout(mPipelineLayout);
-
-	for (const auto& layout : mDescriptorSetLayouts)
-	{
-		getVulkanContext().device.destroyDescriptorSetLayout(layout);
-	}
-
-	new (this) GraphicsPipeline();
 }
 
 void lune::vulkan::GraphicsPipeline::cmdBind(vk::CommandBuffer commandBuffer)

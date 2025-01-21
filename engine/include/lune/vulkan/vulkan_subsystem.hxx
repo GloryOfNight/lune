@@ -70,6 +70,9 @@ namespace lune
 		void addTextureImage(std::string name, vulkan::SharedTextureImage texImage);
 		vulkan::SharedTextureImage findTextureImage(const std::string& name);
 
+		void addSampler(std::string name, vulkan::SharedSampler sampler);
+		vulkan::SharedSampler findSampler(const std::string& name);
+
 		bool beginNextFrame(uint32 viewId);
 		FrameInfo getFrameInfo();
 		void beginRenderPass();
@@ -89,6 +92,8 @@ namespace lune
 		std::unordered_map<std::string, vulkan::SharedPrimitive> mPrimitives{};
 
 		std::unordered_map<std::string, vulkan::SharedTextureImage> mTextureImages{};
+
+		std::unordered_map<std::string, vulkan::SharedSampler> mSamplers{};
 
 		std::map<uint32, std::unique_ptr<vulkan::View>> mViews{};
 	};

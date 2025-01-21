@@ -63,7 +63,6 @@ void lune::vulkan::TextureImage::init(std::span<const SDL_Surface*> surfaces)
 	mFormat = sdlFormatToVulkan(surfaces[0]->format);
 	createImage(imageCreateFlags, layerCount, extent);
 	createImageView(imageViewType, layerCount);
-	createSampler();
 
 	copyPixelsToImage(surfaces, layerCount, extent);
 }
@@ -111,29 +110,6 @@ void lune::vulkan::TextureImage::createImageView(vk::ImageViewType type, uint32 
 			.setSubresourceRange(subresourceRange);
 
 	mImageView = getVulkanContext().device.createImageView(imageViewCreateInfo);
-}
-
-void lune::vulkan::TextureImage::createSampler()
-{
-	const vk::SamplerCreateInfo samplerCreateInfo =
-		vk::SamplerCreateInfo()
-			.setMagFilter(vk::Filter::eNearest)
-			.setMinFilter(vk::Filter::eNearest)
-			.setAddressModeU(vk::SamplerAddressMode::eRepeat)
-			.setAddressModeV(vk::SamplerAddressMode::eRepeat)
-			.setAddressModeW(vk::SamplerAddressMode::eRepeat)
-			.setAnisotropyEnable(VK_FALSE)
-			.setMaxAnisotropy(1)
-			.setBorderColor(vk::BorderColor::eIntOpaqueBlack)
-			.setUnnormalizedCoordinates(VK_FALSE)
-			.setCompareEnable(VK_TRUE)
-			.setCompareOp(vk::CompareOp::eAlways)
-			.setMipmapMode(vk::SamplerMipmapMode::eLinear)
-			.setMipLodBias(0)
-			.setMinLod(0)
-			.setMaxLod(0);
-
-	mSampler = getVulkanContext().device.createSampler(samplerCreateInfo);
 }
 
 void lune::vulkan::TextureImage::copyPixelsToImage(std::span<const SDL_Surface*> surfaces, uint32 layerCount, vk::Extent3D extent)

@@ -24,6 +24,7 @@ namespace lune
 	private:
 		vulkan::SharedPrimitive mBox{};
 		vulkan::SharedGraphicsPipeline mPipeline{};
+		vulkan::SharedSampler mSampler{};
 		struct SkyboxResources
 		{
 			vulkan::SharedTextureImage mTextureImage{};

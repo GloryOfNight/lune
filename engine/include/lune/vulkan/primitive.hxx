@@ -28,8 +28,6 @@ namespace lune::vulkan
 
 		static SharedPrimitive create(const void* vertData, uint32 vertDataSize, uint32 vertSizeof, const void* indexData, uint32 indexDataSize, uint32 indexSizeof);
 
-		void destroy() {};
-
 		void cmdBind(vk::CommandBuffer commandBuffer);
 
 		void cmdDraw(vk::CommandBuffer commandBuffer, uint32 instanceCount = 1, uint32 firstInstance = 0);

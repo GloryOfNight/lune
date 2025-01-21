@@ -11,11 +11,9 @@ namespace lune::vulkan
 		GraphicsPipeline() = default;
 		GraphicsPipeline(GraphicsPipeline&) = delete;
 		GraphicsPipeline(GraphicsPipeline&&) = default;
-		~GraphicsPipeline() = default;
+		~GraphicsPipeline();
 
 		static SharedGraphicsPipeline create(std::shared_ptr<Shader> vertShader, std::shared_ptr<Shader> fragShader);
-
-		void destroy();
 
 		std::shared_ptr<Shader> getVertShader() const { return mVertShader; }
 		std::shared_ptr<Shader> getFragShader() const { return mFragShader; }
