@@ -52,7 +52,7 @@ void lune::MoveSystem::update(Scene* scene, double deltaTime)
 					if (mouseState.y && mouseState.y != halfH)
 					{
 						const auto coefDist = lnm::clamp(halfH / mouseState.y - 1, -0.1f, 0.1f);
-						transformComp->rotate(lnm::radians(rotComp->speed * coefDist), transformComp->mOrientation * rightAxis);
+						transformComp->rotate(-lnm::radians(rotComp->speed * coefDist), transformComp->mOrientation * rightAxis);
 					}
 
 					inputSystem->setShowCursor(false);
@@ -71,9 +71,9 @@ void lune::MoveSystem::update(Scene* scene, double deltaTime)
 				else if (action == "move_back")
 					transformComp->move(-(forwardAxis * lnm::vec3(speed)));
 				if (action == "move_left")
-					transformComp->move(rightAxis * lnm::vec3(speed));
-				else if (action == "move_right")
 					transformComp->move(-(rightAxis * lnm::vec3(speed)));
+				else if (action == "move_right")
+					transformComp->move(rightAxis * lnm::vec3(speed));
 				if (action == "move_up")
 					transformComp->translate(upAxis * lnm::vec3(speed));
 				else if (action == "move_down")
@@ -86,9 +86,9 @@ void lune::MoveSystem::update(Scene* scene, double deltaTime)
 					else if (action == "yaw_right")
 						transformComp->rotate(lnm::radians(rotComp->speed * deltaTime), transformComp->mOrientation * upAxis);
 					if (action == "pitch_up")
-						transformComp->rotate(lnm::radians(rotComp->speed * deltaTime), transformComp->mOrientation * rightAxis);
-					else if (action == "pitch_down")
 						transformComp->rotate(-lnm::radians(rotComp->speed * deltaTime), transformComp->mOrientation * rightAxis);
+					else if (action == "pitch_down")
+						transformComp->rotate(lnm::radians(rotComp->speed * deltaTime), transformComp->mOrientation * rightAxis);
 					if (action == "roll_left")
 						transformComp->rotate(lnm::radians(rotComp->speed * deltaTime), transformComp->mOrientation * forwardAxis);
 					else if (action == "roll_right")

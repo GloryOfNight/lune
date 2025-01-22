@@ -8,5 +8,5 @@ layout(set = 1, binding = 0) uniform samplerCube cubemap;
 
 void main()
 {
-	outColor = texture(cubemap, -inUVW);
+	outColor = texture(cubemap, inUVW);
 }
