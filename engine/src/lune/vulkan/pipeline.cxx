@@ -5,6 +5,55 @@
 
 #include <utility>
 
+const vk::PipelineInputAssemblyStateCreateInfo& lune::vulkan::GraphicsPipeline::defaultInputAssemblyState()
+{
+	static auto state = vk::PipelineInputAssemblyStateCreateInfo()
+							.setTopology(vk::PrimitiveTopology::eTriangleList)
+							.setPrimitiveRestartEnable(VK_FALSE);
+	return state;
+}
+
+const vk::PipelineRasterizationStateCreateInfo& lune::vulkan::GraphicsPipeline::defaultRasterizationState()
+{
+	static auto state = vk::PipelineRasterizationStateCreateInfo()
+							.setRasterizerDiscardEnable(VK_FALSE)
+							.setPolygonMode(vk::PolygonMode::eFill)
+							.setLineWidth(1.0F)
+							.setCullMode(vk::CullModeFlagBits::eNone)
+							.setFrontFace(vk::FrontFace::eCounterClockwise)
+							.setDepthClampEnable(VK_FALSE)
+							.setDepthBiasEnable(VK_FALSE)
+							.setDepthBiasConstantFactor(0.0F)
+							.setDepthBiasSlopeFactor(0.0F)
+							.setDepthBiasClamp(0.0F);
+	return state;
+}
+
+const vk::PipelineMultisampleStateCreateInfo& lune::vulkan::GraphicsPipeline::defaultMultisampleState()
+{
+	static auto state = vk::PipelineMultisampleStateCreateInfo()
+							.setSampleShadingEnable(VK_FALSE)
+							.setRasterizationSamples(getVulkanConfig().sampleCount)
+							.setMinSampleShading(1.0F)
+							.setPSampleMask(nullptr)
+							.setAlphaToCoverageEnable(VK_TRUE)
+							.setAlphaToOneEnable(VK_FALSE);
+	return state;
+}
+
+const vk::PipelineDepthStencilStateCreateInfo& lune::vulkan::GraphicsPipeline::defaultDepthStencilState()
+{
+	static auto state = vk::PipelineDepthStencilStateCreateInfo()
+							.setDepthTestEnable(VK_TRUE)
+							.setDepthWriteEnable(VK_TRUE)
+							.setDepthCompareOp(vk::CompareOp::eLess)
+							.setDepthBoundsTestEnable(VK_FALSE)
+							.setMinDepthBounds(0.0F)
+							.setMaxDepthBounds(1.0F)
+							.setStencilTestEnable(VK_TRUE);
+	return state;
+}
+
 lune::vulkan::GraphicsPipeline::~GraphicsPipeline()
 {
 	const auto cleanPipelineLam = [pipeline = mPipeline, pipelineLayout = mPipelineLayout]() -> bool
@@ -111,6 +160,11 @@ std::vector<vk::PushConstantRange> reflPushConstantRanges(const SpvReflectShader
 
 lune::vulkan::SharedGraphicsPipeline lune::vulkan::GraphicsPipeline::create(std::shared_ptr<Shader> vertShader, std::shared_ptr<Shader> fragShader)
 {
+	return create(vertShader, fragShader, StatesOverride());
+}
+
+lune::vulkan::SharedGraphicsPipeline lune::vulkan::GraphicsPipeline::create(std::shared_ptr<Shader> vertShader, std::shared_ptr<Shader> fragShader, const StatesOverride& statesOverride)
+{
 	if (!vertShader || vertShader->getReflectModule().shader_stage != SpvReflectShaderStageFlagBits::SPV_REFLECT_SHADER_STAGE_VERTEX_BIT)
 	{
 		LN_LOG(Fatal, Vulkan::Pipeline, "Failed to initialize pipeline: vertex shader invalid");
@@ -124,18 +178,18 @@ lune::vulkan::SharedGraphicsPipeline lune::vulkan::GraphicsPipeline::create(std:
 	}
 
 	auto newPipeline = std::make_shared<GraphicsPipeline>();
-	newPipeline->init(vertShader, fragShader);
+	newPipeline->init(vertShader, fragShader, statesOverride);
 	return std::move(newPipeline);
 }
 
-void lune::vulkan::GraphicsPipeline::init(std::shared_ptr<Shader> vertShader, std::shared_ptr<Shader> fragShader)
+void lune::vulkan::GraphicsPipeline::init(std::shared_ptr<Shader> vertShader, std::shared_ptr<Shader> fragShader, const StatesOverride& statesOverride)
 {
 	mVertShader = vertShader;
 	mFragShader = fragShader;
 
 	createDescriptorLayoutsAndPoolSizes();
 	createPipelineLayout();
-	createPipeline();
+	createPipeline(statesOverride);
 }
 
 void lune::vulkan::GraphicsPipeline::cmdBind(vk::CommandBuffer commandBuffer)
@@ -200,12 +254,9 @@ void lune::vulkan::GraphicsPipeline::createPipelineLayout()
 	mPipelineLayout = getVulkanContext().device.createPipelineLayout(pipelineLayoutCreateInfo);
 }
 
-void lune::vulkan::GraphicsPipeline::createPipeline()
+void lune::vulkan::GraphicsPipeline::createPipeline(const StatesOverride& statesOverride)
 {
-	const std::vector<vk::PipelineShaderStageCreateInfo> shaderStages =
-		{
-			reflShaderStage(mVertShader),
-			reflShaderStage(mFragShader)};
+	const std::vector<vk::PipelineShaderStageCreateInfo> shaderStages = {reflShaderStage(mVertShader), reflShaderStage(mFragShader)};
 
 	const auto [vertAttibues, vertBindings] = reflVertexInput(mVertShader->getReflectModule());
 
@@ -236,39 +287,6 @@ void lune::vulkan::GraphicsPipeline::createPipeline()
 										.setAttachments(colorBlendAttachments)
 										.setBlendConstants(colorBlendConstants);
 
-	const auto inputAssemblyState = vk::PipelineInputAssemblyStateCreateInfo()
-										.setTopology(vk::PrimitiveTopology::eTriangleList)
-										.setPrimitiveRestartEnable(VK_FALSE);
-
-	const auto rasterizationState = vk::PipelineRasterizationStateCreateInfo()
-										.setRasterizerDiscardEnable(VK_FALSE)
-										.setPolygonMode(vk::PolygonMode::eFill)
-										.setLineWidth(1.0F)
-										.setCullMode(vk::CullModeFlagBits::eNone)
-										.setFrontFace(vk::FrontFace::eCounterClockwise)
-										.setDepthClampEnable(VK_FALSE)
-										.setDepthBiasEnable(VK_FALSE)
-										.setDepthBiasConstantFactor(0.0F)
-										.setDepthBiasSlopeFactor(0.0F)
-										.setDepthBiasClamp(0.0F);
-
-	const auto multisamplingState = vk::PipelineMultisampleStateCreateInfo()
-										.setSampleShadingEnable(VK_FALSE)
-										.setRasterizationSamples(getVulkanConfig().sampleCount)
-										.setMinSampleShading(1.0F)
-										.setPSampleMask(nullptr)
-										.setAlphaToCoverageEnable(VK_TRUE)
-										.setAlphaToOneEnable(VK_FALSE);
-
-	const auto depthStencilState = vk::PipelineDepthStencilStateCreateInfo()
-									   .setDepthTestEnable(VK_TRUE)
-									   .setDepthWriteEnable(VK_TRUE)
-									   .setDepthCompareOp(vk::CompareOp::eLess)
-									   .setDepthBoundsTestEnable(VK_FALSE)
-									   .setMinDepthBounds(0.0F)
-									   .setMaxDepthBounds(1.0F)
-									   .setStencilTestEnable(VK_TRUE);
-
 	const auto viewportState = vk::PipelineViewportStateCreateInfo()
 								   .setViewportCount(1)
 								   .setScissorCount(1);
@@ -277,16 +295,21 @@ void lune::vulkan::GraphicsPipeline::createPipeline()
 	const auto dynamicState = vk::PipelineDynamicStateCreateInfo()
 								  .setDynamicStates(dynamicStates);
 
+	const auto* inputAssembly = statesOverride.inputAssembly ? statesOverride.inputAssembly : &defaultInputAssemblyState();
+	const auto* rasterization = statesOverride.rasterization ? statesOverride.rasterization : &defaultRasterizationState();
+	const auto* multisampling = statesOverride.multisampling ? statesOverride.multisampling : &defaultMultisampleState();
+	const auto* depthStencil = statesOverride.depthStencil ? statesOverride.depthStencil : &defaultDepthStencilState();
+
 	const auto pipelineCreateInfo = vk::GraphicsPipelineCreateInfo()
 										.setStages(shaderStages)
 										.setPVertexInputState(&vertexInputState)
-										.setPInputAssemblyState(&inputAssemblyState)
+										.setPInputAssemblyState(inputAssembly)
 										.setPViewportState(&viewportState)
 										.setPDynamicState(&dynamicState)
-										.setPRasterizationState(&rasterizationState)
+										.setPRasterizationState(rasterization)
 										.setPColorBlendState(&colorBlendingState)
-										.setPMultisampleState(&multisamplingState)
-										.setPDepthStencilState(&depthStencilState)
+										.setPMultisampleState(multisampling)
+										.setPDepthStencilState(depthStencil)
 										.setLayout(mPipelineLayout)
 										.setRenderPass(getVulkanContext().renderPass)
 										.setSubpass(0);

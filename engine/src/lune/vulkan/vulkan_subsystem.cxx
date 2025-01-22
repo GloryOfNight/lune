@@ -4,6 +4,7 @@
 #include "SDL3_image/SDL_image.h"
 #include "lune/core/assets.hxx"
 #include "lune/core/log.hxx"
+#include "lune/core/sdl.hxx"
 #include "lune/lune.hxx"
 #include "lune/vulkan/pipeline.hxx"
 #include "lune/vulkan/primitive.hxx"
@@ -301,17 +302,17 @@ void lune::VulkanSubsystem::loadDefaultAssets()
 	}
 
 	{
-		SDL_Surface* scarlet = IMG_Load((*EngineAssetPath("scarlet.png")).generic_string().data());
-		addTextureImage("lune::scarlet", vulkan::TextureImage::create(scarlet));
+		UniqueSDLSurface scarlet = UniqueSDLSurface(IMG_Load((*EngineAssetPath("scarlet.png")).generic_string().data()));
+		addTextureImage("lune::scarlet", vulkan::TextureImage::create(scarlet.get()));
 	}
 	{
-		SDL_Surface* right = IMG_Load((*EngineAssetPath("skyboxes/sea/right.png")).generic_string().data());
-		SDL_Surface* left = IMG_Load((*EngineAssetPath("skyboxes/sea/left.png")).generic_string().data());
-		SDL_Surface* top = IMG_Load((*EngineAssetPath("skyboxes/sea/top.png")).generic_string().data());
-		SDL_Surface* bottom = IMG_Load((*EngineAssetPath("skyboxes/sea/bottom.png")).generic_string().data());
-		SDL_Surface* front = IMG_Load((*EngineAssetPath("skyboxes/sea/front.png")).generic_string().data());
-		SDL_Surface* back = IMG_Load((*EngineAssetPath("skyboxes/sea/back.png")).generic_string().data());
-		std::array<const SDL_Surface*, 6> surfaces = {right, left, top, bottom, front, back};
+		UniqueSDLSurface right = UniqueSDLSurface(IMG_Load((*EngineAssetPath("skyboxes/sea/right.png")).generic_string().data()));
+		UniqueSDLSurface left = UniqueSDLSurface(IMG_Load((*EngineAssetPath("skyboxes/sea/left.png")).generic_string().data()));
+		UniqueSDLSurface top = UniqueSDLSurface(IMG_Load((*EngineAssetPath("skyboxes/sea/top.png")).generic_string().data()));
+		UniqueSDLSurface bottom = UniqueSDLSurface(IMG_Load((*EngineAssetPath("skyboxes/sea/bottom.png")).generic_string().data()));
+		UniqueSDLSurface front = UniqueSDLSurface(IMG_Load((*EngineAssetPath("skyboxes/sea/front.png")).generic_string().data()));
+		UniqueSDLSurface back = UniqueSDLSurface(IMG_Load((*EngineAssetPath("skyboxes/sea/back.png")).generic_string().data()));
+		std::array<const SDL_Surface*, 6> surfaces = {right.get(), left.get(), top.get(), bottom.get(), front.get(), back.get()};
 		addTextureImage("lune::skyboxes::sea", vulkan::TextureImage::create(surfaces));
 	}
 
@@ -335,6 +336,36 @@ void lune::VulkanSubsystem::loadDefaultAssets()
 			{{-1.0f, -1.0f, 0.0f}, {0.0f, 0.0f}} // Bottom-left
 		};
 		addPrimitive("lune::plane", vulkan::Primitive::create<Vertex32>(vertices));
+	}
+
+	{
+		std::vector<Vertex34> vertices = {
+			{{0.0f, 0.0f, 0.0f}, {1.0f, 0.0f, 0.0f, 1.0f}},
+			{{1.0f, 0.0f, 0.0f}, {1.0f, 0.0f, 0.0f, 1.0f}}};
+		addPrimitive("lune::gizmoX", vulkan::Primitive::create<Vertex34>(vertices));
+	}
+	{
+		std::vector<Vertex34> vertices = {
+			{{0.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f, 1.0f}},
+			{{0.0f, 1.0f, 0.0f}, {0.0f, 1.0f, 0.0f, 1.0f}}};
+		addPrimitive("lune::gizmoY", vulkan::Primitive::create<Vertex34>(vertices));
+	}
+	{
+		std::vector<Vertex34> vertices = {
+			{{0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 1.0f, 1.0f}},
+			{{0.0f, 0.0f, 1.0f}, {0.0f, 0.0f, 1.0f, 1.0f}}};
+		addPrimitive("lune::gizmoZ", vulkan::Primitive::create<Vertex34>(vertices));
+	}
+	{
+		auto shVert = loadShader(*EngineShaderPath("gizmo.vert.spv"));
+		auto shFrag = loadShader(*EngineShaderPath("gizmo.frag.spv"));
+		
+		auto inputAssembly = vulkan::GraphicsPipeline::defaultInputAssemblyState();
+		inputAssembly.setTopology(vk::PrimitiveTopology::eLineStrip);
+
+		vulkan::GraphicsPipeline::StatesOverride statesOverride{};
+		statesOverride.inputAssembly = &inputAssembly;
+		addPipeline("lune::gizmo", vulkan::GraphicsPipeline::create(shVert, shFrag, statesOverride));
 	}
 
 	{

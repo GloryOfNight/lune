@@ -13,7 +13,21 @@ namespace lune::vulkan
 		GraphicsPipeline(GraphicsPipeline&&) = default;
 		~GraphicsPipeline();
 
+		struct StatesOverride
+		{
+			vk::PipelineInputAssemblyStateCreateInfo* inputAssembly{};
+			vk::PipelineRasterizationStateCreateInfo* rasterization{};
+			vk::PipelineMultisampleStateCreateInfo* multisampling{};
+			vk::PipelineDepthStencilStateCreateInfo* depthStencil{};
+		};
+
+		static const vk::PipelineInputAssemblyStateCreateInfo& defaultInputAssemblyState();
+		static const vk::PipelineRasterizationStateCreateInfo& defaultRasterizationState();
+		static const vk::PipelineMultisampleStateCreateInfo& defaultMultisampleState();
+		static const vk::PipelineDepthStencilStateCreateInfo& defaultDepthStencilState();
+
 		static SharedGraphicsPipeline create(std::shared_ptr<Shader> vertShader, std::shared_ptr<Shader> fragShader);
+		static SharedGraphicsPipeline create(std::shared_ptr<Shader> vertShader, std::shared_ptr<Shader> fragShader, const StatesOverride& statesOverride);
 
 		std::shared_ptr<Shader> getVertShader() const { return mVertShader; }
 		std::shared_ptr<Shader> getFragShader() const { return mFragShader; }
@@ -27,11 +41,11 @@ namespace lune::vulkan
 		void cmdBind(vk::CommandBuffer commandBuffer);
 
 	private:
-		void init(std::shared_ptr<Shader> vertShader, std::shared_ptr<Shader> fragShader);
+		void init(std::shared_ptr<Shader> vertShader, std::shared_ptr<Shader> fragShader, const StatesOverride& statesOverride);
 
 		void createDescriptorLayoutsAndPoolSizes();
 		void createPipelineLayout();
-		void createPipeline();
+		void createPipeline(const StatesOverride& statesOverride);
 
 		std::shared_ptr<Shader> mVertShader{};
 		std::shared_ptr<Shader> mFragShader{};

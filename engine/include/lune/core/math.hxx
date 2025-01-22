@@ -34,6 +34,12 @@ namespace lune
 		lnm::vec2 uv;
 	};
 
+	struct Vertex34
+	{
+		lnm::vec3 position;
+		lnm::vec4 color;
+	};
+
 	struct Vertex342
 	{
 		lnm::vec3 position;
