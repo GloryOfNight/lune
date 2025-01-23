@@ -1,11 +1,7 @@
 #pragma once
 
-#include "lune/lune.hxx"
-
-#include <memory>
 #include <set>
 #include <typeindex>
-#include <vector>
 
 namespace lune
 {

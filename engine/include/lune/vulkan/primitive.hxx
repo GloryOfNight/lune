@@ -3,11 +3,9 @@
 #include "lune/core/math.hxx"
 #include "lune/lune.hxx"
 #include "lune/vulkan/vulkan_core.hxx"
-#include "vulkan/vulkan.hpp"
 
 #include "buffer.hxx"
 
-#include <memory>
 #include <span>
 
 namespace lune::vulkan

@@ -1,7 +1,6 @@
 #pragma once
 
 #include "lune/core/delegate.hxx"
-#include "lune/core/log.hxx"
 #include "lune/game_framework/components/component.hxx"
 #include "lune/lune.hxx"
 

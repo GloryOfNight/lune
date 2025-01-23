@@ -256,7 +256,7 @@ void lune::vulkan::GraphicsPipeline::createPipelineLayout()
 
 void lune::vulkan::GraphicsPipeline::createPipeline(const StatesOverride& statesOverride)
 {
-	const std::vector<vk::PipelineShaderStageCreateInfo> shaderStages = {reflShaderStage(mVertShader), reflShaderStage(mFragShader)};
+	const std::array<vk::PipelineShaderStageCreateInfo, 2> shaderStages{reflShaderStage(mVertShader), reflShaderStage(mFragShader)};
 
 	const auto [vertAttibues, vertBindings] = reflVertexInput(mVertShader->getReflectModule());
 
@@ -291,7 +291,7 @@ void lune::vulkan::GraphicsPipeline::createPipeline(const StatesOverride& states
 								   .setViewportCount(1)
 								   .setScissorCount(1);
 
-	const auto dynamicStates = std::vector<vk::DynamicState>{vk::DynamicState::eViewport, vk::DynamicState::eScissor, vk::DynamicState::eDepthTestEnable};
+	const std::array<vk::DynamicState, 4> dynamicStates{vk::DynamicState::eViewport, vk::DynamicState::eScissor, vk::DynamicState::eDepthTestEnable};
 	const auto dynamicState = vk::PipelineDynamicStateCreateInfo()
 								  .setDynamicStates(dynamicStates);
 

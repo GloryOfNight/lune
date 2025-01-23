@@ -1,0 +1,13 @@
+Index:
+  Background: Build
+
+Diagnostics:
+  UnusedIncludes: None
+
+InlayHints:
+  Enabled: Yes
+  BlockEnd: No
+  Designators: No
+  ParameterNames: No
+  DeducedTypes: No
+  TypeNameLimit: 24

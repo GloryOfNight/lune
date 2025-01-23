@@ -1,7 +1,5 @@
 #pragma once
 
-#include "vulkan/vulkan.hpp"
-
 #include "spirv_reflect.h"
 #include "vulkan_core.hxx"
 
