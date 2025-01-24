@@ -32,16 +32,11 @@ find_package(SDL3 REQUIRED)
 find_package(SDL3_image REQUIRED)
 find_package(SDL3_ttf REQUIRED)
 find_package(glm REQUIRED)
-target_link_libraries(${PROJECT_NAME}-static PUBLIC glm::glm SDL3::SDL3-static SDL3_image::SDL3_image-static SDL3_ttf::SDL3_ttf-static)
+find_package(tinygltf REQUIRED)
+target_link_libraries(${PROJECT_NAME}-static PUBLIC tinygltf::tinygltf glm::glm SDL3::SDL3-static SDL3_image::SDL3_image-static SDL3_ttf::SDL3_ttf-static)
 # other packages end #
 
 # build-in thirdparty #
 add_subdirectory(thirdparty)
 target_link_libraries(${PROJECT_NAME}-static PUBLIC ImGui::ImGui-static)
 # build-in thirdparty end #
-
-find_program(CLANG_TIDY_EXE NAMES "clang-tidy")
-if(CLANG_TIDY_EXE)
-        target_compile_definitions(${PROJECT_NAME}-static PRIVATE SDL_DISABLE_ANALYZE_MACROS)
-        set_target_properties(${PROJECT_NAME}-static PROPERTIES CXX_CLANG_TIDY "${CLANG_TIDY_EXE};-p=${CMAKE_BINARY_DIR}")
-endif()

@@ -10,6 +10,8 @@
 #include "lune/lune.hxx"
 #include "lune/vulkan/vulkan_subsystem.hxx"
 
+#include "lune/core/gltf.hxx"
+
 #include <filesystem>
 
 #if HAVE_SHADER_COMPILER_TOOL
