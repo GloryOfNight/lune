@@ -4,6 +4,13 @@
 #include "lune/vulkan/vulkan_subsystem.hxx"
 
 #include <utility>
+#include <vulkan/vulkan_enums.hpp>
+
+const std::vector<vk::DynamicState>& lune::vulkan::GraphicsPipeline::defaultDynamicStates()
+{
+	static std::vector<vk::DynamicState> states{vk::DynamicState::eViewport, vk::DynamicState::eScissor, vk::DynamicState::eDepthTestEnable};
+	return states;
+}
 
 const vk::PipelineInputAssemblyStateCreateInfo& lune::vulkan::GraphicsPipeline::defaultInputAssemblyState()
 {
@@ -291,7 +298,7 @@ void lune::vulkan::GraphicsPipeline::createPipeline(const StatesOverride& states
 								   .setViewportCount(1)
 								   .setScissorCount(1);
 
-	const std::array<vk::DynamicState, 3> dynamicStates{vk::DynamicState::eViewport, vk::DynamicState::eScissor, vk::DynamicState::eDepthTestEnable};
+	const std::vector<vk::DynamicState>& dynamicStates = statesOverride.dynamicStates.size() ? statesOverride.dynamicStates : defaultDynamicStates();
 	const auto dynamicState = vk::PipelineDynamicStateCreateInfo()
 								  .setDynamicStates(dynamicStates);
 

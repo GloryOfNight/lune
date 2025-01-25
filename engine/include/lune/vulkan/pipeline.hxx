@@ -2,6 +2,7 @@
 
 #include "lune/vulkan/shader.hxx"
 #include "lune/vulkan/vulkan_core.hxx"
+#include <vulkan/vulkan_enums.hpp>
 
 namespace lune::vulkan
 {
@@ -15,12 +16,14 @@ namespace lune::vulkan
 
 		struct StatesOverride
 		{
+			std::vector<vk::DynamicState> dynamicStates{};
 			vk::PipelineInputAssemblyStateCreateInfo* inputAssembly{};
 			vk::PipelineRasterizationStateCreateInfo* rasterization{};
 			vk::PipelineMultisampleStateCreateInfo* multisampling{};
 			vk::PipelineDepthStencilStateCreateInfo* depthStencil{};
 		};
 
+		static const std::vector<vk::DynamicState>& defaultDynamicStates();
 		static const vk::PipelineInputAssemblyStateCreateInfo& defaultInputAssemblyState();
 		static const vk::PipelineRasterizationStateCreateInfo& defaultRasterizationState();
 		static const vk::PipelineMultisampleStateCreateInfo& defaultMultisampleState();

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "lune/vulkan/vulkan_core.hxx"
+
 #include "component.hxx"
 
 #include <string>
@@ -7,8 +9,14 @@
 
 namespace lune
 {
+	struct Primitive
+	{
+		std::string primitiveName{};
+		std::string materialName{};
+		vk::PrimitiveTopology topology{};
+	};
 	struct MeshComponent : public ComponentBase
 	{
-		std::vector<std::string> primitiveNames{};
+		std::vector<Primitive> primitives{};
 	};
 } // namespace lune

@@ -9,6 +9,7 @@
 #include "lune/game_framework/entities/entity.hxx"
 #include "lune/game_framework/scene.hxx"
 #include "lune/vulkan/primitive.hxx"
+#include "lune/vulkan/vulkan_core.hxx"
 #include "lune/vulkan/vulkan_subsystem.hxx"
 
 #include <filesystem>
@@ -26,6 +27,7 @@ bool imageLoad(tinygltf::Image*, const int, std::string*, std::string*, int, int
 
 namespace lune
 {
+	vk::PrimitiveTopology modeToVkTopology(int32 mode);
 	void modelToScene(const tinygltf::Model& tinyModel, std::string_view alias, int32 tinySceneIndex, Scene* luneScene);
 	uint64 processNode(const tinygltf::Model& tinyModel, std::string_view alias, uint32 nodeIndex, Scene* luneScene, EntityBase* parentEntity);
 } // namespace lune
@@ -102,8 +104,12 @@ uint64 lune::processNode(const tinygltf::Model& tinyModel, std::string_view alia
 		for (size_t i = 0; i < nodeMesh.primitives.size(); ++i)
 		{
 			const auto& primitive = nodeMesh.primitives[i];
-			const std::string primitiveName = std::format("{}::{}", primitiveAlias, i);
-			meshComp->primitiveNames.emplace_back(primitiveName);
+			const std::string primitiveName = std::format("{}::primitive::{}", primitiveAlias, i);
+			auto& meshCompPrimitive = meshComp->primitives.emplace_back();
+			meshCompPrimitive.primitiveName = primitiveName;
+			if (primitive.material != -1)
+				meshCompPrimitive.materialName = std::format("{}::material::{}::{}", alias, tinyModel.materials[primitive.material].name, primitive.material);
+			meshCompPrimitive.topology = modeToVkTopology(primitive.mode);
 
 			std::vector<Vertex33> vertexBuffer{};
 
@@ -173,4 +179,26 @@ uint64 lune::processNode(const tinygltf::Model& tinyModel, std::string_view alia
 	}
 
 	return newEntity->getId();
+}
+
+vk::PrimitiveTopology lune::modeToVkTopology(int32 mode)
+{
+	switch (mode)
+	{
+	case TINYGLTF_MODE_POINTS:
+		return vk::PrimitiveTopology::ePointList;
+	case TINYGLTF_MODE_LINE:
+		return vk::PrimitiveTopology::eLineList;
+	case TINYGLTF_MODE_LINE_LOOP:
+		return vk::PrimitiveTopology::eLineList;
+	case TINYGLTF_MODE_LINE_STRIP:
+		return vk::PrimitiveTopology::eLineStrip;
+	case TINYGLTF_MODE_TRIANGLES:
+		return vk::PrimitiveTopology::eTriangleList;
+	case TINYGLTF_MODE_TRIANGLE_STRIP:
+		return vk::PrimitiveTopology::eTriangleStrip;
+	case TINYGLTF_MODE_TRIANGLE_FAN:
+		return vk::PrimitiveTopology::eTriangleFan;
+	}
+	return vk::PrimitiveTopology::eTriangleList;
 }

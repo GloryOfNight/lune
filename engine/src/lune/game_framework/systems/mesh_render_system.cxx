@@ -10,6 +10,9 @@
 #include "lune/vulkan/primitive.hxx"
 #include "lune/vulkan/vulkan_subsystem.hxx"
 
+#include <vulkan/vulkan_enums.hpp>
+
+
 lune::MeshRenderSystem::MeshRenderSystem()
 {
 	addDependecy<CameraSystem>();
@@ -38,8 +41,8 @@ void lune::MeshRenderSystem::prepareRender(class Scene* scene)
 		if (auto it = mResources.find(meshComponent); it == mResources.end())
 		{
 			MeshResources resources{};
-			for (auto& primitiveName : meshComponent->primitiveNames)
-				resources.primitives.emplace_back(vkSubsystem->findPrimitive(primitiveName));
+			for (auto& primitive : meshComponent->primitives)
+				resources.primitives.emplace_back(vkSubsystem->findPrimitive(primitive.primitiveName));
 
 			resources.stagingModelBuffer = vulkan::Buffer::create(vk::BufferUsageFlagBits::eTransferSrc, sizeof(lnm::mat4), VMA_MEMORY_USAGE_AUTO, VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT);
 			resources.modelBuffer = vulkan::Buffer::create(vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eTransferDst, sizeof(lnm::mat4), VMA_MEMORY_USAGE_AUTO, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT);
@@ -104,6 +107,9 @@ void lune::MeshRenderSystem::render(class Scene* scene)
 			const auto& [comp, res] = *findRes;
 
 			res.descSets->getPipeline()->cmdBind(commandBuffer);
+
+			commandBuffer.setPrimitiveTopology(vk::PrimitiveTopology::eTriangleList);
+
 			res.descSets->cmdBind(commandBuffer, 0);
 
 			for (auto& primitive : res.primitives)

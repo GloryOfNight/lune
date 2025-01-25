@@ -300,10 +300,13 @@ void lune::VulkanSubsystem::loadDefaultAssets()
 		auto shFrag = loadShader(*EngineShaderPath("skybox.frag.spv"));
 		addPipeline("lune::skybox", vulkan::GraphicsPipeline::create(shVert, shFrag));
 	}
-		{
+	{
 		auto shVert = loadShader(*EngineShaderPath("gltf/primitive.vert.spv"));
 		auto shFrag = loadShader(*EngineShaderPath("gltf/primitive.frag.spv"));
-		addPipeline("lune::gltf::primitive", vulkan::GraphicsPipeline::create(shVert, shFrag));
+		vulkan::GraphicsPipeline::StatesOverride statesOverride{};
+		statesOverride.dynamicStates = vulkan::GraphicsPipeline::defaultDynamicStates();
+		statesOverride.dynamicStates.emplace_back(vk::DynamicState::ePrimitiveTopology);
+		addPipeline("lune::gltf::primitive", vulkan::GraphicsPipeline::create(shVert, shFrag, statesOverride));
 	}
 
 	{
@@ -334,11 +337,11 @@ void lune::VulkanSubsystem::loadDefaultAssets()
 	{
 		std::vector<Vertex32> vertices = {
 			{{-1.0f, -1.0f, 0.0f}, {0.0f, 1.0f}}, // Top-left
-			{{1.0f, -1.0f, 0.0f}, {1.0f, 1.0f}},	 // Top-right
-			{{1.0f, 1.0f, 0.0f}, {1.0f, 0.0f}}, // Bottom-right
+			{{1.0f, -1.0f, 0.0f}, {1.0f, 1.0f}},  // Top-right
+			{{1.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},	  // Bottom-right
 			{{-1.0f, -1.0f, 0.0f}, {0.0f, 1.0f}}, // Top-left
-			{{1.0f, 1.0f, 0.0f}, {1.0f, 0.0f}}, // Bottom-right
-			{{-1.0f, 1.0f, 0.0f}, {0.0f, 0.0f}} // Bottom-left
+			{{1.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},	  // Bottom-right
+			{{-1.0f, 1.0f, 0.0f}, {0.0f, 0.0f}}	  // Bottom-left
 		};
 		addPrimitive("lune::plane", vulkan::Primitive::create<Vertex32>(vertices));
 	}
@@ -364,7 +367,7 @@ void lune::VulkanSubsystem::loadDefaultAssets()
 	{
 		auto shVert = loadShader(*EngineShaderPath("gizmo.vert.spv"));
 		auto shFrag = loadShader(*EngineShaderPath("gizmo.frag.spv"));
-		
+
 		auto inputAssembly = vulkan::GraphicsPipeline::defaultInputAssemblyState();
 		inputAssembly.setTopology(vk::PrimitiveTopology::eLineStrip);
 
