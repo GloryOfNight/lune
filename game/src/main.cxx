@@ -1,4 +1,6 @@
+#include "lune/core/assets.hxx"
 #include "lune/core/engine.hxx"
+#include "lune/core/gltf.hxx"
 #include "lune/game_framework/components/camera.hxx"
 #include "lune/game_framework/components/input.hxx"
 #include "lune/game_framework/components/move.hxx"
@@ -7,16 +9,46 @@
 #include "lune/game_framework/components/sprite.hxx"
 #include "lune/game_framework/components/transform.hxx"
 #include "lune/game_framework/systems/camera_system.hxx"
+#include "lune/game_framework/systems/gizmo_system.hxx"
 #include "lune/game_framework/systems/input_system.hxx"
 #include "lune/game_framework/systems/move_system.hxx"
 #include "lune/game_framework/systems/skybox_system.hxx"
 #include "lune/game_framework/systems/sprite_render_system.hxx"
+#include "lune/game_framework/systems/mesh_render_system.hxx"
 #include "lune/lune.hxx"
 
 #include <imgui.h>
 #include <iostream>
 #include <string>
 #include <vector>
+
+
+class DebugSystem : public lune::SystemBase
+{
+public:
+	virtual void update(lune::Scene* scene, double deltaTime) override
+	{
+		auto eIds = scene->getComponentEntities<lune::SpriteComponent>();
+		for (auto eId : eIds)
+		{
+			auto entity = scene->findEntity(eId);
+			auto transformComp = entity->findComponent<lune::TransformComponent>();
+
+			// if (ImGui::GetCurrentContext())
+			// {
+			// 	lnm::vec3 e = lnm::eulerAngles(transformComp->mOrientation);
+			// 	auto q = transformComp->mOrientation;
+			// 	ImGui::Begin("camera");
+			// 	ImGui::SliderFloat4("quat", &transformComp->mOrientation.x, -1.f, 1.f);
+			// 	ImGui::InputFloat3("euler", &e.x);
+			// 	ImGui::End();
+
+			// 	transformComp->mOrientation = lnm::normalize(transformComp->mOrientation);
+			// 	return;
+			// }
+		}
+	}
+};
 
 class CameraEntity : public lune::EntityBase
 {
@@ -97,9 +129,7 @@ public:
 		addEntity<SkyboxEntity>();
 
 		auto scarlet1 = addEntity<ScarletSprite>();
-
-		auto scarlet2 = addEntity<ScarletSprite>();
-		scarlet2->findComponent<lune::TransformComponent>()->translate(lnm::vec3(2, 0, 0));
+		scarlet1->findComponent<lune::TransformComponent>()->translate(lnm::vec3(0, 0, 0));
 
 		auto scarlet3 = addEntity<ScarletSprite>();
 		scarlet3->findComponent<lune::TransformComponent>()->translate(lnm::vec3(-2, 0, 0));
@@ -117,8 +147,11 @@ public:
 		scarlet7->findComponent<lune::TransformComponent>()->translate(lnm::vec3(-2, -2, -2));
 
 		registerSystem<lune::CameraSystem>();
-		registerSystem<lune::SpriteRenderSystem>();
 		registerSystem<lune::SkyboxSystem>();
+		registerSystem<lune::SpriteRenderSystem>();
+		registerSystem<DebugSystem>();
+		registerSystem<lune::GizmoSystem>();
+		registerSystem<lune::MeshRenderSystem>();
 
 		auto inputSystem = registerSystem<lune::InputSystem>();
 		inputSystem->setWindowId(ln::Engine::get()->getViewWindowId(0));
@@ -141,7 +174,9 @@ int main(int argc, char** argv)
 	uint32 viewId = engine.createWindow("so8", 800, 800);
 	//engine.createWindow("so8 - 2", 800, 800);
 
-	engine.addScene(std::make_unique<GameScene>());
+	auto scene = engine.addScene(std::make_unique<GameScene>());
+
+	bool loadRes = lune::gltf::loadInScene(*lune::EngineAssetPath("viking_room/scene.gltf"), "viking_room", scene);
 
 	engine.run();
 

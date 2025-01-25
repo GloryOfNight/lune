@@ -33,7 +33,7 @@ find_package(SDL3_image REQUIRED)
 find_package(SDL3_ttf REQUIRED)
 find_package(glm REQUIRED)
 find_package(tinygltf REQUIRED)
-target_link_libraries(${PROJECT_NAME}-static PUBLIC tinygltf::tinygltf glm::glm SDL3::SDL3-static SDL3_image::SDL3_image-static SDL3_ttf::SDL3_ttf-static)
+target_link_libraries(${PROJECT_NAME}-static PUBLIC TinyGltf::TinyGltf-static glm::glm SDL3::SDL3-static SDL3_image::SDL3_image-static SDL3_ttf::SDL3_ttf-static)
 # other packages end #
 
 # build-in thirdparty #

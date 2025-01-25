@@ -5,12 +5,12 @@
 #include "SDL3_ttf/SDL_ttf.h"
 #include "lune/core/assets.hxx"
 #include "lune/core/event_subsystem.hxx"
+#include "lune/core/gltf.hxx"
 #include "lune/core/log.hxx"
 #include "lune/core/timer_subsystem.hxx"
+#include "lune/game_framework/scene.hxx"
 #include "lune/lune.hxx"
 #include "lune/vulkan/vulkan_subsystem.hxx"
-
-#include "lune/core/gltf.hxx"
 
 #include <filesystem>
 
@@ -195,12 +195,10 @@ void lune::Engine::removeWindow(uint32 viewId)
 	}
 }
 
-uint64 lune::Engine::addScene(std::unique_ptr<Scene> s)
+lune::Scene* lune::Engine::addScene(std::unique_ptr<Scene> s)
 {
 	static uint64 sIdCounter = 0;
-	if (s) [[likely]]
-		return mScenes.emplace_back(std::pair<uint64, std::unique_ptr<Scene>>{++sIdCounter, std::move(s)}).first;
-	return uint64();
+	return mScenes.emplace_back(std::pair<uint64, std::unique_ptr<Scene>>{++sIdCounter, std::move(s)}).second.get();
 }
 
 void lune::Engine::onSdlQuitEvent(const SDL_Event& event)

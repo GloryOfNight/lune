@@ -81,14 +81,12 @@ lune::ShaderCompiler::Result lune::ShaderCompiler::compileShaders(const std::fil
 	for (auto& p : fs::recursive_directory_iterator(srcShaderDir))
 	{
 		if (!p.is_regular_file())
-		{
 			continue;
-		}
 
 		const bool isSourceShaderFile = isStemShaderSource(p.path().extension().string());
 		if (isSourceShaderFile)
 		{
-			const std::string binPathStr = binShaderDir.generic_string() + "/" + p.path().filename().generic_string() + ".spv";
+			const std::string binPathStr = binShaderDir.generic_string() + '/' + fs::relative(p.path().parent_path(), srcShaderDir).generic_string() + '/' + p.path().filename().generic_string() + ".spv";
 			totalShaderFiles.push_back(binPathStr);
 
 			const fs::path binPath = binPathStr;
@@ -98,17 +96,17 @@ lune::ShaderCompiler::Result lune::ShaderCompiler::compileShaders(const std::fil
 				const auto lastCodeWriteTime = fs::last_write_time(p);
 				if (lastCodeWriteTime < lastBinWriteTime)
 				{
-					std::cout << binPathStr << " OK" << std::endl;
+					std::cout << binPathStr << " UP-TO-DATE" << std::endl;
 					continue;
 				}
 				else
 				{
-					std::cout << binPathStr << " OLD" << std::endl;
+					std::cout << binPathStr << " OUTDATED" << std::endl;
 				}
 			}
 			else
 			{
-				std::cout << binPathStr << " MISSING" << std::endl;
+				std::cout << binPathStr << " NOT COMPILED" << std::endl;
 			}
 			needToCompileShaderFiles.push_back(p.path());
 		}
@@ -120,15 +118,17 @@ lune::ShaderCompiler::Result lune::ShaderCompiler::compileShaders(const std::fil
 		for (auto& path : needToCompileShaderFiles)
 		{
 			const std::string sourceShaderPath = path.generic_string();
-			const std::string outputShaderPath = binShaderDir.generic_string() + '/' + path.filename().generic_string() + ".spv";
+			std::filesystem::create_directories(binShaderDir / fs::relative(path.parent_path(), srcShaderDir));
+			const std::string outputShaderPath = binShaderDir.generic_string() + '/' + fs::relative(path.parent_path(), srcShaderDir).generic_string() + '/' + path.filename().generic_string() + ".spv";
 			const std::string command = "glslc" + exeStem + ' ' + sourceShaderPath + " -o " + outputShaderPath + " --target-env=" + vkVerStr;
 			const int result = std::system(command.data());
 			if (result == 0)
 			{
-				std::cout << outputShaderPath << " - COMPILED OK" << std::endl;
+				std::cout << outputShaderPath << " - COMPILED" << std::endl;
 			}
 			else
 			{
+				std::cout << outputShaderPath << " - COMPILATION FAILURE" << std::endl;
 				return Result::CompileError;
 			}
 		}

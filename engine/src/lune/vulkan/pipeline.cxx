@@ -291,7 +291,7 @@ void lune::vulkan::GraphicsPipeline::createPipeline(const StatesOverride& states
 								   .setViewportCount(1)
 								   .setScissorCount(1);
 
-	const std::array<vk::DynamicState, 4> dynamicStates{vk::DynamicState::eViewport, vk::DynamicState::eScissor, vk::DynamicState::eDepthTestEnable};
+	const std::array<vk::DynamicState, 3> dynamicStates{vk::DynamicState::eViewport, vk::DynamicState::eScissor, vk::DynamicState::eDepthTestEnable};
 	const auto dynamicState = vk::PipelineDynamicStateCreateInfo()
 								  .setDynamicStates(dynamicStates);
 

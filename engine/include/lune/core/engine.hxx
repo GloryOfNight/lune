@@ -36,7 +36,7 @@ namespace lune
 		uint32 getViewWindowId(uint32 viewId);
 		void removeWindow(uint32 viewId);
 
-		uint64 addScene(std::unique_ptr<Scene> s);
+		Scene* addScene(std::unique_ptr<Scene> s);
 
 		const std::vector<uint32>& getViewIds() const { return mViews; };
 

@@ -300,6 +300,11 @@ void lune::VulkanSubsystem::loadDefaultAssets()
 		auto shFrag = loadShader(*EngineShaderPath("skybox.frag.spv"));
 		addPipeline("lune::skybox", vulkan::GraphicsPipeline::create(shVert, shFrag));
 	}
+		{
+		auto shVert = loadShader(*EngineShaderPath("gltf/primitive.vert.spv"));
+		auto shFrag = loadShader(*EngineShaderPath("gltf/primitive.frag.spv"));
+		addPipeline("lune::gltf::primitive", vulkan::GraphicsPipeline::create(shVert, shFrag));
+	}
 
 	{
 		UniqueSDLSurface scarlet = UniqueSDLSurface(IMG_Load((*EngineAssetPath("scarlet.png")).generic_string().data()));

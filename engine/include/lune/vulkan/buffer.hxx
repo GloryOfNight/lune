@@ -19,6 +19,7 @@ namespace lune::vulkan
 		static UniqueBuffer create(vk::BufferUsageFlags usage, vk::DeviceSize size, VmaMemoryUsage vmaUsage, VmaAllocationCreateFlags vmaFlags);
 
 		vk::Buffer getBuffer() const { return mBuffer; }
+		vk::DeviceSize getSize() const { return mSize; }
 
 		uint8* map() const;
 
