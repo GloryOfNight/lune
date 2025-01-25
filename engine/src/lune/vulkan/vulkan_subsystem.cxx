@@ -11,6 +11,7 @@
 #include "lune/vulkan/sampler.hxx"
 #include "lune/vulkan/shader.hxx"
 #include "lune/vulkan/texture_image.hxx"
+#include "lune/vulkan/vulkan_core.hxx"
 
 #include <vector>
 #include <vulkan/vulkan_core.h>
@@ -99,6 +100,9 @@ void lune::VulkanSubsystem::initialize()
 	std::vector<const char*> instanceLayers = {};
 
 	vulkan::createInstance(applicationInfo, instanceExtensions, instanceLayers, getVulkanContext());
+
+	vulkan::loadVulkanDynamicFunctions();
+
 	vulkan::findPhysicalDevice(getVulkanContext());
 
 	if (nullptr == getVulkanContext().physicalDevice)

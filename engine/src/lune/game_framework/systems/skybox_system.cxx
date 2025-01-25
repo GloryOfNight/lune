@@ -8,6 +8,7 @@
 #include "lune/vulkan/primitive.hxx"
 #include "lune/vulkan/sampler.hxx"
 #include "lune/vulkan/texture_image.hxx"
+#include "lune/vulkan/vulkan_core.hxx"
 #include "lune/vulkan/vulkan_subsystem.hxx"
 
 lune::SkyboxSystem::SkyboxSystem()
@@ -62,8 +63,8 @@ void lune::SkyboxSystem::render(class Scene* scene)
 		mPipeline->cmdBind(commandBuffer);
 		skybox.mDescriptorSets->cmdBind(commandBuffer, 0);
 
-		commandBuffer.setDepthTestEnable(false);
+		commandBuffer.setDepthTestEnableEXT(false, vulkan::getDynamicLoader());
 		mBox->cmdDraw(commandBuffer);
-		commandBuffer.setDepthTestEnable(true);
+		commandBuffer.setDepthTestEnableEXT(true, vulkan::getDynamicLoader());
 	}
 }

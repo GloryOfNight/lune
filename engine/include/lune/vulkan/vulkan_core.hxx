@@ -2,9 +2,8 @@
 
 #define VULKAN_HPP_ENABLE_DYNAMIC_LOADER_TOOL 0
 #define VULKAN_HPP_DISPATCH_LOADER_DYNAMIC 0
-#include "vulkan/vulkan.hpp"
-
 #include "lune/lune.hxx"
+#include "vulkan/vulkan.hpp"
 
 #include "vk_mem_alloc.h"
 
@@ -21,6 +20,9 @@ namespace lune
 		using SharedPrimitive = std::shared_ptr<class Primitive>;
 		using SharedTextureImage = std::shared_ptr<class TextureImage>;
 		using SharedSampler = std::shared_ptr<class Sampler>;
+
+		extern "C++" vk::DispatchLoaderDynamic& getDynamicLoader() noexcept;
+		extern "C++" void loadVulkanDynamicFunctions();
 	} // namespace vulkan
 
 	struct VulkanContext final

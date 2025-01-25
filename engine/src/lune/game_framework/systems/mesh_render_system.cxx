@@ -108,7 +108,7 @@ void lune::MeshRenderSystem::render(class Scene* scene)
 
 			res.descSets->getPipeline()->cmdBind(commandBuffer);
 
-			commandBuffer.setPrimitiveTopology(vk::PrimitiveTopology::eTriangleList);
+			commandBuffer.setPrimitiveTopologyEXT(vk::PrimitiveTopology::eTriangleList, vulkan::getDynamicLoader());
 
 			res.descSets->cmdBind(commandBuffer, 0);
 

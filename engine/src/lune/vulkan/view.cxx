@@ -185,7 +185,7 @@ void lune::vulkan::View::beginRenderPass()
 
 	commandBuffer.setViewport(0, vk::Viewport(0.f, 0.f, static_cast<float>(mCurrentExtent.width), static_cast<float>(mCurrentExtent.height), 0.f, 1.f));
 	commandBuffer.setScissor(0, vk::Rect2D(vk::Offset2D(0, 0), mCurrentExtent));
-	commandBuffer.setDepthTestEnable(true);
+	commandBuffer.setDepthTestEnableEXT(true, getDynamicLoader());
 }
 
 void lune::vulkan::View::sumbit()
