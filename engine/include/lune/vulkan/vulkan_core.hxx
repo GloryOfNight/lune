@@ -1,7 +1,10 @@
 #pragma once
 
-#include "lune/lune.hxx"
+#define VULKAN_HPP_ENABLE_DYNAMIC_LOADER_TOOL 0
+#define VULKAN_HPP_DISPATCH_LOADER_DYNAMIC 0
 #include "vulkan/vulkan.hpp"
+
+#include "lune/lune.hxx"
 
 #include "vk_mem_alloc.h"
 

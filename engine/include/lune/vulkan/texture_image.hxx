@@ -1,7 +1,7 @@
 #pragma once
 
 #include "lune/lune.hxx"
-#include "vulkan/vulkan.hpp"
+#include "vulkan_core.hxx"
 
 #include "vma.hxx"
 

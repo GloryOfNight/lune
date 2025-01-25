@@ -2,7 +2,7 @@
 
 #include "lune/vulkan/depth_image.hxx"
 #include "lune/vulkan/msaa_image.hxx"
-#include "vulkan/vulkan.hpp"
+#include "vulkan_core.hxx"
 
 #include <memory>
 #include <vector>

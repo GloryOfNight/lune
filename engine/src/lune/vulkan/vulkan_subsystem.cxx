@@ -13,6 +13,8 @@
 #include "lune/vulkan/texture_image.hxx"
 
 #include <vector>
+#include <vulkan/vulkan_core.h>
+#include <vulkan/vulkan_structs.hpp>
 
 #define LUNE_USE_VALIDATION
 
@@ -482,8 +484,13 @@ void lune::vulkan::findPhysicalDevice(VulkanContext& context)
 
 void lune::vulkan::createDevice(VulkanContext& context)
 {
-	const auto queueFamilyProperties = context.physicalDevice.getQueueFamilyProperties();
-	const auto enabledFeatures = context.physicalDevice.getFeatures();
+	auto extendedDynamicStateEXT = vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT()
+									   .setExtendedDynamicState(VK_TRUE);
+
+	vk::PhysicalDeviceFeatures2 enabledFeatures = context.physicalDevice.getFeatures2()
+													  .setPNext(&extendedDynamicStateEXT);
+
+	const std::vector<vk::QueueFamilyProperties> queueFamilyProperties = context.physicalDevice.getQueueFamilyProperties();
 
 	std::vector<vk::DeviceQueueCreateInfo> queueCreateInfoList;
 	queueCreateInfoList.reserve(queueFamilyProperties.size());
@@ -497,8 +504,23 @@ void lune::vulkan::createDevice(VulkanContext& context)
 			.setQueuePriorities(priorities);
 	}
 
+	const auto hasExtensionLam = [](const std::vector<vk::ExtensionProperties>& availableExtensions, std::string_view extension) -> bool
+	{
+		for (auto& properties : availableExtensions)
+			if (properties.extensionName == extension)
+				return true;
+		return false;
+	};
+
 	const std::vector<vk::ExtensionProperties> availableExtensions = context.physicalDevice.enumerateDeviceExtensionProperties();
-	const std::vector<const char*> requiredExtensions{"VK_KHR_swapchain"};
+	std::vector<const char*> requiredExtensions{"VK_KHR_swapchain", "VK_EXT_extended_dynamic_state"};
+
+	if (!hasExtensionLam(availableExtensions, "VK_KHR_swapchain"))
+		LN_LOG(Fatal, Vulkan, "Required vulkan extension \'{}\' not available", "VK_KHR_swapchain");
+	if (!hasExtensionLam(availableExtensions, "VK_EXT_extended_dynamic_state"))
+		LN_LOG(Fatal, Vulkan, "Required vulkan extension \'{}\' not available", "VK_EXT_extended_dynamic_state");
+	if (hasExtensionLam(availableExtensions, "VK_KHR_portability_subset"))
+		requiredExtensions.emplace_back("VK_KHR_portability_subset");
 
 	for (const auto& requiredExtension : requiredExtensions)
 	{
@@ -518,10 +540,10 @@ void lune::vulkan::createDevice(VulkanContext& context)
 	const std::vector<const char*> requiredLayers{};
 
 	const vk::DeviceCreateInfo deviceCreateInfo = vk::DeviceCreateInfo()
+													  .setPNext(&enabledFeatures)
 													  .setQueueCreateInfos(queueCreateInfoList)
 													  .setPEnabledExtensionNames(requiredExtensions)
-													  .setPEnabledLayerNames(requiredLayers)
-													  .setPEnabledFeatures(&enabledFeatures);
+													  .setPEnabledLayerNames(requiredLayers);
 
 	context.device = context.physicalDevice.createDevice(deviceCreateInfo);
 }
