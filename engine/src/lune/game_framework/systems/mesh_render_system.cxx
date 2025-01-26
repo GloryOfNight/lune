@@ -3,7 +3,9 @@
 #include "lune/core/engine.hxx"
 #include "lune/core/gltf.hxx"
 #include "lune/game_framework/components/mesh.hxx"
+#include "lune/game_framework/components/parent_child.hxx"
 #include "lune/game_framework/components/transform.hxx"
+#include "lune/game_framework/entities/entity.hxx"
 #include "lune/game_framework/systems/camera_system.hxx"
 #include "lune/vulkan/buffer.hxx"
 #include "lune/vulkan/descriptor_sets.hxx"
@@ -14,6 +16,24 @@
 #include "lune/vulkan/vulkan_subsystem.hxx"
 
 #include <vulkan/vulkan_enums.hpp>
+
+namespace lune
+{
+	lnm::mat4 findTransform(Scene* scene, EntityBase* entity)
+	{
+		lnm::mat4 model = lnm::mat4(1.f);
+		if (entity)
+		{
+			auto transformComp = entity->findComponent<TransformComponent>();
+			if (transformComp)
+				model = lnm::translate(model, transformComp->mPosition) * lnm::mat4(transformComp->mOrientation) * lnm::scale(model, transformComp->mScale);
+			auto parentChildComp = entity->findComponent<ParentChildComponent>();
+			if (parentChildComp && parentChildComp->mParentId)
+				return findTransform(scene, scene->findEntity(parentChildComp->mParentId)) * model;
+		}
+		return model;
+	}
+} // namespace lune
 
 lune::MeshRenderSystem::MeshRenderSystem()
 {
@@ -85,10 +105,7 @@ void lune::MeshRenderSystem::prepareRender(class Scene* scene)
 
 		auto& resources = mResources.find(meshComponent)->second;
 
-		lnm::mat4 model = lnm::mat4(1.f);
-		auto transformComp = entity->findComponent<TransformComponent>();
-		if (transformComp)
-			model = lnm::translate(model, transformComp->mPosition) * lnm::mat4(transformComp->mOrientation) * lnm::scale(model, transformComp->mScale);
+		lnm::mat4 model = findTransform(scene, entity);
 
 		int diff{};
 		uint8* pStageBuffer = res->stagingModelBuffer->map();

@@ -11,17 +11,16 @@
 #include "lune/game_framework/systems/camera_system.hxx"
 #include "lune/game_framework/systems/gizmo_system.hxx"
 #include "lune/game_framework/systems/input_system.hxx"
+#include "lune/game_framework/systems/mesh_render_system.hxx"
 #include "lune/game_framework/systems/move_system.hxx"
 #include "lune/game_framework/systems/skybox_system.hxx"
 #include "lune/game_framework/systems/sprite_render_system.hxx"
-#include "lune/game_framework/systems/mesh_render_system.hxx"
 #include "lune/lune.hxx"
 
 #include <imgui.h>
 #include <iostream>
 #include <string>
 #include <vector>
-
 
 class DebugSystem : public lune::SystemBase
 {
@@ -176,7 +175,8 @@ int main(int argc, char** argv)
 
 	auto scene = engine.addScene(std::make_unique<GameScene>());
 
-	bool loadRes = lune::gltf::loadInScene(*lune::EngineAssetPath("viking_room/scene.gltf"), "viking_room", scene);
+	lune::gltf::loadInScene(*lune::EngineAssetPath("viking_room/scene.gltf"), "viking_room", scene);
+	lune::gltf::loadInScene(*lune::EngineAssetPath("mi-24d/scene.gltf"), "mi-24d", scene);
 
 	engine.run();
 

@@ -25,7 +25,7 @@ namespace lune
 {
 	namespace gltf
 	{
-		extern "C++" bool loadInScene(std::filesystem::path gltfScene, std::string_view alias, class Scene* scene);
+		extern "C++" std::vector<uint64> loadInScene(std::filesystem::path gltfScene, std::string_view alias, class Scene* scene);
 	}; // namespace gltf
 
 	namespace vulkan::gltf

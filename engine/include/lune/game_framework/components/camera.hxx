@@ -22,7 +22,7 @@ namespace lune
 		float mFov{45.f};
 		float mAspectRatio{1.f};
 		float mNear{0.1f};
-		float mFar{100.f};
+		float mFar{10000.f};
 	};
 
 	struct IsometricCameraComponent : public ComponentBase

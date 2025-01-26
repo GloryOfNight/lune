@@ -116,7 +116,7 @@ void lune::VulkanSubsystem::initialize()
 
 	getVulkanConfig().colorFormat = vk::Format::eB8G8R8A8Unorm;
 	getVulkanConfig().depthFormat = findSupportedDepthFormat(getVulkanContext().physicalDevice);
-	getVulkanConfig().sampleCount = vk::SampleCountFlagBits::e1;
+	getVulkanConfig().sampleCount = vk::SampleCountFlagBits::e8;
 
 	const auto mPhysicalDeviceProperies = getVulkanContext().physicalDevice.getProperties();
 

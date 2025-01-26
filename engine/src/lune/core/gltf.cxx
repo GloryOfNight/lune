@@ -42,16 +42,19 @@ namespace lune
 	vk::PrimitiveTopology makeTopology(int32 mode);
 	vk::Filter makeFilter(int32 tinyFilter);
 
-	void modelToScene(std::filesystem::path sceneRoot, const tinygltf::Model& tinyModel, std::string_view alias, int32 tinySceneIndex, Scene* luneScene);
+	std::vector<uint64> modelToScene(std::filesystem::path sceneRoot, const tinygltf::Model& tinyModel, std::string_view alias, int32 tinySceneIndex, Scene* luneScene);
 	uint64 processNode(const tinygltf::Model& tinyModel, std::string_view alias, uint32 nodeIndex, Scene* luneScene, EntityBase* parentEntity);
+	void decomposeTRS(const lnm::mat4& matrix, lnm::vec3& translation, lnm::quat& rotation, lnm::vec3& scale);
 } // namespace lune
 
-bool lune::gltf::loadInScene(std::filesystem::path gltfScene, std::string_view alias, class Scene* scene)
+std::vector<uint64> lune::gltf::loadInScene(std::filesystem::path gltfScene, std::string_view alias, class Scene* scene)
 {
+	std::vector<uint64> rootEntities{};
+
 	if (scene == nullptr) [[unlikely]]
-		return false;
+		return rootEntities;
 	if (!std::filesystem::is_regular_file(gltfScene)) [[unlikely]]
-		return false;
+		return rootEntities;
 
 	tinygltf::Model model;
 
@@ -75,20 +78,24 @@ bool lune::gltf::loadInScene(std::filesystem::path gltfScene, std::string_view a
 	{
 		for (size_t i = 0; i < model.scenes.size(); ++i)
 		{
-			modelToScene(gltfScene.parent_path(), model, alias, i, scene);
+			std::vector<uint64> sceneEntities = modelToScene(gltfScene.parent_path(), model, alias, i, scene);
+			std::move(sceneEntities.begin(), sceneEntities.end(), std::back_inserter(rootEntities));
 		}
 	}
 
-	return result;
+	return rootEntities;
 }
 
-void lune::modelToScene(std::filesystem::path sceneRoot, const tinygltf::Model& tinyModel, std::string_view alias, int32 tinySceneIndex, Scene* scene)
+std::vector<uint64> lune::modelToScene(std::filesystem::path sceneRoot, const tinygltf::Model& tinyModel, std::string_view alias, int32 tinySceneIndex, Scene* scene)
 {
+	std::vector<uint64> rootEntities{};
+
 	auto& tinyScene = tinyModel.scenes[tinySceneIndex];
 	const size_t tinySceneNodeSize = tinyScene.nodes.size();
 	for (size_t i = 0; i < tinySceneNodeSize; ++i)
 	{
-		processNode(tinyModel, alias, tinyScene.nodes[i], scene, nullptr);
+		uint64 entity = processNode(tinyModel, alias, tinyScene.nodes[i], scene, nullptr);
+		rootEntities.emplace_back(entity);
 	}
 
 	auto vkSubsystem = Engine::get()->findSubsystem<VulkanSubsystem>();
@@ -113,6 +120,8 @@ void lune::modelToScene(std::filesystem::path sceneRoot, const tinygltf::Model& 
 		newMaterial->init(&tinyModel, &tinyModel.materials[i], alias);
 		vkSubsystem->addCustomResource(std::format("{}::material::{}", alias, i), std::move(newMaterial));
 	}
+
+	return rootEntities;
 }
 
 uint64 lune::processNode(const tinygltf::Model& tinyModel, std::string_view alias, uint32 nodeIndex, Scene* scene, EntityBase* parentEntity)
@@ -121,6 +130,16 @@ uint64 lune::processNode(const tinygltf::Model& tinyModel, std::string_view alia
 
 	auto newEntity = scene->addEntity<lune::EntityBase>();
 	auto parentChildComp = newEntity->addComponent<ParentChildComponent>();
+
+	auto transformComp = newEntity->addComponent<TransformComponent>();
+	if (node.rotation.size())
+		transformComp->mOrientation = *reinterpret_cast<const lnm::dquat*>(node.rotation.data());
+	if (node.scale.size())
+		transformComp->mScale = *reinterpret_cast<const lnm::dvec3*>(node.scale.data());
+	if (node.translation.size())
+		transformComp->mPosition = *reinterpret_cast<const lnm::dvec3*>(node.translation.data());
+	if (node.matrix.size())
+		decomposeTRS(*reinterpret_cast<const lnm::dmat4x4*>(node.matrix.data()), transformComp->mPosition, transformComp->mOrientation, transformComp->mScale);
 
 	if (parentEntity)
 		parentChildComp->mParentId = parentEntity->getId();
@@ -134,7 +153,7 @@ uint64 lune::processNode(const tinygltf::Model& tinyModel, std::string_view alia
 	if (node.mesh != -1 && tinyModel.meshes[node.mesh].primitives.size())
 	{
 		const auto& nodeMesh = tinyModel.meshes[node.mesh];
-		auto transformComp = newEntity->addComponent<TransformComponent>();
+
 		auto meshComp = newEntity->addComponent<MeshComponent>();
 
 		const std::string primitiveAlias = std::format("{}::{}::{}", alias, node.name, nodeMesh.name);
@@ -413,4 +432,22 @@ void lune::vulkan::gltf::Material::init(const tinygltf::Model* tinyModel, const 
 
 	mBuffer = Buffer::create(vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eTransferDst, sizeof(shaderMat), VMA_MEMORY_USAGE_AUTO, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT);
 	mBuffer->copyTransfer(&shaderMat, 0, sizeof(shaderMat));
+}
+
+void lune::decomposeTRS(const lnm::mat4& matrix, lnm::vec3& translation, lnm::quat& rotation, lnm::vec3& scale)
+{
+	translation = lnm::vec3(matrix[3][0], matrix[3][1], matrix[3][2]);
+
+	lnm::vec3 colX(matrix[0][0], matrix[0][1], matrix[0][2]);
+	lnm::vec3 colY(matrix[1][0], matrix[1][1], matrix[1][2]);
+	lnm::vec3 colZ(matrix[2][0], matrix[2][1], matrix[2][2]);
+	scale.x = lnm::length(colX);
+	scale.y = lnm::length(colY);
+	scale.z = lnm::length(colZ);
+
+	lnm::mat3 rotationMatrix(
+		colX / scale.x,
+		colY / scale.y,
+		colZ / scale.z);
+	rotation = glm::quat_cast(rotationMatrix);
 }
