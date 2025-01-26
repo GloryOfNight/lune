@@ -111,10 +111,13 @@ uint64 lune::processNode(const tinygltf::Model& tinyModel, std::string_view alia
 				meshCompPrimitive.materialName = std::format("{}::material::{}::{}", alias, tinyModel.materials[primitive.material].name, primitive.material);
 			meshCompPrimitive.topology = modeToVkTopology(primitive.mode);
 
-			std::vector<Vertex33> vertexBuffer{};
+			std::vector<Vertex33224> vertexBuffer{};
 
 			int32 positionAttrIndex{-1};
 			int32 normalAttrIndex{-1};
+			std::vector<int32> texCoordsAttrIndices{};
+			std::vector<int32> colorAttrIndices{};
+
 			for (const auto& [name, index] : primitive.attributes)
 			{
 				if (name == "POSITION")
@@ -125,9 +128,22 @@ uint64 lune::processNode(const tinygltf::Model& tinyModel, std::string_view alia
 				{
 					normalAttrIndex = index;
 				}
+				else if (name.find("TEXCOORD_") != std::string::npos)
+				{
+					texCoordsAttrIndices.emplace_back(index);
+				}
+				else if (name.find("COLOR_") != std::string::npos)
+				{
+					colorAttrIndices.emplace_back(index);
+				}
 			}
 
 			const lnm::vec3* positionsData = nullptr;
+			const lnm::vec3* normalData = nullptr;
+			const lnm::uint8* uv0 = nullptr;
+			const lnm::uint8* uv1 = nullptr;
+			const lnm::uint8* color0 = nullptr;
+
 			size_t positionBufferCount = 0;
 			if (positionAttrIndex != -1)
 			{
@@ -137,12 +153,38 @@ uint64 lune::processNode(const tinygltf::Model& tinyModel, std::string_view alia
 				positionBufferCount = positionAccessor.count;
 			}
 
-			const lnm::vec3* normalData = nullptr;
 			if (normalAttrIndex != -1)
 			{
 				const auto& normalAccessor = tinyModel.accessors[normalAttrIndex];
 				const auto& normalBufferView = tinyModel.bufferViews[normalAccessor.bufferView];
 				normalData = reinterpret_cast<const lnm::vec3*>(tinyModel.buffers[normalBufferView.buffer].data.data() + normalBufferView.byteOffset + normalAccessor.byteOffset);
+			}
+
+			for (size_t k = 0; k < texCoordsAttrIndices.size(); ++k)
+			{
+				const int32 attrIndex = texCoordsAttrIndices[k];
+				const auto& accessor = tinyModel.accessors[attrIndex];
+				const auto& bufferView = tinyModel.bufferViews[accessor.bufferView];
+
+				const uint8* data = reinterpret_cast<const uint8*>(tinyModel.buffers[bufferView.buffer].data.data() + bufferView.byteOffset + accessor.byteOffset);
+				if (k == 0)
+					uv0 = data;
+				else if (k == 1)
+					uv1 = data;
+				else
+					break; // not supported
+			}
+
+			for (size_t k = 0; k < colorAttrIndices.size(); ++k)
+			{
+				const int32 attrIndex = colorAttrIndices[k];
+				const auto& accessor = tinyModel.accessors[attrIndex];
+				const auto& bufferView = tinyModel.bufferViews[accessor.bufferView];
+				const uint8* data = reinterpret_cast<const uint8*>(tinyModel.buffers[bufferView.buffer].data.data() + bufferView.byteOffset + accessor.byteOffset);
+				if (k == 0)
+					color0 = data;
+				else
+					break; // not supported
 			}
 
 			const uint8* indicesData = nullptr;
@@ -168,10 +210,56 @@ uint64 lune::processNode(const tinygltf::Model& tinyModel, std::string_view alia
 				{
 					vertexBuffer[k].normal = *(normalData + k);
 				}
+				if (uv0)
+				{
+					const auto& accessor = tinyModel.accessors[texCoordsAttrIndices[0]];
+					if (accessor.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT)
+						vertexBuffer[k].uv0 = *reinterpret_cast<const lnm::vec2*>(uv0 + (k * sizeof(lnm::vec2)));
+					else if (accessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT)
+						vertexBuffer[k].uv0 = *reinterpret_cast<const lnm::u16vec2*>(uv0 + (k * sizeof(lnm::u16vec2)));
+					else if (accessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE)
+						vertexBuffer[k].uv0 = *reinterpret_cast<const lnm::u8vec2*>(uv0 + (k * sizeof(lnm::u8vec2)));
+				}
+				if (uv1)
+				{
+					const auto& accessor = tinyModel.accessors[texCoordsAttrIndices[1]];
+					if (accessor.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT)
+						vertexBuffer[k].uv1 = *reinterpret_cast<const lnm::vec2*>(uv1 + (k * sizeof(lnm::vec2)));
+					else if (accessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT)
+						vertexBuffer[k].uv1 = *reinterpret_cast<const lnm::u16vec2*>(uv1 + (k * sizeof(lnm::u16vec2)));
+					else if (accessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE)
+						vertexBuffer[k].uv1 = *reinterpret_cast<const lnm::u8vec2*>(uv1 + (k * sizeof(lnm::u8vec2)));
+				}
+				if (color0)
+				{
+					const auto& accessor = tinyModel.accessors[colorAttrIndices[0]];
+					if (accessor.type == TINYGLTF_TYPE_VEC4)
+					{
+						if (accessor.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT)
+							vertexBuffer[k].color0 = lnm::vec4(*reinterpret_cast<const lnm::vec3*>(color0 + (k * sizeof(lnm::vec3))), 1.f);
+						else if (accessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT)
+							vertexBuffer[k].color0 = lnm::u16vec4(*reinterpret_cast<const lnm::u16vec3*>(color0 + (k * sizeof(lnm::u16vec3))), 1);
+						else if (accessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE)
+							vertexBuffer[k].color0 = lnm::u8vec4(*reinterpret_cast<const lnm::u8vec3*>(color0 + (k * sizeof(lnm::u8vec3))), 1);
+					}
+					else if (accessor.type == TINYGLTF_TYPE_VEC3)
+					{
+						if (accessor.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT)
+							vertexBuffer[k].color0 = *reinterpret_cast<const lnm::vec4*>(color0 + (k * sizeof(lnm::vec4)));
+						else if (accessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT)
+							vertexBuffer[k].color0 = *reinterpret_cast<const lnm::u16vec4*>(color0 + (k * sizeof(lnm::u16vec4)));
+						else if (accessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE)
+							vertexBuffer[k].color0 = *reinterpret_cast<const lnm::u8vec4*>(color0 + (k * sizeof(lnm::u8vec4)));
+					}
+				}
+				else
+				{
+					vertexBuffer[k].color0 = lnm::vec4(1.f, 1.f, 1.f, 1.f);
+				}
 			}
 
 			auto vkSubsystem = Engine::get()->findSubsystem<VulkanSubsystem>();
-			vkSubsystem->addPrimitive(primitiveName, vulkan::Primitive::create(vertexBuffer.data(), vertexBuffer.size(), sizeof(Vertex33), indicesData, indiciesCount, indiciesSizeof));
+			vkSubsystem->addPrimitive(primitiveName, vulkan::Primitive::create(vertexBuffer.data(), vertexBuffer.size(), sizeof(Vertex33224), indicesData, indiciesCount, indiciesSizeof));
 
 			// load textures to gpu
 			// ??? save somewhere materials for reuse

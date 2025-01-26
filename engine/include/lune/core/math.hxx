@@ -51,6 +51,15 @@ namespace lune
 		lnm::vec2 uv{};
 	};
 
+	struct Vertex33224
+	{
+		lnm::vec3 position{};
+		lnm::vec3 normal{};
+		lnm::vec2 uv0{};
+		lnm::vec2 uv1{};
+		lnm::vec4 color0{};
+	};
+
 	using Index16 = uint16;
 	using Index32 = uint32;
 
