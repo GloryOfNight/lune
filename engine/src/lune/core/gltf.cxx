@@ -362,6 +362,7 @@ vk::Filter lune::makeFilter(int32 tinyFilter)
 struct ShaderMaterialData
 {
 	lnm::vec3 emissiveFactor{};
+	int32 padding0{};
 	lnm::vec4 baseColorFactor{};
 	float metallicFactor{};
 	float roughnessFactor{};
@@ -381,7 +382,7 @@ void lune::vulkan::gltf::Material::init(const tinygltf::Model* tinyModel, const 
 	auto shFrag = vkSubsystem->loadShader(*EngineShaderPath("gltf/primitive.frag.spv"));
 
 	auto rasterizationState = GraphicsPipeline::defaultRasterizationState();
-	rasterizationState.setCullMode(tinyMaterial->doubleSided ? vk::CullModeFlagBits::eNone : vk::CullModeFlagBits::eBack);
+	rasterizationState.setCullMode(tinyMaterial->doubleSided ? vk::CullModeFlagBits::eNone : vk::CullModeFlagBits::eFront);
 
 	vulkan::GraphicsPipeline::StatesOverride statesOverride{};
 	statesOverride.rasterization = &rasterizationState;
