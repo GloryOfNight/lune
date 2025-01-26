@@ -8,7 +8,7 @@ layout(location = 4) in vec4 inColor0;
 
 layout(location = 0) out vec4 outColor;
 
-layout(set = 1, binding = 0) uniform sampler2D textures[];
+layout(set = 1, binding = 0) uniform sampler2D textures[4];
 
 layout(set = 1, binding = 1) uniform readonly Material
 {
@@ -18,16 +18,9 @@ layout(set = 1, binding = 1) uniform readonly Material
     float roughnessFactor;
     float normalScale;
 
-    int baseColorTextureIndex;
     int baseColorTextureUVSet;
-    
-    int metallicRoughnessTextureIndex;
     int metallicRoughnessTextureUVSet;
-
-    int NormalTextureIndex;
     int NormalTextureUVSet;
-
-    int emissiveTextureIndex;
     int emissiveTextureUVSet;
 } material;
 

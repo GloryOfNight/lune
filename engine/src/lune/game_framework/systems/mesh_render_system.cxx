@@ -67,7 +67,7 @@ void lune::MeshRenderSystem::prepareRender(class Scene* scene)
 				{
 					const auto& tex = textures.at(i);
 					const auto& sampler = samplers.at(i);
-					descSet->addImageInfo("textures", 0, tex->getImageView(), sampler->getSampler());
+					descSet->setImageInfo("textures", 0, tex->getImageView(), sampler->getSampler(), i);
 				}
 
 				descSet->setBufferInfo("material", 0, matBufffer->getBuffer(), 0, matBufffer->getSize());

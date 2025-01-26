@@ -1,5 +1,6 @@
 #include "lune/vulkan/vulkan_subsystem.hxx"
 
+#include "SDL3/SDL_surface.h"
 #include "SDL3/SDL_vulkan.h"
 #include "SDL3_image/SDL_image.h"
 #include "lune/core/assets.hxx"
@@ -11,8 +12,8 @@
 #include "lune/vulkan/sampler.hxx"
 #include "lune/vulkan/shader.hxx"
 #include "lune/vulkan/texture_image.hxx"
-#include "lune/vulkan/vulkan_custom_resource.hxx"
 #include "lune/vulkan/vulkan_core.hxx"
+#include "lune/vulkan/vulkan_custom_resource.hxx"
 
 #include <vector>
 #include <vulkan/vulkan_core.h>
@@ -315,6 +316,25 @@ void lune::VulkanSubsystem::sumbitFrame()
 void lune::VulkanSubsystem::loadDefaultAssets()
 {
 	{
+		UniqueSDLSurface surface = UniqueSDLSurface(SDL_CreateSurface(64, 64, SDL_PixelFormat::SDL_PIXELFORMAT_BGRA8888));
+		const uint8 magnetta[4] = {255, 0, 255, 255};
+		const uint8 black[4] = {0, 0, 0, 255};
+		const auto wh = surface->w * surface->h;
+		for (uint32_t i = 0; i < wh; ++i)
+		{
+			uint8* pixels = reinterpret_cast<uint8*>(surface->pixels);
+			const uint8* src = i % 3 || i == 1 ? &magnetta[0] : &black[0];
+			memcpy(&pixels[i * 4], src, 4);
+		}
+
+		addTextureImage("lune::default", vulkan::TextureImage::create(surface.get()));
+		auto createInfo = vulkan::Sampler::defaultCreateInfo()
+							  .setMagFilter(vk::Filter::eNearest)
+							  .setMinFilter(vk::Filter::eNearest);
+		addSampler("lune::default", vulkan::Sampler::create(std::move(createInfo)));
+	}
+
+	{
 		auto shVert = loadShader(*EngineShaderPath("sprite.vert.spv"));
 		auto shFrag = loadShader(*EngineShaderPath("sprite.frag.spv"));
 		addPipeline("lune::sprite", vulkan::GraphicsPipeline::create(shVert, shFrag));
@@ -332,7 +352,6 @@ void lune::VulkanSubsystem::loadDefaultAssets()
 		statesOverride.dynamicStates.emplace_back(vk::DynamicState::ePrimitiveTopology);
 		addPipeline("lune::gltf::primitive", vulkan::GraphicsPipeline::create(shVert, shFrag, statesOverride));
 	}
-
 	{
 		UniqueSDLSurface scarlet = UniqueSDLSurface(IMG_Load((*EngineAssetPath("scarlet.png")).generic_string().data()));
 		addTextureImage("lune::scarlet", vulkan::TextureImage::create(scarlet.get()));

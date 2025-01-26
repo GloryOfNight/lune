@@ -348,17 +348,10 @@ struct ShaderMaterialData
 	float roughnessFactor{};
 	float normalScale{};
 
-	int32 baseColorTextureIndex{-1};
-	int32 baseColorTextureUVSet{};
-
-	int32 metallicRoughnessTextureIndex{-1};
-	int32 metallicRoughnessTextureUVSet{};
-
-	int32 NormalTextureIndex{-1};
-	int32 NormalTextureUVSet{};
-
-	int32 emissiveTextureIndex{-1};
-	int32 emissiveTextureUVSet{};
+	int32 baseColorTextureUVSet{-1};
+	int32 metallicRoughnessTextureUVSet{-1};
+	int32 NormalTextureUVSet{-1};
+	int32 emissiveTextureUVSet{-1};
 };
 
 void lune::vulkan::gltf::Material::init(const tinygltf::Model* tinyModel, const tinygltf::Material* tinyMaterial, const std::string_view alias)
@@ -387,36 +380,35 @@ void lune::vulkan::gltf::Material::init(const tinygltf::Model* tinyModel, const 
 
 	uint8 texCounter = 0;
 
+	mTextures = std::vector<SharedTextureImage>(4, vkSubsystem->findTextureImage("lune::default"));
+	mSamplers = std::vector<SharedSampler>(4, vkSubsystem->findSampler("lune::default"));
+
 	if (tinyMaterial->pbrMetallicRoughness.baseColorTexture.index != -1)
 	{
-		shaderMat.baseColorTextureIndex = mTextures.size();
 		shaderMat.baseColorTextureUVSet = tinyMaterial->pbrMetallicRoughness.baseColorTexture.texCoord;
-		mTextures.emplace_back(vkSubsystem->findTextureImage(std::format("{}::texture::{}", alias, tinyMaterial->pbrMetallicRoughness.baseColorTexture.index)));
-		mSamplers.emplace_back(vkSubsystem->findSampler(std::format("{}::sampler::{}", alias, tinyModel->textures[tinyMaterial->pbrMetallicRoughness.baseColorTexture.index].sampler)));
+		mTextures[0] = (vkSubsystem->findTextureImage(std::format("{}::texture::{}", alias, tinyMaterial->pbrMetallicRoughness.baseColorTexture.index)));
+		mSamplers[0] = (vkSubsystem->findSampler(std::format("{}::sampler::{}", alias, tinyModel->textures[tinyMaterial->pbrMetallicRoughness.baseColorTexture.index].sampler)));
 	}
 
 	if (tinyMaterial->pbrMetallicRoughness.metallicRoughnessTexture.index != -1)
 	{
-		shaderMat.metallicRoughnessTextureIndex = mTextures.size();
 		shaderMat.metallicRoughnessTextureUVSet = tinyMaterial->pbrMetallicRoughness.metallicRoughnessTexture.texCoord;
-		mTextures.emplace_back(vkSubsystem->findTextureImage(std::format("{}::texture::{}", alias, tinyMaterial->pbrMetallicRoughness.metallicRoughnessTexture.index)));
-		mSamplers.emplace_back(vkSubsystem->findSampler(std::format("{}::sampler::{}", alias, tinyModel->textures[tinyMaterial->pbrMetallicRoughness.metallicRoughnessTexture.index].sampler)));
+		mTextures[1] = (vkSubsystem->findTextureImage(std::format("{}::texture::{}", alias, tinyMaterial->pbrMetallicRoughness.metallicRoughnessTexture.index)));
+		mSamplers[1] = (vkSubsystem->findSampler(std::format("{}::sampler::{}", alias, tinyModel->textures[tinyMaterial->pbrMetallicRoughness.metallicRoughnessTexture.index].sampler)));
 	}
 
 	if (tinyMaterial->normalTexture.index != -1)
 	{
-		shaderMat.NormalTextureIndex = mTextures.size();
 		shaderMat.NormalTextureUVSet = tinyMaterial->normalTexture.texCoord;
-		mTextures.emplace_back(vkSubsystem->findTextureImage(std::format("{}::texture::{}", alias, tinyMaterial->normalTexture.index)));
-		mSamplers.emplace_back(vkSubsystem->findSampler(std::format("{}::sampler::{}", alias, tinyModel->textures[tinyMaterial->normalTexture.index].sampler)));
+		mTextures[2] = (vkSubsystem->findTextureImage(std::format("{}::texture::{}", alias, tinyMaterial->normalTexture.index)));
+		mSamplers[2] = (vkSubsystem->findSampler(std::format("{}::sampler::{}", alias, tinyModel->textures[tinyMaterial->normalTexture.index].sampler)));
 	}
 
 	if (tinyMaterial->emissiveTexture.index != -1)
 	{
-		shaderMat.emissiveTextureIndex = mTextures.size();
 		shaderMat.emissiveTextureUVSet = tinyMaterial->emissiveTexture.texCoord;
-		mTextures.emplace_back(vkSubsystem->findTextureImage(std::format("{}::texture::{}", alias, tinyMaterial->emissiveTexture.index)));
-		mSamplers.emplace_back(vkSubsystem->findSampler(std::format("{}::sampler::{}", alias, tinyModel->textures[tinyMaterial->emissiveTexture.index].sampler)));
+		mTextures[3] = (vkSubsystem->findTextureImage(std::format("{}::texture::{}", alias, tinyMaterial->emissiveTexture.index)));
+		mSamplers[3] = (vkSubsystem->findSampler(std::format("{}::sampler::{}", alias, tinyModel->textures[tinyMaterial->emissiveTexture.index].sampler)));
 	}
 
 	mBuffer = Buffer::create(vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eTransferDst, sizeof(shaderMat), VMA_MEMORY_USAGE_AUTO, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT);

@@ -24,8 +24,7 @@ namespace lune::vulkan
 		static UniqueDescriptorSets create(SharedGraphicsPipeline pipeline, uint32 maxAllocations);
 
 		void setBufferInfo(std::string_view name, uint32 allocId, vk::Buffer buffer, vk::DeviceSize offset, vk::DeviceSize range);
-		void setImageInfo(std::string_view name, uint32 allocId, vk::ImageView imageView, vk::Sampler sampler);
-		void addImageInfo(std::string_view name, uint32 allocId, vk::ImageView imageView, vk::Sampler sampler);
+		void setImageInfo(std::string_view name, uint32 allocId, vk::ImageView imageView, vk::Sampler sampler, uint32 dstArrayElem = 0);
 
 		void updateSets(uint32 allocId);
 
@@ -47,6 +46,6 @@ namespace lune::vulkan
 		std::vector<vk::DescriptorSet> mDescriptorSets{};
 
 		std::vector<std::map<std::string, vk::DescriptorBufferInfo>> mBufferInfos{};
-		std::vector<std::map<std::string, std::vector<vk::DescriptorImageInfo>>> mImageInfos{};
+		std::vector<std::map<std::string, std::map<int32, vk::DescriptorImageInfo>>> mImageInfos{};
 	};
 } // namespace lune::vulkan

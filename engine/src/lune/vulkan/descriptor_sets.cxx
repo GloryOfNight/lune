@@ -36,32 +36,23 @@ void lune::vulkan::DescriptorSets::init()
 	allocateDescriptorSets();
 }
 
-void lune::vulkan::DescriptorSets::setBufferInfo(std::string_view name, uint32 index, vk::Buffer buffer, vk::DeviceSize offset, vk::DeviceSize range)
+void lune::vulkan::DescriptorSets::setBufferInfo(std::string_view name, uint32 allocId, vk::Buffer buffer, vk::DeviceSize offset, vk::DeviceSize range)
 {
 	auto bufferInfo = vk::DescriptorBufferInfo()
 						  .setBuffer(buffer)
 						  .setOffset(offset)
 						  .setRange(range);
-	mBufferInfos[index].insert_or_assign(std::string(name), std::move(bufferInfo));
+	mBufferInfos[allocId].insert_or_assign(std::string(name), std::move(bufferInfo));
 }
 
-void lune::vulkan::DescriptorSets::setImageInfo(std::string_view name, uint32 index, vk::ImageView imageView, vk::Sampler sampler)
+void lune::vulkan::DescriptorSets::setImageInfo(std::string_view name, uint32 allocId, vk::ImageView imageView, vk::Sampler sampler, uint32 dstArrayElem)
 {
 	auto imageInfo = vk::DescriptorImageInfo()
 						 .setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal)
 						 .setImageView(imageView)
 						 .setSampler(sampler);
-	mImageInfos[index].insert_or_assign(std::string(name), std::vector<vk::DescriptorImageInfo>{std::move(imageInfo)});
-}
-
-void lune::vulkan::DescriptorSets::addImageInfo(std::string_view name, uint32 index, vk::ImageView imageView, vk::Sampler sampler)
-{
-	auto imageInfo = vk::DescriptorImageInfo()
-						 .setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal)
-						 .setImageView(imageView)
-						 .setSampler(sampler);
-	auto [it, res] = mImageInfos[index].try_emplace(std::string(name));
-	it->second.emplace_back(std::move(imageInfo));
+	auto [it, res] = mImageInfos[allocId].try_emplace(std::string(name));
+	it->second.insert_or_assign(dstArrayElem, std::move(imageInfo));
 }
 
 void lune::vulkan::DescriptorSets::updateSets(uint32 index)
@@ -79,22 +70,31 @@ void lune::vulkan::DescriptorSets::updateSets(uint32 index)
 			{
 				const auto& reflBinding = refl.descriptor_bindings[k];
 
-				vk::WriteDescriptorSet& write = writes.emplace_back(vk::WriteDescriptorSet())
-													.setDstSet(mDescriptorSets[reflDescSet.set + descriptorSetOffset])
-													.setDstBinding(reflBinding.binding)
-													.setDescriptorCount(reflBinding.count)
-													.setDescriptorType(static_cast<vk::DescriptorType>(reflBinding.descriptor_type));
-				switch (write.descriptorType)
+				vk::WriteDescriptorSet write = vk::WriteDescriptorSet()
+												   .setDstSet(mDescriptorSets[reflDescSet.set + descriptorSetOffset])
+												   .setDstBinding(reflBinding.binding)
+												   .setDstArrayElement(0)
+												   .setDescriptorCount(reflBinding.count)
+												   .setDescriptorType(static_cast<vk::DescriptorType>(reflBinding.descriptor_type));
+
+				if (write.descriptorType == vk::DescriptorType::eUniformBuffer)
 				{
-				case vk::DescriptorType::eUniformBuffer:
-					write.setPBufferInfo(&mBufferInfos[index].at(reflBinding.name));
-					break;
-				case vk::DescriptorType::eCombinedImageSampler:
-					write.setImageInfo(mImageInfos[index].at(reflBinding.name));
-					break;
-				default:
+					write.setBufferInfo(mBufferInfos[index].at(reflBinding.name));
+					writes.emplace_back(write);
+				}
+				else if (write.descriptorType == vk::DescriptorType::eCombinedImageSampler)
+				{
+					const auto& images = mImageInfos[index].at(reflBinding.name);
+					for (const auto& [elem, image] : images)
+					{
+						write.setImageInfo(image);
+						write.setDstArrayElement(elem);
+						writes.emplace_back(write);
+					}
+				}
+				else
+				{
 					LN_LOG(Fatal, Vulkan::DescriptorSets, "Type {} - not supported", static_cast<int32>(write.descriptorType))
-					break;
 				}
 			}
 		}
