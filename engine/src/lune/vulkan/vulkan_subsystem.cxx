@@ -11,6 +11,7 @@
 #include "lune/vulkan/sampler.hxx"
 #include "lune/vulkan/shader.hxx"
 #include "lune/vulkan/texture_image.hxx"
+#include "lune/vulkan/vulkan_custom_resource.hxx"
 #include "lune/vulkan/vulkan_core.hxx"
 
 #include <vector>
@@ -51,6 +52,7 @@ lune::VulkanSubsystem::~VulkanSubsystem()
 	mGraphicsPipelines.clear();
 	mShaders.clear();
 	mPrimitives.clear();
+	mCustomResources.clear();
 	mViews.clear();
 
 	getVulkanDeleteQueue().cleanup();
@@ -246,6 +248,22 @@ lune::vulkan::SharedSampler lune::VulkanSubsystem::findSampler(const std::string
 {
 	auto findRes = mSamplers.find(name);
 	return findRes != mSamplers.end() ? findRes->second : nullptr;
+}
+
+void lune::VulkanSubsystem::addCustomResource(std::string name, vulkan::SharedVulkanCustomResource resource)
+{
+	if (mCustomResources.find(name) != mCustomResources.end())
+	{
+		LN_LOG(Fatal, Vulkan, "Can't emplace new primitive, name already taken: {}", name);
+		return;
+	}
+	mCustomResources.emplace(name, std::move(resource));
+}
+
+lune::vulkan::SharedVulkanCustomResource lune::VulkanSubsystem::findCustomResource(const std::string& name)
+{
+	auto findRes = mCustomResources.find(name);
+	return findRes != mCustomResources.end() ? findRes->second : nullptr;
 }
 
 bool lune::VulkanSubsystem::beginNextFrame(uint32 viewId)

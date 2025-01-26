@@ -25,6 +25,7 @@ namespace lune::vulkan
 
 		void setBufferInfo(std::string_view name, uint32 allocId, vk::Buffer buffer, vk::DeviceSize offset, vk::DeviceSize range);
 		void setImageInfo(std::string_view name, uint32 allocId, vk::ImageView imageView, vk::Sampler sampler);
+		void addImageInfo(std::string_view name, uint32 allocId, vk::ImageView imageView, vk::Sampler sampler);
 
 		void updateSets(uint32 allocId);
 
@@ -46,6 +47,6 @@ namespace lune::vulkan
 		std::vector<vk::DescriptorSet> mDescriptorSets{};
 
 		std::vector<std::map<std::string, vk::DescriptorBufferInfo>> mBufferInfos{};
-		std::vector<std::map<std::string, vk::DescriptorImageInfo>> mImageInfos{};
+		std::vector<std::map<std::string, std::vector<vk::DescriptorImageInfo>>> mImageInfos{};
 	};
 } // namespace lune::vulkan

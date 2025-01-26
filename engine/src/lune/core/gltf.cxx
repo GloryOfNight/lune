@@ -1,24 +1,36 @@
 #include "lune/core/gltf.hxx"
 
+#include "lune/core/assets.hxx"
 #include "lune/core/engine.hxx"
 #include "lune/core/log.hxx"
 #include "lune/core/math.hxx"
+#include "lune/core/sdl.hxx"
 #include "lune/game_framework/components/mesh.hxx"
 #include "lune/game_framework/components/parent_child.hxx"
 #include "lune/game_framework/components/transform.hxx"
 #include "lune/game_framework/entities/entity.hxx"
 #include "lune/game_framework/scene.hxx"
+#include "lune/vulkan/buffer.hxx"
+#include "lune/vulkan/pipeline.hxx"
 #include "lune/vulkan/primitive.hxx"
+#include "lune/vulkan/sampler.hxx"
+#include "lune/vulkan/shader.hxx"
+#include "lune/vulkan/texture_image.hxx"
 #include "lune/vulkan/vulkan_core.hxx"
 #include "lune/vulkan/vulkan_subsystem.hxx"
 
+#include <SDL3_image/SDL_image.h>
+#include <cstddef>
 #include <filesystem>
 #include <format>
 #include <glm/detail/qualifier.hpp>
 #include <glm/ext/vector_float3.hpp>
+#include <glm/fwd.hpp>
+#include <memory>
 #include <span>
 #include <string>
 #include <tinygltf/tiny_gltf.h>
+#include <vulkan/vulkan_enums.hpp>
 
 bool imageLoad(tinygltf::Image*, const int, std::string*, std::string*, int, int, const unsigned char*, int, void*)
 {
@@ -27,8 +39,10 @@ bool imageLoad(tinygltf::Image*, const int, std::string*, std::string*, int, int
 
 namespace lune
 {
-	vk::PrimitiveTopology modeToVkTopology(int32 mode);
-	void modelToScene(const tinygltf::Model& tinyModel, std::string_view alias, int32 tinySceneIndex, Scene* luneScene);
+	vk::PrimitiveTopology makeTopology(int32 mode);
+	vk::Filter makeFilter(int32 tinyFilter);
+
+	void modelToScene(std::filesystem::path sceneRoot, const tinygltf::Model& tinyModel, std::string_view alias, int32 tinySceneIndex, Scene* luneScene);
 	uint64 processNode(const tinygltf::Model& tinyModel, std::string_view alias, uint32 nodeIndex, Scene* luneScene, EntityBase* parentEntity);
 } // namespace lune
 
@@ -61,20 +75,43 @@ bool lune::gltf::loadInScene(std::filesystem::path gltfScene, std::string_view a
 	{
 		for (size_t i = 0; i < model.scenes.size(); ++i)
 		{
-			modelToScene(model, alias, i, scene);
+			modelToScene(gltfScene.parent_path(), model, alias, i, scene);
 		}
 	}
 
 	return result;
 }
 
-void lune::modelToScene(const tinygltf::Model& tinyModel, std::string_view alias, int32 tinySceneIndex, Scene* scene)
+void lune::modelToScene(std::filesystem::path sceneRoot, const tinygltf::Model& tinyModel, std::string_view alias, int32 tinySceneIndex, Scene* scene)
 {
 	auto& tinyScene = tinyModel.scenes[tinySceneIndex];
 	const size_t tinySceneNodeSize = tinyScene.nodes.size();
 	for (size_t i = 0; i < tinySceneNodeSize; ++i)
 	{
 		processNode(tinyModel, alias, tinyScene.nodes[i], scene, nullptr);
+	}
+
+	auto vkSubsystem = Engine::get()->findSubsystem<VulkanSubsystem>();
+	for (size_t i = 0; i < tinyModel.samplers.size(); ++i)
+	{
+		const auto& tinySampler = tinyModel.samplers[i];
+		vk::SamplerCreateInfo createInfo = vulkan::Sampler::defaultCreateInfo();
+		createInfo.setMagFilter(makeFilter(tinySampler.magFilter)).setMinFilter(makeFilter(tinySampler.minFilter));
+		vkSubsystem->addSampler(std::format("{}::sampler::{}", alias, i), vulkan::Sampler::create(createInfo));
+	}
+	for (size_t i = 0; i < tinyModel.textures.size(); ++i)
+	{
+		const auto& tinyTexture = tinyModel.textures[i];
+		const auto& tinyImage = tinyModel.images[tinyTexture.source];
+		const auto imagePath = sceneRoot / tinyImage.uri;
+		auto newSurface = UniqueSDLSurface(IMG_Load(imagePath.generic_string().c_str()));
+		vkSubsystem->addTextureImage(std::format("{}::texture::{}", alias, i), vulkan::TextureImage::create(newSurface.get()));
+	}
+	for (size_t i = 0; i < tinyModel.materials.size(); ++i)
+	{
+		vulkan::gltf::SharedMaterial newMaterial = std::make_shared<vulkan::gltf::Material>();
+		newMaterial->init(&tinyModel, &tinyModel.materials[i], alias);
+		vkSubsystem->addCustomResource(std::format("{}::material::{}", alias, i), std::move(newMaterial));
 	}
 }
 
@@ -108,8 +145,8 @@ uint64 lune::processNode(const tinygltf::Model& tinyModel, std::string_view alia
 			auto& meshCompPrimitive = meshComp->primitives.emplace_back();
 			meshCompPrimitive.primitiveName = primitiveName;
 			if (primitive.material != -1)
-				meshCompPrimitive.materialName = std::format("{}::material::{}::{}", alias, tinyModel.materials[primitive.material].name, primitive.material);
-			meshCompPrimitive.topology = modeToVkTopology(primitive.mode);
+				meshCompPrimitive.materialName = std::format("{}::material::{}", alias, primitive.material);
+			meshCompPrimitive.topology = makeTopology(primitive.mode);
 
 			std::vector<Vertex33224> vertexBuffer{};
 
@@ -269,7 +306,7 @@ uint64 lune::processNode(const tinygltf::Model& tinyModel, std::string_view alia
 	return newEntity->getId();
 }
 
-vk::PrimitiveTopology lune::modeToVkTopology(int32 mode)
+vk::PrimitiveTopology lune::makeTopology(int32 mode)
 {
 	switch (mode)
 	{
@@ -289,4 +326,99 @@ vk::PrimitiveTopology lune::modeToVkTopology(int32 mode)
 		return vk::PrimitiveTopology::eTriangleFan;
 	}
 	return vk::PrimitiveTopology::eTriangleList;
+}
+
+vk::Filter lune::makeFilter(int32 tinyFilter)
+{
+	switch (tinyFilter)
+	{
+	case TINYGLTF_TEXTURE_FILTER_LINEAR:
+		return vk::Filter::eLinear;
+	case TINYGLTF_TEXTURE_FILTER_NEAREST:
+		return vk::Filter::eNearest;
+	}
+	return vk::Filter::eLinear;
+}
+
+struct ShaderMaterialData
+{
+	lnm::vec3 emissiveFactor{};
+	lnm::vec4 baseColorFactor{};
+	float metallicFactor{};
+	float roughnessFactor{};
+	float normalScale{};
+
+	int32 baseColorTextureIndex{-1};
+	int32 baseColorTextureUVSet{};
+
+	int32 metallicRoughnessTextureIndex{-1};
+	int32 metallicRoughnessTextureUVSet{};
+
+	int32 NormalTextureIndex{-1};
+	int32 NormalTextureUVSet{};
+
+	int32 emissiveTextureIndex{-1};
+	int32 emissiveTextureUVSet{};
+};
+
+void lune::vulkan::gltf::Material::init(const tinygltf::Model* tinyModel, const tinygltf::Material* tinyMaterial, const std::string_view alias)
+{
+	auto vkSubsystem = Engine::get()->findSubsystem<VulkanSubsystem>();
+
+	auto shVert = vkSubsystem->loadShader(*EngineShaderPath("gltf/primitive.vert.spv"));
+	auto shFrag = vkSubsystem->loadShader(*EngineShaderPath("gltf/primitive.frag.spv"));
+
+	auto rasterizationState = GraphicsPipeline::defaultRasterizationState();
+	rasterizationState.setCullMode(tinyMaterial->doubleSided ? vk::CullModeFlagBits::eNone : vk::CullModeFlagBits::eBack);
+
+	vulkan::GraphicsPipeline::StatesOverride statesOverride{};
+	statesOverride.rasterization = &rasterizationState;
+	statesOverride.dynamicStates = vulkan::GraphicsPipeline::defaultDynamicStates();
+	statesOverride.dynamicStates.emplace_back(vk::DynamicState::ePrimitiveTopology);
+
+	mPipeline = GraphicsPipeline::create(shVert, shFrag, statesOverride);
+
+	ShaderMaterialData shaderMat{};
+	shaderMat.emissiveFactor = *reinterpret_cast<const lnm::dvec3*>(tinyMaterial->emissiveFactor.data());
+	shaderMat.baseColorFactor = *reinterpret_cast<const lnm::dvec4*>(tinyMaterial->pbrMetallicRoughness.baseColorFactor.data());
+	shaderMat.metallicFactor = tinyMaterial->pbrMetallicRoughness.metallicFactor;
+	shaderMat.roughnessFactor = tinyMaterial->pbrMetallicRoughness.roughnessFactor;
+	shaderMat.normalScale = tinyMaterial->normalTexture.scale;
+
+	uint8 texCounter = 0;
+
+	if (tinyMaterial->pbrMetallicRoughness.baseColorTexture.index != -1)
+	{
+		shaderMat.baseColorTextureIndex = mTextures.size();
+		shaderMat.baseColorTextureUVSet = tinyMaterial->pbrMetallicRoughness.baseColorTexture.texCoord;
+		mTextures.emplace_back(vkSubsystem->findTextureImage(std::format("{}::texture::{}", alias, tinyMaterial->pbrMetallicRoughness.baseColorTexture.index)));
+		mSamplers.emplace_back(vkSubsystem->findSampler(std::format("{}::sampler::{}", alias, tinyModel->textures[tinyMaterial->pbrMetallicRoughness.baseColorTexture.index].sampler)));
+	}
+
+	if (tinyMaterial->pbrMetallicRoughness.metallicRoughnessTexture.index != -1)
+	{
+		shaderMat.metallicRoughnessTextureIndex = mTextures.size();
+		shaderMat.metallicRoughnessTextureUVSet = tinyMaterial->pbrMetallicRoughness.metallicRoughnessTexture.texCoord;
+		mTextures.emplace_back(vkSubsystem->findTextureImage(std::format("{}::texture::{}", alias, tinyMaterial->pbrMetallicRoughness.metallicRoughnessTexture.index)));
+		mSamplers.emplace_back(vkSubsystem->findSampler(std::format("{}::sampler::{}", alias, tinyModel->textures[tinyMaterial->pbrMetallicRoughness.metallicRoughnessTexture.index].sampler)));
+	}
+
+	if (tinyMaterial->normalTexture.index != -1)
+	{
+		shaderMat.NormalTextureIndex = mTextures.size();
+		shaderMat.NormalTextureUVSet = tinyMaterial->normalTexture.texCoord;
+		mTextures.emplace_back(vkSubsystem->findTextureImage(std::format("{}::texture::{}", alias, tinyMaterial->normalTexture.index)));
+		mSamplers.emplace_back(vkSubsystem->findSampler(std::format("{}::sampler::{}", alias, tinyModel->textures[tinyMaterial->normalTexture.index].sampler)));
+	}
+
+	if (tinyMaterial->emissiveTexture.index != -1)
+	{
+		shaderMat.emissiveTextureIndex = mTextures.size();
+		shaderMat.emissiveTextureUVSet = tinyMaterial->emissiveTexture.texCoord;
+		mTextures.emplace_back(vkSubsystem->findTextureImage(std::format("{}::texture::{}", alias, tinyMaterial->emissiveTexture.index)));
+		mSamplers.emplace_back(vkSubsystem->findSampler(std::format("{}::sampler::{}", alias, tinyModel->textures[tinyMaterial->emissiveTexture.index].sampler)));
+	}
+
+	mBuffer = Buffer::create(vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eTransferDst, sizeof(shaderMat), VMA_MEMORY_USAGE_AUTO, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT);
+	mBuffer->copyTransfer(&shaderMat, 0, sizeof(shaderMat));
 }

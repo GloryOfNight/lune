@@ -2,10 +2,14 @@
 
 #include "lune/vulkan/shader.hxx"
 #include "lune/vulkan/vulkan_core.hxx"
+
+#include <memory>
 #include <vulkan/vulkan_enums.hpp>
+
 
 namespace lune::vulkan
 {
+	using UniqueGraphicsPipeline = std::unique_ptr<class GraphicsPipeline>;
 	class GraphicsPipeline final
 	{
 	public:

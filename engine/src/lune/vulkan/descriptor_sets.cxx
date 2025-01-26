@@ -42,7 +42,7 @@ void lune::vulkan::DescriptorSets::setBufferInfo(std::string_view name, uint32 i
 						  .setBuffer(buffer)
 						  .setOffset(offset)
 						  .setRange(range);
-	mBufferInfos[index].emplace(name, std::move(bufferInfo));
+	mBufferInfos[index].insert_or_assign(std::string(name), std::move(bufferInfo));
 }
 
 void lune::vulkan::DescriptorSets::setImageInfo(std::string_view name, uint32 index, vk::ImageView imageView, vk::Sampler sampler)
@@ -51,7 +51,17 @@ void lune::vulkan::DescriptorSets::setImageInfo(std::string_view name, uint32 in
 						 .setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal)
 						 .setImageView(imageView)
 						 .setSampler(sampler);
-	mImageInfos[index].emplace(name, std::move(imageInfo));
+	mImageInfos[index].insert_or_assign(std::string(name), std::vector<vk::DescriptorImageInfo>{std::move(imageInfo)});
+}
+
+void lune::vulkan::DescriptorSets::addImageInfo(std::string_view name, uint32 index, vk::ImageView imageView, vk::Sampler sampler)
+{
+	auto imageInfo = vk::DescriptorImageInfo()
+						 .setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal)
+						 .setImageView(imageView)
+						 .setSampler(sampler);
+	auto [it, res] = mImageInfos[index].try_emplace(std::string(name));
+	it->second.emplace_back(std::move(imageInfo));
 }
 
 void lune::vulkan::DescriptorSets::updateSets(uint32 index)
@@ -80,7 +90,7 @@ void lune::vulkan::DescriptorSets::updateSets(uint32 index)
 					write.setPBufferInfo(&mBufferInfos[index].at(reflBinding.name));
 					break;
 				case vk::DescriptorType::eCombinedImageSampler:
-					write.setPImageInfo(&mImageInfos[index].at(reflBinding.name));
+					write.setImageInfo(mImageInfos[index].at(reflBinding.name));
 					break;
 				default:
 					LN_LOG(Fatal, Vulkan::DescriptorSets, "Type {} - not supported", static_cast<int32>(write.descriptorType))

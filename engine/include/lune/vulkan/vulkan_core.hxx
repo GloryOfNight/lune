@@ -15,6 +15,7 @@ namespace lune
 {
 	namespace vulkan
 	{
+		using SharedVulkanCustomResource = std::shared_ptr<class VulkanCustomResource>;
 		using SharedGraphicsPipeline = std::shared_ptr<class GraphicsPipeline>;
 		using SharedShader = std::shared_ptr<class Shader>;
 		using SharedPrimitive = std::shared_ptr<class Primitive>;

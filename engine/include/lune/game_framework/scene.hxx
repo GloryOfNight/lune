@@ -1,5 +1,6 @@
 #pragma once
 
+#include "lune/core/gltf.hxx"
 #include "lune/game_framework/components/component.hxx"
 #include "lune/game_framework/entities/entity.hxx"
 #include "lune/game_framework/systems/system.hxx"

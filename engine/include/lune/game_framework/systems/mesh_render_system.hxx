@@ -1,11 +1,13 @@
 #pragma once
 
-#include "system.hxx"
-
+#include "lune/core/gltf.hxx"
 #include "lune/game_framework/components/mesh.hxx"
-#include "lune/vulkan/vulkan_core.hxx"
 #include "lune/vulkan/buffer.hxx"
 #include "lune/vulkan/descriptor_sets.hxx"
+#include "lune/vulkan/vulkan_core.hxx"
+
+#include "system.hxx"
+
 
 namespace lune
 {
@@ -23,7 +25,8 @@ namespace lune
 		struct MeshResources
 		{
 			std::vector<vulkan::SharedPrimitive> primitives{};
-			vulkan::UniqueDescriptorSets descSets{};
+			std::vector<vulkan::UniqueDescriptorSets> descSets{};
+			std::vector<vulkan::SharedVulkanCustomResource> materials{};
 			vulkan::UniqueBuffer stagingModelBuffer{};
 			vulkan::UniqueBuffer modelBuffer{};
 		};
