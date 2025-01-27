@@ -316,7 +316,7 @@ void lune::VulkanSubsystem::sumbitFrame()
 void lune::VulkanSubsystem::loadDefaultAssets()
 {
 	{
-		UniqueSDLSurface surface = UniqueSDLSurface(SDL_CreateSurface(64, 64, SDL_PixelFormat::SDL_PIXELFORMAT_BGRA8888));
+		UniqueSDLSurface surface = UniqueSDLSurface(SDL_CreateSurface(64, 64, SDL_PixelFormat::SDL_PIXELFORMAT_RGBA32));
 		const uint8 magnetta[4] = {255, 0, 255, 255};
 		const uint8 black[4] = {0, 0, 0, 255};
 		const auto wh = surface->w * surface->h;
@@ -353,16 +353,16 @@ void lune::VulkanSubsystem::loadDefaultAssets()
 		addPipeline("lune::gltf::primitive", vulkan::GraphicsPipeline::create(shVert, shFrag, statesOverride));
 	}
 	{
-		UniqueSDLSurface scarlet = UniqueSDLSurface(IMG_Load((*EngineAssetPath("scarlet.png")).generic_string().data()));
+		UniqueSDLSurface scarlet = loadTextureImage((*EngineAssetPath("scarlet.png")).generic_string());
 		addTextureImage("lune::scarlet", vulkan::TextureImage::create(scarlet.get()));
 	}
 	{
-		UniqueSDLSurface right = UniqueSDLSurface(IMG_Load((*EngineAssetPath("skyboxes/sea/right.png")).generic_string().data()));
-		UniqueSDLSurface left = UniqueSDLSurface(IMG_Load((*EngineAssetPath("skyboxes/sea/left.png")).generic_string().data()));
-		UniqueSDLSurface top = UniqueSDLSurface(IMG_Load((*EngineAssetPath("skyboxes/sea/top.png")).generic_string().data()));
-		UniqueSDLSurface bottom = UniqueSDLSurface(IMG_Load((*EngineAssetPath("skyboxes/sea/bottom.png")).generic_string().data()));
-		UniqueSDLSurface front = UniqueSDLSurface(IMG_Load((*EngineAssetPath("skyboxes/sea/front.png")).generic_string().data()));
-		UniqueSDLSurface back = UniqueSDLSurface(IMG_Load((*EngineAssetPath("skyboxes/sea/back.png")).generic_string().data()));
+		UniqueSDLSurface right = loadTextureImage((*EngineAssetPath("skyboxes/sea/right.png")).generic_string());
+		UniqueSDLSurface left = loadTextureImage((*EngineAssetPath("skyboxes/sea/left.png")).generic_string());
+		UniqueSDLSurface top = loadTextureImage((*EngineAssetPath("skyboxes/sea/top.png")).generic_string());
+		UniqueSDLSurface bottom = loadTextureImage((*EngineAssetPath("skyboxes/sea/bottom.png")).generic_string());
+		UniqueSDLSurface front = loadTextureImage((*EngineAssetPath("skyboxes/sea/front.png")).generic_string());
+		UniqueSDLSurface back = loadTextureImage((*EngineAssetPath("skyboxes/sea/back.png")).generic_string());
 		std::array<const SDL_Surface*, 6> surfaces = {right.get(), left.get(), top.get(), bottom.get(), front.get(), back.get()};
 		addTextureImage("lune::skyboxes::sea", vulkan::TextureImage::create(surfaces));
 	}

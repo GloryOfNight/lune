@@ -111,7 +111,7 @@ std::vector<uint64> lune::modelToScene(std::filesystem::path sceneRoot, const ti
 		const auto& tinyTexture = tinyModel.textures[i];
 		const auto& tinyImage = tinyModel.images[tinyTexture.source];
 		const auto imagePath = sceneRoot / tinyImage.uri;
-		auto newSurface = UniqueSDLSurface(IMG_Load(imagePath.generic_string().c_str()));
+		auto newSurface = loadTextureImage(imagePath.generic_string());
 		vkSubsystem->addTextureImage(std::format("{}::texture::{}", alias, i), vulkan::TextureImage::create(newSurface.get()));
 	}
 	for (size_t i = 0; i < tinyModel.materials.size(); ++i)

@@ -8,11 +8,11 @@ vk::Format sdlFormatToVulkan(SDL_PixelFormat format)
 	switch (format)
 	{
 	case SDL_PIXELFORMAT_RGBA32:
-		return vk::Format::eR8G8B8A8Unorm;
+		return vk::Format::eR8G8B8A8Unorm;;
 	case SDL_PIXELFORMAT_BGRA8888:
 		return vk::Format::eB8G8R8A8Unorm;
 	default:
-		LN_LOG(Fatal, Vulkan::Image, "Unsupported format detected!");
+		LN_LOG(Fatal, Vulkan::Image, "Unsupported texture format!");
 		return vk::Format::eUndefined;
 	}
 }
