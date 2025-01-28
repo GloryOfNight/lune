@@ -3,6 +3,7 @@
 #include "backends/imgui_impl_sdl3.h"
 #include "backends/imgui_impl_vulkan.h"
 #include "lune/core/log.hxx"
+#include "lune/vulkan/vulkan_core.hxx"
 #include "lune/vulkan/vulkan_subsystem.hxx"
 
 #include "imgui.h"
@@ -10,6 +11,8 @@
 #include <SDL3/SDL_video.h>
 #include <SDL3/SDL_vulkan.h>
 #include <thread>
+#include <vulkan/vulkan_enums.hpp>
+#include <vulkan/vulkan_handles.hpp>
 
 vk::SurfaceFormatKHR findSurfaceFormat(vk::PhysicalDevice physicalDevice, vk::SurfaceKHR surface, vk::Format format)
 {
@@ -66,14 +69,13 @@ lune::vulkan::View::~View()
 		return true;
 	};
 
-	const auto cleanOtherLam = [semaphore1 = mSemaphoreImageAvailable, semaphore2 = mSemaphoreRenderFinished, fences = mSubmitQueueFences, commandBuffers = mImageCommandBuffers]() -> bool
+	const auto cleanOtherLam = [semaphore1 = mSemaphoreImageAvailable, semaphore2 = mSemaphoreCopyComplete, semaphore3 = mSemaphoreRenderFinished, fences = mSubmitQueueFences]() -> bool
 	{
 		getVulkanContext().device.destroySemaphore(semaphore1);
 		getVulkanContext().device.destroySemaphore(semaphore2);
+		getVulkanContext().device.destroySemaphore(semaphore3);
 		for (auto fence : fences)
 			getVulkanContext().device.destroyFence(fence);
-		if (commandBuffers.size())
-			getVulkanContext().device.freeCommandBuffers(getVulkanContext().graphicsCommandPool, commandBuffers);
 		return true;
 	};
 
@@ -104,7 +106,6 @@ void lune::vulkan::View::init()
 {
 	createSwapchain();
 	createImageViews();
-	createImageCommandBuffers();
 
 	mDepthImage = DepthImage::create(this);
 
@@ -158,19 +159,36 @@ bool lune::vulkan::View::beginNextFrame()
 	ImGui::SetCurrentContext(mImGuiContext);
 	ImGui::Render();
 
-	vk::CommandBuffer commandBuffer = mImageCommandBuffers[mImageIndex];
+	{
+		const vk::CommandBufferAllocateInfo commandBufferAllocateInfo =
+			vk::CommandBufferAllocateInfo()
+				.setLevel(vk::CommandBufferLevel::ePrimary)
+				.setCommandBufferCount(1)
+				.setCommandPool(getVulkanContext().transferCommandPool);
+		mCopyCommandBuffer = getVulkanContext().device.allocateCommandBuffers(commandBufferAllocateInfo)[0];
+	}
+	{
+		const vk::CommandBufferAllocateInfo commandBufferAllocateInfo =
+			vk::CommandBufferAllocateInfo()
+				.setLevel(vk::CommandBufferLevel::ePrimary)
+				.setCommandBufferCount(1)
+				.setCommandPool(getVulkanContext().graphicsCommandPool);
+		mImageCommandBuffer = getVulkanContext().device.allocateCommandBuffers(commandBufferAllocateInfo)[0];
+	}
 
-	const vk::CommandBufferBeginInfo commandBufferBeginInfo(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
-	commandBuffer.begin(commandBufferBeginInfo);
+	const vk::CommandBufferBeginInfo commandBufferBeginInfo =
+		vk::CommandBufferBeginInfo()
+			.setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
+
+	mCopyCommandBuffer.begin(commandBufferBeginInfo);
+	mImageCommandBuffer.begin(commandBufferBeginInfo);
 
 	return true;
 }
 
 void lune::vulkan::View::beginRenderPass()
 {
-	auto commandBuffer = getCurrentImageCmdBuffer();
-
-	std::array<vk::ClearValue, 2> clearValues;
+	std::array<vk::ClearValue, 2> clearValues{};
 	clearValues[0].color = vk::ClearColorValue(std::array<float, 4>{0.0F, 0.0F, 0.0F, 1.0F});
 	clearValues[1].depthStencil = vk::ClearDepthStencilValue(1.0F, 0U);
 
@@ -181,33 +199,41 @@ void lune::vulkan::View::beginRenderPass()
 			.setRenderArea(vk::Rect2D(vk::Offset2D(0, 0), mCurrentExtent))
 			.setClearValues(clearValues);
 
-	commandBuffer.beginRenderPass(renderPassBeginInfo, vk::SubpassContents::eInline);
+	mImageCommandBuffer.beginRenderPass(renderPassBeginInfo, vk::SubpassContents::eInline);
 
-	commandBuffer.setViewport(0, vk::Viewport(0.f, 0.f, static_cast<float>(mCurrentExtent.width), static_cast<float>(mCurrentExtent.height), 0.f, 1.f));
-	commandBuffer.setScissor(0, vk::Rect2D(vk::Offset2D(0, 0), mCurrentExtent));
-	commandBuffer.setDepthTestEnableEXT(true, getDynamicLoader());
+	mImageCommandBuffer.setViewport(0, vk::Viewport(0.f, 0.f, static_cast<float>(mCurrentExtent.width), static_cast<float>(mCurrentExtent.height), 0.f, 1.f));
+	mImageCommandBuffer.setScissor(0, vk::Rect2D(vk::Offset2D(0, 0), mCurrentExtent));
 }
 
 void lune::vulkan::View::sumbit()
 {
-	auto commandBuffer = getCurrentImageCmdBuffer();
+	{ // submit copy command buffer
+		mCopyCommandBuffer.end();
+		const std::array<vk::Semaphore, 1> submitWaitSemaphores = {mSemaphoreImageAvailable};
+		const std::array<vk::Semaphore, 1> submitSignalSemaphores = {mSemaphoreCopyComplete};
+		const std::array<vk::PipelineStageFlags, 1> submitWaitDstStages = {vk::PipelineStageFlagBits::eTopOfPipe};
+		const std::array<vk::CommandBuffer, 1> submitCommandBuffers = {mCopyCommandBuffer};
+		const vk::SubmitInfo submitInfo =
+			vk::SubmitInfo()
+				.setWaitSemaphores(submitWaitSemaphores)
+				.setSignalSemaphores(submitSignalSemaphores)
+				.setWaitDstStageMask(submitWaitDstStages)
+				.setCommandBuffers(submitCommandBuffers);
+		getVulkanContext().transferQueue.submit(submitInfo);
+		mCopyCommandBuffer = nullptr;
+	}
 
 	ImGui::SetCurrentContext(mImGuiContext);
 	auto drawData = ImGui::GetDrawData();
-	ImGui_ImplVulkan_RenderDrawData(drawData, commandBuffer);
+	ImGui_ImplVulkan_RenderDrawData(drawData, mImageCommandBuffer);
 
-	if (!commandBuffer) [[unlikely]]
-	{
-		LN_LOG(Error, Vulkan::View, "Submit called while no frame avaible!")
-		return;
-	}
-	commandBuffer.endRenderPass();
-	commandBuffer.end();
+	mImageCommandBuffer.endRenderPass();
+	mImageCommandBuffer.end();
 
-	const std::array<vk::Semaphore, 1> submitWaitSemaphores = {mSemaphoreImageAvailable};
+	const std::array<vk::Semaphore, 1> submitWaitSemaphores = {mSemaphoreCopyComplete};
 	const std::array<vk::Semaphore, 1> submitSignalSemaphores = {mSemaphoreRenderFinished};
 	const std::array<vk::PipelineStageFlags, 1> submitWaitDstStages = {vk::PipelineStageFlagBits::eColorAttachmentOutput};
-	const std::array<vk::CommandBuffer, 1> submitCommandBuffers = {commandBuffer};
+	const std::array<vk::CommandBuffer, 1> submitCommandBuffers = {mImageCommandBuffer};
 
 	const vk::SubmitInfo submitInfo =
 		vk::SubmitInfo()
@@ -215,8 +241,8 @@ void lune::vulkan::View::sumbit()
 			.setSignalSemaphores(submitSignalSemaphores)
 			.setWaitDstStageMask(submitWaitDstStages)
 			.setCommandBuffers(submitCommandBuffers);
-
 	getVulkanContext().graphicsQueue.submit(submitInfo, mSubmitQueueFences[mImageIndex]);
+	mImageCommandBuffer = nullptr;
 
 	const vk::PresentInfoKHR presentInfo =
 		vk::PresentInfoKHR()
@@ -386,16 +412,6 @@ void lune::vulkan::View::createFramebuffers()
 	}
 }
 
-void lune::vulkan::View::createImageCommandBuffers()
-{
-	const vk::CommandBufferAllocateInfo commandBufferAllocateInfo =
-		vk::CommandBufferAllocateInfo()
-			.setLevel(vk::CommandBufferLevel::ePrimary)
-			.setCommandBufferCount(getImageCount())
-			.setCommandPool(getVulkanContext().graphicsCommandPool);
-	mImageCommandBuffers = getVulkanContext().device.allocateCommandBuffers(commandBufferAllocateInfo);
-}
-
 void lune::vulkan::View::createFences()
 {
 	mSubmitQueueFences.resize(getImageCount());
@@ -409,6 +425,7 @@ void lune::vulkan::View::createFences()
 void lune::vulkan::View::createSemaphores()
 {
 	mSemaphoreImageAvailable = getVulkanContext().device.createSemaphore(vk::SemaphoreCreateInfo());
+	mSemaphoreCopyComplete = getVulkanContext().device.createSemaphore(vk::SemaphoreCreateInfo());
 	mSemaphoreRenderFinished = getVulkanContext().device.createSemaphore(vk::SemaphoreCreateInfo());
 }
 

@@ -6,6 +6,7 @@
 #include "lune/vulkan/pipeline.hxx"
 #include "lune/vulkan/primitive.hxx"
 #include "lune/vulkan/vulkan_subsystem.hxx"
+#include <vulkan/vulkan_handles.hpp>
 
 lune::GizmoSystem::GizmoSystem()
 {
@@ -19,7 +20,7 @@ void lune::GizmoSystem::render(Scene* scene)
 		return;
 
 	auto vkSubsystem = Engine::get()->findSubsystem<VulkanSubsystem>();
-	auto [viewId, imageIndex, commandBuffer] = vkSubsystem->getFrameInfo();
+	vk::CommandBuffer commandBuffer = vkSubsystem->getFrameInfo().renderCommandBuffer;
 
 	auto gizmoX = vkSubsystem->findPrimitive("lune::gizmoX");
 	auto gizmoY = vkSubsystem->findPrimitive("lune::gizmoY");

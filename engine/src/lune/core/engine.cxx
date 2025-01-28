@@ -128,17 +128,11 @@ void lune::Engine::run()
 		{
 			if (vkSubsystem->beginNextFrame(viewId))
 			{
-				auto [viewId, imageIndex, commandBuffer] = vkSubsystem->getFrameInfo();
-
-				for (auto& [sId, s] : mScenes)
-				{
-					s->prepareRender();
-				}
-
 				vkSubsystem->beginRenderPass();
 
 				for (auto& [sId, s] : mScenes)
 				{
+					s->prepareRender();
 					s->render();
 				}
 

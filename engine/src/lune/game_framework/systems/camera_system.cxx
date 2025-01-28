@@ -59,7 +59,9 @@ void lune::CameraSystem::prepareRender(Scene* scene)
 {
 	const auto& entities = scene->getEntities();
 	auto vkSubsystem = Engine::get()->findSubsystem<VulkanSubsystem>();
-	auto [viewId, imageIndex, commandBuffer] = vkSubsystem->getFrameInfo();
+	const auto& frameInfo = vkSubsystem->getFrameInfo();
+	uint32 viewId = frameInfo.viewId;
+	vk::CommandBuffer commandBuffer = frameInfo.copyCommandBuffer;
 
 	if (!mViewProjStagingBuffer)
 		mViewProjStagingBuffer = vulkan::Buffer::create(vk::BufferUsageFlagBits::eTransferSrc, sizeof(ViewProj), VMA_MEMORY_USAGE_AUTO, VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT);
@@ -75,47 +77,31 @@ void lune::CameraSystem::prepareRender(Scene* scene)
 	if (findRes == mViewsProjs.end())
 		return;
 
-	uint32 diff{};
-
 	uint8* pStageBuffer = mViewProjStagingBuffer->map();
 
-	if (uint32 memdiff = memcmp(pStageBuffer, &findRes->second.viewProj, sizeof(lnm::mat4)); memdiff != 0)
+	if (const uint32 diff = memcmp(pStageBuffer, &findRes->second.viewProj, sizeof(lnm::mat4)); diff != 0)
 	{
 		memcpy(pStageBuffer, &findRes->second.viewProj, sizeof(lnm::mat4));
-		diff += memdiff;
+		const vk::BufferCopy bufferCopy = vk::BufferCopy()
+											  .setSrcOffset(0)
+											  .setSize(sizeof(lnm::mat4));
+		commandBuffer.copyBuffer(mViewProjStagingBuffer->getBuffer(), mViewProjBuffer->getBuffer(), bufferCopy);
 	}
-	if (uint32 memdiff = memcmp(pStageBuffer + offsetof(ViewProj, view), &findRes->second.view, sizeof(lnm::mat4)); memdiff != 0)
+	if (const uint32 diff = memcmp(pStageBuffer + offsetof(ViewProj, view), &findRes->second.view, sizeof(lnm::mat4)); diff != 0)
 	{
 		memcpy(pStageBuffer + offsetof(ViewProj, view), &findRes->second.view, sizeof(lnm::mat4));
-		diff += memdiff;
+		const vk::BufferCopy bufferCopy = vk::BufferCopy()
+											  .setSrcOffset(offsetof(ViewProj, view))
+											  .setSize(sizeof(lnm::mat4));
+		commandBuffer.copyBuffer(mViewProjStagingBuffer->getBuffer(), mViewBuffer->getBuffer(), bufferCopy);
 	}
-	if (uint32 memdiff = memcmp(pStageBuffer + offsetof(ViewProj, proj), &findRes->second.proj, sizeof(lnm::mat4)); memdiff != 0)
+	if (const uint32 diff = memcmp(pStageBuffer + offsetof(ViewProj, proj), &findRes->second.proj, sizeof(lnm::mat4)); diff != 0)
 	{
 		memcpy(pStageBuffer + offsetof(ViewProj, proj), &findRes->second.proj, sizeof(lnm::mat4));
-		diff += memdiff;
+		const vk::BufferCopy bufferCopy = vk::BufferCopy()
+											  .setSrcOffset(offsetof(ViewProj, proj))
+											  .setSize(sizeof(lnm::mat4));
+		commandBuffer.copyBuffer(mViewProjStagingBuffer->getBuffer(), mProjBuffer->getBuffer(), bufferCopy);
 	}
-
 	mViewProjStagingBuffer->unmap();
-
-	if (diff)
-	{
-		{
-			const vk::BufferCopy bufferCopy = vk::BufferCopy()
-												  .setSrcOffset(0)
-												  .setSize(sizeof(lnm::mat4));
-			commandBuffer.copyBuffer(mViewProjStagingBuffer->getBuffer(), mViewProjBuffer->getBuffer(), bufferCopy);
-		}
-		{
-			const vk::BufferCopy bufferCopy = vk::BufferCopy()
-												  .setSrcOffset(offsetof(ViewProj, view))
-												  .setSize(sizeof(lnm::mat4));
-			commandBuffer.copyBuffer(mViewProjStagingBuffer->getBuffer(), mViewBuffer->getBuffer(), bufferCopy);
-		}
-		{
-			const vk::BufferCopy bufferCopy = vk::BufferCopy()
-												  .setSrcOffset(offsetof(ViewProj, proj))
-												  .setSize(sizeof(lnm::mat4));
-			commandBuffer.copyBuffer(mViewProjStagingBuffer->getBuffer(), mProjBuffer->getBuffer(), bufferCopy);
-		}
-	}
 }

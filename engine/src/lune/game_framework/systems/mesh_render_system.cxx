@@ -16,6 +16,7 @@
 #include "lune/vulkan/vulkan_subsystem.hxx"
 
 #include <vulkan/vulkan_enums.hpp>
+#include <vulkan/vulkan_handles.hpp>
 
 namespace lune
 {
@@ -44,7 +45,7 @@ void lune::MeshRenderSystem::prepareRender(class Scene* scene)
 {
 	const auto& entities = scene->getEntities();
 	auto vkSubsystem = Engine::get()->findSubsystem<VulkanSubsystem>();
-	auto [viewId, imageIndex, commandBuffer] = vkSubsystem->getFrameInfo();
+	vk::CommandBuffer commandBuffer = vkSubsystem->getFrameInfo().copyCommandBuffer;
 
 	auto cameraSystem = scene->findSystem<CameraSystem>();
 	if (!cameraSystem)
@@ -125,7 +126,7 @@ void lune::MeshRenderSystem::render(class Scene* scene)
 {
 	const auto& entities = scene->getEntities();
 	auto vkSubsystem = Engine::get()->findSubsystem<VulkanSubsystem>();
-	auto [viewId, imageIndex, commandBuffer] = vkSubsystem->getFrameInfo();
+	vk::CommandBuffer commandBuffer = vkSubsystem->getFrameInfo().renderCommandBuffer;
 
 	auto cameraSystem = scene->findSystem<CameraSystem>();
 	if (!cameraSystem)

@@ -2,10 +2,12 @@
 
 #include "lune/vulkan/depth_image.hxx"
 #include "lune/vulkan/msaa_image.hxx"
+
 #include "vulkan_core.hxx"
 
 #include <memory>
 #include <vector>
+#include <vulkan/vulkan_handles.hpp>
 
 struct SDL_Window;
 struct ImGui_ImplVulkanH_Window;
@@ -38,13 +40,8 @@ namespace lune::vulkan
 		SDL_Window* getWindow() const { return mWindow; }
 		ImGui_ImplVulkanH_Window* getImGuiWindow() { return mImGuiWindow; }
 
-		vk::CommandBuffer getCurrentImageCmdBuffer()
-		{
-			if (mImageIndex != UINT32_MAX) [[likely]]
-				return mImageCommandBuffers[mImageIndex];
-			else
-				return vk::CommandBuffer();
-		}
+		vk::CommandBuffer getCurrentImageCmdBuffer() const { return mImageCommandBuffer; }
+		vk::CommandBuffer getCurrentImageCopyCmdBuffer() const { return mCopyCommandBuffer; }
 
 	private:
 		void init();
@@ -60,8 +57,6 @@ namespace lune::vulkan
 		void createImageViews();
 
 		void createFramebuffers();
-
-		void createImageCommandBuffers();
 
 		void createFences();
 
@@ -80,6 +75,9 @@ namespace lune::vulkan
 
 		uint32 mImageIndex{};
 
+		vk::CommandBuffer mImageCommandBuffer{};
+		vk::CommandBuffer mCopyCommandBuffer{};
+
 		UniqueDepthImage mDepthImage;
 
 		UniqueMsaaImage mMsaaImage;
@@ -93,12 +91,10 @@ namespace lune::vulkan
 		std::vector<vk::ImageView> mSwapchainImageViews;
 		uint32 mMinImageCount{};
 
-		std::vector<vk::CommandBuffer> mImageCommandBuffers;
-
 		std::vector<vk::Framebuffer> mFramebuffers;
 
 		std::vector<vk::Fence> mSubmitQueueFences;
 
-		vk::Semaphore mSemaphoreImageAvailable, mSemaphoreRenderFinished;
+		vk::Semaphore mSemaphoreImageAvailable, mSemaphoreCopyComplete, mSemaphoreRenderFinished;
 	};
 } // namespace lune::vulkan

@@ -8,6 +8,6 @@ namespace lune
 {
 	struct MoveComponent : public ComponentBase
 	{
-		float speed{100.f};
+		float speed{15.f};
 	};
 } // namespace lune

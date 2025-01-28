@@ -11,6 +11,7 @@
 #include "lune/vulkan/sampler.hxx"
 #include "lune/vulkan/texture_image.hxx"
 #include "lune/vulkan/vulkan_subsystem.hxx"
+#include <vulkan/vulkan_handles.hpp>
 
 void lune::SpriteRenderSystem::update(Scene* scene, double deltaTime)
 {
@@ -20,7 +21,7 @@ void lune::SpriteRenderSystem::prepareRender(Scene* scene)
 {
 	const auto& entities = scene->getEntities();
 	auto vkSubsystem = Engine::get()->findSubsystem<VulkanSubsystem>();
-	auto [viewId, imageIndex, commandBuffer] = vkSubsystem->getFrameInfo();
+	vk::CommandBuffer commandBuffer = vkSubsystem->getFrameInfo().copyCommandBuffer;
 
 	auto cameraSystem = scene->findSystem<CameraSystem>();
 	if (!cameraSystem)
@@ -99,7 +100,7 @@ void lune::SpriteRenderSystem::render(Scene* scene)
 {
 	const auto& entities = scene->getEntities();
 	auto vkSubsystem = Engine::get()->findSubsystem<VulkanSubsystem>();
-	auto [viewId, imageIndex, commandBuffer] = vkSubsystem->getFrameInfo();
+	vk::CommandBuffer commandBuffer = vkSubsystem->getFrameInfo().renderCommandBuffer;
 
 	auto cameraSystem = scene->findSystem<CameraSystem>();
 	if (!cameraSystem)

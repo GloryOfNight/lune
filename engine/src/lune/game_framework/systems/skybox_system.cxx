@@ -10,6 +10,7 @@
 #include "lune/vulkan/texture_image.hxx"
 #include "lune/vulkan/vulkan_core.hxx"
 #include "lune/vulkan/vulkan_subsystem.hxx"
+#include <vulkan/vulkan_handles.hpp>
 
 lune::SkyboxSystem::SkyboxSystem()
 {
@@ -55,16 +56,13 @@ void lune::SkyboxSystem::prepareRender(class Scene* scene)
 void lune::SkyboxSystem::render(class Scene* scene)
 {
 	auto vkSubsystem = Engine::get()->findSubsystem<VulkanSubsystem>();
-	auto [viewId, imageIndex, commandBuffer] = vkSubsystem->getFrameInfo();
+	vk::CommandBuffer commandBuffer = vkSubsystem->getFrameInfo().renderCommandBuffer;
 
 	for (const auto& [eId, skybox] : mSkyboxes)
 	{
 		mBox->cmdBind(commandBuffer);
 		mPipeline->cmdBind(commandBuffer);
 		skybox.mDescriptorSets->cmdBind(commandBuffer, 0);
-
-		commandBuffer.setDepthTestEnableEXT(false, vulkan::getDynamicLoader());
 		mBox->cmdDraw(commandBuffer);
-		commandBuffer.setDepthTestEnableEXT(true, vulkan::getDynamicLoader());
 	}
 }

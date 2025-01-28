@@ -20,7 +20,8 @@ namespace lune
 	{
 		uint32 viewId{};
 		uint32 imageIndex{};
-		vk::CommandBuffer commandBuffer{};
+		vk::CommandBuffer copyCommandBuffer{};
+		vk::CommandBuffer renderCommandBuffer{};
 	};
 
 	namespace vulkan

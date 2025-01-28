@@ -287,7 +287,8 @@ lune::FrameInfo lune::VulkanSubsystem::getFrameInfo()
 		FrameInfo info{};
 		info.viewId = mCurrentFrameViewId;
 		info.imageIndex = view->getImageIndex();
-		info.commandBuffer = view->getCurrentImageCmdBuffer();
+		info.copyCommandBuffer = view->getCurrentImageCopyCmdBuffer();
+		info.renderCommandBuffer = view->getCurrentImageCmdBuffer();
 
 		return std::move(info);
 	}
@@ -342,7 +343,14 @@ void lune::VulkanSubsystem::loadDefaultAssets()
 	{
 		auto shVert = loadShader(*EngineShaderPath("skybox.vert.spv"));
 		auto shFrag = loadShader(*EngineShaderPath("skybox.frag.spv"));
-		addPipeline("lune::skybox", vulkan::GraphicsPipeline::create(shVert, shFrag));
+
+		auto depthStencil = vulkan::GraphicsPipeline::defaultDepthStencilState();
+		depthStencil.setDepthTestEnable(VK_FALSE);
+
+		vulkan::GraphicsPipeline::StatesOverride statesOverride{};
+		statesOverride.depthStencil = &depthStencil;
+
+		addPipeline("lune::skybox", vulkan::GraphicsPipeline::create(shVert, shFrag, statesOverride));
 	}
 	{
 		auto shVert = loadShader(*EngineShaderPath("gltf/primitive.vert.spv"));

@@ -8,7 +8,7 @@
 
 const std::vector<vk::DynamicState>& lune::vulkan::GraphicsPipeline::defaultDynamicStates()
 {
-	static std::vector<vk::DynamicState> states{vk::DynamicState::eViewport, vk::DynamicState::eScissor, vk::DynamicState::eDepthTestEnable};
+	static std::vector<vk::DynamicState> states{vk::DynamicState::eViewport, vk::DynamicState::eScissor};
 	return states;
 }
 
