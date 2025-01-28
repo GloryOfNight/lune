@@ -1,6 +1,7 @@
 #include "lune/vulkan/texture_image.hxx"
 
 #include "lune/core/log.hxx"
+#include "lune/vulkan/buffer.hxx"
 #include "lune/vulkan/vulkan_subsystem.hxx"
 
 vk::Format sdlFormatToVulkan(SDL_PixelFormat format)
@@ -8,7 +9,7 @@ vk::Format sdlFormatToVulkan(SDL_PixelFormat format)
 	switch (format)
 	{
 	case SDL_PIXELFORMAT_RGBA32:
-		return vk::Format::eR8G8B8A8Unorm;;
+		return vk::Format::eR8G8B8A8Unorm;
 	case SDL_PIXELFORMAT_BGRA8888:
 		return vk::Format::eB8G8R8A8Unorm;
 	default:
@@ -114,36 +115,17 @@ void lune::vulkan::TextureImage::createImageView(vk::ImageViewType type, uint32 
 
 void lune::vulkan::TextureImage::copyPixelsToImage(std::span<const SDL_Surface*> surfaces, uint32 layerCount, vk::Extent3D extent)
 {
-	VkBuffer stagingBuffer;
-	VmaAllocation stagingAllocation;
-	{ // Create staging buffer
-		vk::BufferCreateInfo bufferCreateInfo =
-			vk::BufferCreateInfo()
-				.setSize(vma::getAllocationSize(mVmaAllocation))
-				.setUsage(vk::BufferUsageFlagBits::eTransferSrc)
-				.setSharingMode(vk::SharingMode::eExclusive);
+	const auto vmaUsage = VMA_MEMORY_USAGE_AUTO_PREFER_HOST;
+	const auto vmaFlags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT;
+	UniqueBuffer stagingBuffer = Buffer::create(vk::BufferUsageFlagBits::eTransferSrc, vma::getAllocationSize(mVmaAllocation), vmaUsage, vmaFlags);
 
-		VmaAllocationCreateInfo allocationCreateInfo{};
-		allocationCreateInfo.usage = VMA_MEMORY_USAGE_AUTO;
-		allocationCreateInfo.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT;
-
-		VmaAllocationInfo allocationInfo = {};
-
-		vmaCreateBuffer(getVulkanContext().vmaAllocator, reinterpret_cast<const VkBufferCreateInfo*>(&bufferCreateInfo), &allocationCreateInfo, &stagingBuffer, &stagingAllocation, &allocationInfo);
-	}
-
-	{ // Copy pixels to staging buffer
-		void* data{};
-		vmaMapMemory(getVulkanContext().vmaAllocator, stagingAllocation, &data);
-		const uint32 size = surfaces[0]->w * surfaces[0]->pitch;
-		uint32 offset = 0;
-		for (const SDL_Surface* surface : surfaces)
-		{
-			const uint8* pixels = static_cast<const uint8*>(surface->pixels);
-			std::memcpy(static_cast<uint8*>(data) + offset, pixels, size);
-			offset += size;
-		}
-		vmaUnmapMemory(getVulkanContext().vmaAllocator, stagingAllocation);
+	const uint32 size = surfaces[0]->w * surfaces[0]->pitch;
+	uint32 offset = 0;
+	for (const SDL_Surface* surface : surfaces)
+	{
+		const uint8* pixels = static_cast<const uint8*>(surface->pixels);
+		stagingBuffer->copyMap(pixels, offset, size);
+		offset += size;
 	}
 
 	const vk::CommandBufferAllocateInfo commandBufferAllocateInfo =
@@ -199,7 +181,7 @@ void lune::vulkan::TextureImage::copyPixelsToImage(std::span<const SDL_Surface*>
 				.setImageOffset(vk::Offset3D(0, 0, 0))
 				.setImageExtent(extent);
 
-		commandBuffer.copyBufferToImage(stagingBuffer, mImage, vk::ImageLayout::eTransferDstOptimal, bufferImageCopy);
+		commandBuffer.copyBufferToImage(stagingBuffer->getBuffer(), mImage, vk::ImageLayout::eTransferDstOptimal, bufferImageCopy);
 	}
 
 	{ // Transition image layout
@@ -236,6 +218,4 @@ void lune::vulkan::TextureImage::copyPixelsToImage(std::span<const SDL_Surface*>
 		[[maybe_unused]] vk::Result waitRes = getVulkanContext().device.waitForFences(transferFence, true, UINT64_MAX);
 		getVulkanContext().device.destroyFence(transferFence);
 	}
-
-	vmaDestroyBuffer(getVulkanContext().vmaAllocator, stagingBuffer, stagingAllocation);
 }

@@ -67,7 +67,7 @@ void lune::vulkan::Buffer::copyTransfer(const void* data, size_t offset, size_t 
 {
 	const auto vmaUsage = VMA_MEMORY_USAGE_AUTO_PREFER_HOST;
 	const auto vmaFlags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT;
-	auto stagingBuffer = create(vk::BufferUsageFlagBits::eTransferSrc, size, vmaUsage, vmaFlags);
+	UniqueBuffer stagingBuffer = create(vk::BufferUsageFlagBits::eTransferSrc, size, vmaUsage, vmaFlags);
 
 	stagingBuffer->copyMap(data, 0, size);
 
