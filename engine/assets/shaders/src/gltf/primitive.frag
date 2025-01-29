@@ -8,7 +8,7 @@ layout(location = 4) in vec4 inColor0;
 
 layout(location = 0) out vec4 outColor;
 
-layout(set = 1, binding = 0) uniform sampler2D textures[4]; // 0 - base, 1 - metallicRoughness, 2 - normal, 3 - emissive
+layout(set = 1, binding = 0) uniform sampler2D textures[5]; // 0 - base, 1 - metallicRoughness, 2 - normal, 3 - occlusion, 4 - emissive
 
 layout(set = 1, binding = 1) uniform readonly Material
 {
@@ -22,11 +22,13 @@ layout(set = 1, binding = 1) uniform readonly Material
     int baseColorTextureUVSet;
     int metallicRoughnessTextureUVSet;
     int normalTextureUVSet;
+    int occlusionTextureUVSet;
     int emissiveTextureUVSet;
 } material;
 
 void main()
 {
+    // Base Color
     vec4 baseColor = material.baseColorFactor;
     if (material.baseColorTextureUVSet >= 0)
     {
@@ -34,6 +36,7 @@ void main()
         baseColor *= texture(textures[0], baseUV);
     }
 
+    // Metallic & Roughness
     vec2 metallicRoughnessUV = (material.metallicRoughnessTextureUVSet == 0) ? inUV0 : inUV1;
     vec2 metallicRoughnessValues = vec2(material.metallicFactor, material.roughnessFactor);
     if (material.metallicRoughnessTextureUVSet >= 0)
@@ -44,24 +47,34 @@ void main()
     float metallic = metallicRoughnessValues.x;
     float roughness = metallicRoughnessValues.y;
 
+    // Normal Map
     vec3 normal = normalize(inNormal);
     if (material.normalTextureUVSet >= 0)
     {
         vec2 normalUV = (material.normalTextureUVSet == 0) ? inUV0 : inUV1;
         vec3 normalTex = texture(textures[2], normalUV).rgb;
-        normalTex = normalTex * 2.0 - 1.0; // Transform to [-1, 1] range
+        normalTex = normalTex * 2.0 - 1.0; // Convert to [-1,1] range
         normal = normalize(normal + material.normalScale * normalTex);
     }
 
+    // Occlusion (Ambient Occlusion)
+    float occlusion = 1.0;
+    if (material.occlusionTextureUVSet >= 0)
+    {
+        vec2 occlusionUV = (material.occlusionTextureUVSet == 0) ? inUV0 : inUV1;
+        occlusion = texture(textures[3], occlusionUV).r;
+    }
+
+    // Emissive Color
     vec3 emissive = material.emissiveFactor;
     if (material.emissiveTextureUVSet >= 0)
     {
         vec2 emissiveUV = (material.emissiveTextureUVSet == 0) ? inUV0 : inUV1;
-        emissive *= texture(textures[3], emissiveUV).rgb;
+        emissive *= texture(textures[4], emissiveUV).rgb;
     }
 
-    // Basic PBR approximation combining all factors
-    vec3 finalColor = baseColor.rgb * (1.0 - metallic) + emissive;
+    // Final Color (No lighting, just textures & factors)
+    vec3 finalColor = baseColor.rgb * occlusion + emissive;
 
     outColor = vec4(finalColor, baseColor.a);
 }

@@ -53,9 +53,6 @@ void lune::MeshRenderSystem::prepareRender(class Scene* scene)
 	if (!cameraSystem)
 		return;
 
-	if (!mPipeline)
-		mPipeline = vkSubsystem->findPipeline("lune::gltf::primitive");
-
 	auto eIds = scene->getComponentEntities<MeshComponent>();
 	for (uint64 eId : eIds)
 	{

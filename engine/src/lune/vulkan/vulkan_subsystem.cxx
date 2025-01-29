@@ -354,14 +354,6 @@ void lune::VulkanSubsystem::loadDefaultAssets()
 		addPipeline("lune::skybox", vulkan::GraphicsPipeline::create(shVert, shFrag, statesOverride));
 	}
 	{
-		auto shVert = loadShader(*EngineShaderPath("gltf/primitive.vert.spv"));
-		auto shFrag = loadShader(*EngineShaderPath("gltf/primitive.frag.spv"));
-		vulkan::GraphicsPipeline::StatesOverride statesOverride{};
-		statesOverride.dynamicStates = vulkan::GraphicsPipeline::defaultDynamicStates();
-		statesOverride.dynamicStates.emplace_back(vk::DynamicState::ePrimitiveTopology);
-		addPipeline("lune::gltf::primitive", vulkan::GraphicsPipeline::create(shVert, shFrag, statesOverride));
-	}
-	{
 		UniqueSDLSurface scarlet = loadTextureImage((*EngineAssetPath("scarlet.png")).generic_string());
 		addTextureImage("lune::scarlet", vulkan::TextureImage::create(scarlet.get()));
 	}

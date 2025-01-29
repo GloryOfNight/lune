@@ -379,7 +379,8 @@ struct ShaderMaterialData
 
 	int32 baseColorTextureUVSet{-1};
 	int32 metallicRoughnessTextureUVSet{-1};
-	int32 NormalTextureUVSet{-1};
+	int32 normalTextureUVSet{-1};
+	int32 occlusioTextureUVSet{-1};
 	int32 emissiveTextureUVSet{-1};
 };
 
@@ -428,16 +429,23 @@ void lune::gltf::Material::init(const tinygltf::Model* tinyModel, const tinygltf
 
 	if (tinyMaterial->normalTexture.index != -1)
 	{
-		shaderMat.NormalTextureUVSet = tinyMaterial->normalTexture.texCoord;
+		shaderMat.normalTextureUVSet = tinyMaterial->normalTexture.texCoord;
 		mTextures[2] = (vkSubsystem->findTextureImage(std::format("{}::texture::{}", alias, tinyMaterial->normalTexture.index)));
 		mSamplers[2] = (vkSubsystem->findSampler(std::format("{}::sampler::{}", alias, tinyModel->textures[tinyMaterial->normalTexture.index].sampler)));
+	}
+
+	if (tinyMaterial->occlusionTexture.index != -1)
+	{
+		shaderMat.occlusioTextureUVSet = tinyMaterial->occlusionTexture.texCoord;
+		mTextures[3] = (vkSubsystem->findTextureImage(std::format("{}::texture::{}", alias, tinyMaterial->occlusionTexture.index)));
+		mSamplers[3] = (vkSubsystem->findSampler(std::format("{}::sampler::{}", alias, tinyModel->textures[tinyMaterial->occlusionTexture.index].sampler)));
 	}
 
 	if (tinyMaterial->emissiveTexture.index != -1)
 	{
 		shaderMat.emissiveTextureUVSet = tinyMaterial->emissiveTexture.texCoord;
-		mTextures[3] = (vkSubsystem->findTextureImage(std::format("{}::texture::{}", alias, tinyMaterial->emissiveTexture.index)));
-		mSamplers[3] = (vkSubsystem->findSampler(std::format("{}::sampler::{}", alias, tinyModel->textures[tinyMaterial->emissiveTexture.index].sampler)));
+		mTextures[4] = (vkSubsystem->findTextureImage(std::format("{}::texture::{}", alias, tinyMaterial->emissiveTexture.index)));
+		mSamplers[4] = (vkSubsystem->findSampler(std::format("{}::sampler::{}", alias, tinyModel->textures[tinyMaterial->emissiveTexture.index].sampler)));
 	}
 
 	mBuffer = vulkan::Buffer::create(vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eTransferDst, sizeof(shaderMat), VMA_MEMORY_USAGE_AUTO, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT);

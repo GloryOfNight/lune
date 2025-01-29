@@ -21,7 +21,6 @@ namespace lune
 		virtual void render(class Scene* scene) override;
 
 	private:
-		vulkan::SharedGraphicsPipeline mPipeline{};
 		struct MeshResources
 		{
 			std::vector<vulkan::SharedPrimitive> primitives{};
