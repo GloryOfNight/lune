@@ -176,9 +176,10 @@ uint64 lune::processNode(const tinygltf::Model& tinyModel, std::string_view alia
 				meshCompPrimitive.materialName = std::format("{}::material::{}", alias, primitive.material);
 			meshCompPrimitive.topology = makeTopology(primitive.mode);
 
-			std::vector<Vertex33224> vertexBuffer{};
+			std::vector<Vertex343224> vertexBuffer{};
 
 			int32 positionAttrIndex{-1};
+			int32 tangentAttrIndex{-1};
 			int32 normalAttrIndex{-1};
 			std::vector<int32> texCoordsAttrIndices{};
 			std::vector<int32> colorAttrIndices{};
@@ -188,6 +189,10 @@ uint64 lune::processNode(const tinygltf::Model& tinyModel, std::string_view alia
 				if (name == "POSITION")
 				{
 					positionAttrIndex = index;
+				}
+				else if (name == "TANGENT")
+				{
+					tangentAttrIndex = index;
 				}
 				else if (name == "NORMAL")
 				{
@@ -204,6 +209,7 @@ uint64 lune::processNode(const tinygltf::Model& tinyModel, std::string_view alia
 			}
 
 			const lnm::vec3* positionsData = nullptr;
+			const lnm::vec4* tangentData = nullptr;
 			const lnm::vec3* normalData = nullptr;
 			const lnm::uint8* uv0 = nullptr;
 			const lnm::uint8* uv1 = nullptr;
@@ -212,17 +218,24 @@ uint64 lune::processNode(const tinygltf::Model& tinyModel, std::string_view alia
 			size_t positionBufferCount = 0;
 			if (positionAttrIndex != -1)
 			{
-				const auto& positionAccessor = tinyModel.accessors[positionAttrIndex];
-				const auto& positionsBufferView = tinyModel.bufferViews[positionAccessor.bufferView];
-				positionsData = reinterpret_cast<const lnm::vec3*>(tinyModel.buffers[positionsBufferView.buffer].data.data() + positionsBufferView.byteOffset + positionAccessor.byteOffset);
-				positionBufferCount = positionAccessor.count;
+				const auto& accessor = tinyModel.accessors[positionAttrIndex];
+				const auto& bufferView = tinyModel.bufferViews[accessor.bufferView];
+				positionsData = reinterpret_cast<const lnm::vec3*>(tinyModel.buffers[bufferView.buffer].data.data() + bufferView.byteOffset + accessor.byteOffset);
+				positionBufferCount = accessor.count;
+			}
+
+			if (tangentAttrIndex != -1)
+			{
+				const auto& accessor = tinyModel.accessors[tangentAttrIndex];
+				const auto& bufferView = tinyModel.bufferViews[accessor.bufferView];
+				tangentData = reinterpret_cast<const lnm::vec4*>(tinyModel.buffers[bufferView.buffer].data.data() + bufferView.byteOffset + accessor.byteOffset);
 			}
 
 			if (normalAttrIndex != -1)
 			{
-				const auto& normalAccessor = tinyModel.accessors[normalAttrIndex];
-				const auto& normalBufferView = tinyModel.bufferViews[normalAccessor.bufferView];
-				normalData = reinterpret_cast<const lnm::vec3*>(tinyModel.buffers[normalBufferView.buffer].data.data() + normalBufferView.byteOffset + normalAccessor.byteOffset);
+				const auto& accessor = tinyModel.accessors[normalAttrIndex];
+				const auto& bufferView = tinyModel.bufferViews[accessor.bufferView];
+				normalData = reinterpret_cast<const lnm::vec3*>(tinyModel.buffers[bufferView.buffer].data.data() + bufferView.byteOffset + accessor.byteOffset);
 			}
 
 			for (size_t k = 0; k < texCoordsAttrIndices.size(); ++k)
@@ -271,6 +284,10 @@ uint64 lune::processNode(const tinygltf::Model& tinyModel, std::string_view alia
 			for (size_t k = 0; k < positionBufferCount; ++k)
 			{
 				vertexBuffer[k].position = *(positionsData + k);
+				if (tangentData)
+				{
+					vertexBuffer[k].tangent = *(tangentData + k);
+				}
 				if (normalData)
 				{
 					vertexBuffer[k].normal = *(normalData + k);
@@ -324,7 +341,7 @@ uint64 lune::processNode(const tinygltf::Model& tinyModel, std::string_view alia
 			}
 
 			auto vkSubsystem = Engine::get()->findSubsystem<VulkanSubsystem>();
-			vkSubsystem->addPrimitive(primitiveName, vulkan::Primitive::create(vertexBuffer.data(), vertexBuffer.size(), sizeof(Vertex33224), indicesData, indiciesCount, indiciesSizeof));
+			vkSubsystem->addPrimitive(primitiveName, vulkan::Primitive::create(vertexBuffer.data(), vertexBuffer.size(), sizeof(Vertex343224), indicesData, indiciesCount, indiciesSizeof));
 
 			// load textures to gpu
 			// ??? save somewhere materials for reuse

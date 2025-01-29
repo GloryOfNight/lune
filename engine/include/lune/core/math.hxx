@@ -51,9 +51,10 @@ namespace lune
 		lnm::vec2 uv{};
 	};
 
-	struct Vertex33224
+	struct Vertex343224
 	{
 		lnm::vec3 position{};
+		lnm::vec4 tangent{};
 		lnm::vec3 normal{};
 		lnm::vec2 uv0{};
 		lnm::vec2 uv1{};
