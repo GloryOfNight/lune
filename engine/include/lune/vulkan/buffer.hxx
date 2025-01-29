@@ -8,7 +8,7 @@ namespace lune::vulkan
 {
 	using UniqueBuffer = std::unique_ptr<class Buffer>;
 
-	class Buffer
+	class Buffer final
 	{
 	public:
 		Buffer() = default;

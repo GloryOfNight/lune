@@ -7,17 +7,18 @@
 #include "lune/core/log.hxx"
 #include "lune/core/sdl.hxx"
 #include "lune/lune.hxx"
+#include "lune/vulkan/material.hxx"
 #include "lune/vulkan/pipeline.hxx"
 #include "lune/vulkan/primitive.hxx"
 #include "lune/vulkan/sampler.hxx"
 #include "lune/vulkan/shader.hxx"
 #include "lune/vulkan/texture_image.hxx"
 #include "lune/vulkan/vulkan_core.hxx"
-#include "lune/vulkan/vulkan_custom_resource.hxx"
 
 #include <vector>
 #include <vulkan/vulkan_core.h>
 #include <vulkan/vulkan_structs.hpp>
+
 
 #define LUNE_USE_VALIDATION
 
@@ -53,7 +54,7 @@ lune::VulkanSubsystem::~VulkanSubsystem()
 	mGraphicsPipelines.clear();
 	mShaders.clear();
 	mPrimitives.clear();
-	mCustomResources.clear();
+	mMaterials.clear();
 	mViews.clear();
 
 	getVulkanDeleteQueue().cleanup();
@@ -251,20 +252,20 @@ lune::vulkan::SharedSampler lune::VulkanSubsystem::findSampler(const std::string
 	return findRes != mSamplers.end() ? findRes->second : nullptr;
 }
 
-void lune::VulkanSubsystem::addCustomResource(std::string name, vulkan::SharedVulkanCustomResource resource)
+void lune::VulkanSubsystem::addMaterial(std::string name, vulkan::SharedMaterial material)
 {
-	if (mCustomResources.find(name) != mCustomResources.end())
+	if (mMaterials.find(name) != mMaterials.end())
 	{
 		LN_LOG(Fatal, Vulkan, "Can't emplace new primitive, name already taken: {}", name);
 		return;
 	}
-	mCustomResources.emplace(name, std::move(resource));
+	mMaterials.emplace(name, std::move(material));
 }
 
-lune::vulkan::SharedVulkanCustomResource lune::VulkanSubsystem::findCustomResource(const std::string& name)
+lune::vulkan::SharedMaterial lune::VulkanSubsystem::findMaterial(const std::string& name)
 {
-	auto findRes = mCustomResources.find(name);
-	return findRes != mCustomResources.end() ? findRes->second : nullptr;
+	auto findRes = mMaterials.find(name);
+	return findRes != mMaterials.end() ? findRes->second : nullptr;
 }
 
 bool lune::VulkanSubsystem::beginNextFrame(uint32 viewId)

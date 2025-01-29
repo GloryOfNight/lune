@@ -26,7 +26,7 @@ namespace lune
 		{
 			std::vector<vulkan::SharedPrimitive> primitives{};
 			std::vector<vulkan::UniqueDescriptorSets> descSets{};
-			std::vector<vulkan::SharedVulkanCustomResource> materials{};
+			std::vector<vulkan::SharedMaterial> materials{};
 			vulkan::UniqueBuffer stagingModelBuffer{};
 			vulkan::UniqueBuffer modelBuffer{};
 		};

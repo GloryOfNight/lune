@@ -53,7 +53,7 @@ void lune::vulkan::MsaaImage::createImage()
 			.setSharingMode(vk::SharingMode::eExclusive);
 
 	VmaAllocationCreateInfo vmaAllocCreateInfo{};
-	vmaAllocCreateInfo.usage = VMA_MEMORY_USAGE_AUTO;
+	vmaAllocCreateInfo.usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE;
 	VmaAllocationInfo allocInfo{};
 	vmaCreateImage(getVulkanContext().vmaAllocator, reinterpret_cast<const VkImageCreateInfo*>(&imageCreateInfo), &vmaAllocCreateInfo, reinterpret_cast<VkImage*>(&mImage), &mVmaAllocation, &allocInfo);
 }

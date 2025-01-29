@@ -8,7 +8,7 @@ namespace lune::vulkan
 {
 	using UniqueSampler = std::unique_ptr<class Sampler>;
 
-	class Sampler
+	class Sampler final
 	{
 	public:
 		Sampler() = default;

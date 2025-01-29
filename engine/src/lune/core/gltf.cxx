@@ -11,6 +11,7 @@
 #include "lune/game_framework/entities/entity.hxx"
 #include "lune/game_framework/scene.hxx"
 #include "lune/vulkan/buffer.hxx"
+#include "lune/vulkan/material.hxx"
 #include "lune/vulkan/pipeline.hxx"
 #include "lune/vulkan/primitive.hxx"
 #include "lune/vulkan/sampler.hxx"
@@ -30,7 +31,15 @@
 #include <span>
 #include <string>
 #include <tinygltf/tiny_gltf.h>
-#include <vulkan/vulkan_enums.hpp>
+
+namespace lune::gltf
+{
+	class Material : public vulkan::Material
+	{
+	public:
+		void init(const tinygltf::Model* tinyModel, const tinygltf::Material* tinyMaterial, const std::string_view alias);
+	};
+} // namespace lune::gltf
 
 bool imageLoad(tinygltf::Image*, const int, std::string*, std::string*, int, int, const unsigned char*, int, void*)
 {
@@ -116,9 +125,9 @@ std::vector<uint64> lune::modelToScene(std::filesystem::path sceneRoot, const ti
 	}
 	for (size_t i = 0; i < tinyModel.materials.size(); ++i)
 	{
-		vulkan::gltf::SharedMaterial newMaterial = std::make_shared<vulkan::gltf::Material>();
+		std::shared_ptr<gltf::Material> newMaterial = std::make_shared<gltf::Material>();
 		newMaterial->init(&tinyModel, &tinyModel.materials[i], alias);
-		vkSubsystem->addCustomResource(std::format("{}::material::{}", alias, i), std::move(newMaterial));
+		vkSubsystem->addMaterial(std::format("{}::material::{}", alias, i), newMaterial);
 	}
 
 	return rootEntities;
@@ -374,14 +383,14 @@ struct ShaderMaterialData
 	int32 emissiveTextureUVSet{-1};
 };
 
-void lune::vulkan::gltf::Material::init(const tinygltf::Model* tinyModel, const tinygltf::Material* tinyMaterial, const std::string_view alias)
+void lune::gltf::Material::init(const tinygltf::Model* tinyModel, const tinygltf::Material* tinyMaterial, const std::string_view alias)
 {
 	auto vkSubsystem = Engine::get()->findSubsystem<VulkanSubsystem>();
 
 	auto shVert = vkSubsystem->loadShader(*EngineShaderPath("gltf/primitive.vert.spv"));
 	auto shFrag = vkSubsystem->loadShader(*EngineShaderPath("gltf/primitive.frag.spv"));
 
-	auto rasterizationState = GraphicsPipeline::defaultRasterizationState();
+	auto rasterizationState = vulkan::GraphicsPipeline::defaultRasterizationState();
 	rasterizationState.setCullMode(tinyMaterial->doubleSided ? vk::CullModeFlagBits::eNone : vk::CullModeFlagBits::eFront);
 
 	vulkan::GraphicsPipeline::StatesOverride statesOverride{};
@@ -389,7 +398,7 @@ void lune::vulkan::gltf::Material::init(const tinygltf::Model* tinyModel, const 
 	statesOverride.dynamicStates = vulkan::GraphicsPipeline::defaultDynamicStates();
 	statesOverride.dynamicStates.emplace_back(vk::DynamicState::ePrimitiveTopology);
 
-	mPipeline = GraphicsPipeline::create(shVert, shFrag, statesOverride);
+	mPipeline = vulkan::GraphicsPipeline::create(shVert, shFrag, statesOverride);
 
 	ShaderMaterialData shaderMat{};
 	shaderMat.emissiveFactor = *reinterpret_cast<const lnm::dvec3*>(tinyMaterial->emissiveFactor.data());
@@ -400,8 +409,8 @@ void lune::vulkan::gltf::Material::init(const tinygltf::Model* tinyModel, const 
 
 	uint8 texCounter = 0;
 
-	mTextures = std::vector<SharedTextureImage>(4, vkSubsystem->findTextureImage("lune::default"));
-	mSamplers = std::vector<SharedSampler>(4, vkSubsystem->findSampler("lune::default"));
+	mTextures = std::vector<vulkan::SharedTextureImage>(4, vkSubsystem->findTextureImage("lune::default"));
+	mSamplers = std::vector<vulkan::SharedSampler>(4, vkSubsystem->findSampler("lune::default"));
 
 	if (tinyMaterial->pbrMetallicRoughness.baseColorTexture.index != -1)
 	{
@@ -431,7 +440,7 @@ void lune::vulkan::gltf::Material::init(const tinygltf::Model* tinyModel, const 
 		mSamplers[3] = (vkSubsystem->findSampler(std::format("{}::sampler::{}", alias, tinyModel->textures[tinyMaterial->emissiveTexture.index].sampler)));
 	}
 
-	mBuffer = Buffer::create(vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eTransferDst, sizeof(shaderMat), VMA_MEMORY_USAGE_AUTO, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT);
+	mBuffer = vulkan::Buffer::create(vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eTransferDst, sizeof(shaderMat), VMA_MEMORY_USAGE_AUTO, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT);
 	mBuffer->copyTransfer(&shaderMat, 0, sizeof(shaderMat));
 }
 

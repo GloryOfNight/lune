@@ -73,8 +73,8 @@ namespace lune
 		void addSampler(std::string name, vulkan::SharedSampler sampler);
 		vulkan::SharedSampler findSampler(const std::string& name);
 
-		void addCustomResource(std::string name, vulkan::SharedVulkanCustomResource resource);
-		vulkan::SharedVulkanCustomResource findCustomResource(const std::string& name);
+		void addMaterial(std::string name, vulkan::SharedMaterial material);
+		vulkan::SharedMaterial findMaterial(const std::string& name);
 
 		bool beginNextFrame(uint32 viewId);
 		FrameInfo getFrameInfo();
@@ -98,7 +98,7 @@ namespace lune
 
 		std::unordered_map<std::string, vulkan::SharedSampler> mSamplers{};
 
-		std::unordered_map<std::string, vulkan::SharedVulkanCustomResource> mCustomResources{};
+		std::unordered_map<std::string, vulkan::SharedMaterial> mMaterials{};
 
 		std::map<uint32, std::unique_ptr<vulkan::View>> mViews{};
 	};

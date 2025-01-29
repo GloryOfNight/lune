@@ -9,6 +9,7 @@
 #include "lune/game_framework/systems/camera_system.hxx"
 #include "lune/vulkan/buffer.hxx"
 #include "lune/vulkan/descriptor_sets.hxx"
+#include "lune/vulkan/material.hxx"
 #include "lune/vulkan/pipeline.hxx"
 #include "lune/vulkan/primitive.hxx"
 #include "lune/vulkan/sampler.hxx"
@@ -17,6 +18,7 @@
 
 #include <vulkan/vulkan_enums.hpp>
 #include <vulkan/vulkan_handles.hpp>
+
 
 namespace lune
 {
@@ -72,8 +74,7 @@ void lune::MeshRenderSystem::prepareRender(class Scene* scene)
 			{
 				resources.primitives.emplace_back(vkSubsystem->findPrimitive(primitive.primitiveName));
 
-				auto& materialRes = resources.materials.emplace_back(vkSubsystem->findCustomResource(primitive.materialName));
-				auto material = dynamic_cast<const vulkan::gltf::Material*>(materialRes.get());
+				auto& material = resources.materials.emplace_back(vkSubsystem->findMaterial(primitive.materialName));
 
 				auto& descSet = resources.descSets.emplace_back(vulkan::DescriptorSets::create(material->getPipeline(), 1));
 				descSet->setBufferInfo("viewProj", 0, cameraSystem->getViewProjectionBuffer()->getBuffer(), 0, cameraSystem->getViewProjectionBuffer()->getSize());
