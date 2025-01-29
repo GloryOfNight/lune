@@ -165,11 +165,12 @@ uint64 lune::processNode(const tinygltf::Model& tinyModel, std::string_view alia
 
 		auto meshComp = newEntity->addComponent<MeshComponent>();
 
-		const std::string primitiveAlias = std::format("{}::{}::{}", alias, node.name, nodeMesh.name);
+		const std::string primitiveAlias = std::format("{}::node::{}::mesh::{}", alias, nodeIndex, node.mesh);
 		for (size_t i = 0; i < nodeMesh.primitives.size(); ++i)
 		{
 			const auto& primitive = nodeMesh.primitives[i];
 			const std::string primitiveName = std::format("{}::primitive::{}", primitiveAlias, i);
+
 			auto& meshCompPrimitive = meshComp->primitives.emplace_back();
 			meshCompPrimitive.primitiveName = primitiveName;
 			if (primitive.material != -1)
