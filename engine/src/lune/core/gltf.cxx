@@ -410,8 +410,8 @@ void lune::gltf::Material::init(const tinygltf::Model* tinyModel, const tinygltf
 
 	uint8 texCounter = 0;
 
-	mTextures = std::vector<vulkan::SharedTextureImage>(4, vkSubsystem->findTextureImage("lune::default"));
-	mSamplers = std::vector<vulkan::SharedSampler>(4, vkSubsystem->findSampler("lune::default"));
+	mTextures = std::vector<vulkan::SharedTextureImage>(5, vkSubsystem->findTextureImage("lune::default"));
+	mSamplers = std::vector<vulkan::SharedSampler>(5, vkSubsystem->findSampler("lune::default"));
 
 	if (tinyMaterial->pbrMetallicRoughness.baseColorTexture.index != -1)
 	{
