@@ -1,7 +1,6 @@
 #include "lune/vulkan/depth_image.hxx"
 
 #include "lune/core/log.hxx"
-#include "lune/vulkan/view.hxx"
 #include "lune/vulkan/vulkan_subsystem.hxx"
 
 lune::vulkan::DepthImage::~DepthImage()
@@ -20,33 +19,32 @@ lune::vulkan::DepthImage::~DepthImage()
 	getVulkanDeleteQueue().push(cleanImageAlloc);
 }
 
-lune::vulkan::UniqueDepthImage lune::vulkan::DepthImage::create(View* view)
+lune::vulkan::UniqueDepthImage lune::vulkan::DepthImage::create(vk::Extent2D extent)
 
 {
 	auto newDepthImage = std::make_unique<DepthImage>();
-	newDepthImage->init(view);
+	newDepthImage->init(extent);
 	return std::move(newDepthImage);
 }
 
-void lune::vulkan::DepthImage::init(View* view)
+void lune::vulkan::DepthImage::init(vk::Extent2D extent)
 {
 	mFormat = getVulkanConfig().depthFormat;
-	mExtent = view->getCurrentExtent();
 	mSampleCount = getVulkanConfig().sampleCount;
 
-	createImage();
+	createImage(extent);
 	createImageView();
 
 	transitionImageLayout(vk::ImageLayout::eUndefined, vk::ImageLayout::eDepthStencilAttachmentOptimal);
 }
 
-void lune::vulkan::DepthImage::createImage()
+void lune::vulkan::DepthImage::createImage(vk::Extent2D extent)
 {
 	const vk::ImageCreateInfo imageCreateInfo =
 		vk::ImageCreateInfo()
 			.setImageType(vk::ImageType::e2D)
 			.setFormat(mFormat)
-			.setExtent(vk::Extent3D(mExtent, 1))
+			.setExtent(vk::Extent3D(extent, 1))
 			.setMipLevels(1)
 			.setArrayLayers(1)
 			.setSamples(mSampleCount)

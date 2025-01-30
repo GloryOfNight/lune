@@ -1,12 +1,11 @@
 #include "lune/vulkan/msaa_image.hxx"
 
-#include "lune/vulkan/view.hxx"
 #include "lune/vulkan/vulkan_subsystem.hxx"
 
-lune::vulkan::UniqueMsaaImage lune::vulkan::MsaaImage::create(View* view)
+lune::vulkan::UniqueMsaaImage lune::vulkan::MsaaImage::create(vk::Extent2D extent)
 {
 	auto newMsaaImage = std::make_unique<MsaaImage>();
-	newMsaaImage->init(view);
+	newMsaaImage->init(extent);
 	return std::move(newMsaaImage);
 }
 
@@ -26,23 +25,22 @@ lune::vulkan::MsaaImage::~MsaaImage()
 	getVulkanDeleteQueue().push(cleanImageAlloc);
 }
 
-void lune::vulkan::MsaaImage::init(View* view)
+void lune::vulkan::MsaaImage::init(vk::Extent2D extent)
 {
 	mFormat = getVulkanConfig().colorFormat;
-	mExtent = view->getCurrentExtent();
 	mSampleCount = getVulkanConfig().sampleCount;
 
-	createImage();
+	createImage(extent);
 	createImageView();
 }
 
-void lune::vulkan::MsaaImage::createImage()
+void lune::vulkan::MsaaImage::createImage(vk::Extent2D extent)
 {
 	const vk::ImageCreateInfo imageCreateInfo =
 		vk::ImageCreateInfo()
 			.setImageType(vk::ImageType::e2D)
 			.setFormat(mFormat)
-			.setExtent(vk::Extent3D(mExtent, 1))
+			.setExtent(vk::Extent3D(extent, 1))
 			.setMipLevels(1)
 			.setArrayLayers(1)
 			.setSamples(mSampleCount)

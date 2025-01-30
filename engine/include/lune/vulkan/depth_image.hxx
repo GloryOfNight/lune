@@ -3,6 +3,7 @@
 #include "lune/vulkan/vulkan_core.hxx"
 
 #include <memory>
+#include <vulkan/vulkan_structs.hpp>
 
 namespace lune::vulkan
 {
@@ -16,21 +17,20 @@ namespace lune::vulkan
 		DepthImage(DepthImage&&) = default;
 		~DepthImage();
 
-		static UniqueDepthImage create(class View* view);
+		static UniqueDepthImage create(vk::Extent2D extent);
 
 		vk::Format getFormat() const { return mFormat; }
 		vk::Image getImage() const { return mImage; }
 		vk::ImageView getImageView() const { return mImageView; }
 
 	private:
-		void init(class View* view);
+		void init(vk::Extent2D extent);
 
-		void createImage();
+		void createImage(vk::Extent2D extent);
 		void createImageView();
 		void transitionImageLayout(vk::ImageLayout oldLayout, vk::ImageLayout newLayout);
 
 		vk::Format mFormat{vk::Format::eD32Sfloat};
-		vk::Extent2D mExtent{};
 		vk::SampleCountFlagBits mSampleCount{vk::SampleCountFlagBits::e1};
 
 		vk::Image mImage{};

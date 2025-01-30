@@ -14,20 +14,19 @@ namespace lune::vulkan
 		MsaaImage(MsaaImage&&) = default;
 		~MsaaImage();
 
-		static UniqueMsaaImage create(class View* view);
+		static UniqueMsaaImage create(vk::Extent2D extent);
 
 		vk::Format getFormat() const { return mFormat; }
 		vk::Image getImage() const { return mImage; }
 		vk::ImageView getImageView() const { return mImageView; }
 
 	private:
-		void init(class View* view);
+		void init(vk::Extent2D extent);
 
-		void createImage();
+		void createImage(vk::Extent2D extent);
 		void createImageView();
 
 		vk::Format mFormat{};
-		vk::Extent2D mExtent{};
 		vk::SampleCountFlagBits mSampleCount{vk::SampleCountFlagBits::e1};
 
 		vk::Image mImage{};

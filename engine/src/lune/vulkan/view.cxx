@@ -107,10 +107,10 @@ void lune::vulkan::View::init()
 	createSwapchain();
 	createImageViews();
 
-	mDepthImage = DepthImage::create(this);
+	mDepthImage = DepthImage::create(getCurrentExtent());
 
 	if (getVulkanConfig().sampleCount != vk::SampleCountFlagBits::e1)
-		mMsaaImage = MsaaImage::create(this);
+		mMsaaImage = MsaaImage::create(getCurrentExtent());
 
 	createFramebuffers();
 	createFences();
@@ -129,10 +129,10 @@ void lune::vulkan::View::recreateSwapchain()
 	createImageViews();
 
 	if (mDepthImage)
-		mDepthImage = DepthImage::create(this);
+		mDepthImage = DepthImage::create(getCurrentExtent());
 
 	if (mMsaaImage)
-		mMsaaImage = MsaaImage::create(this);
+		mMsaaImage = MsaaImage::create(getCurrentExtent());
 
 	createFramebuffers();
 
