@@ -130,6 +130,8 @@ void lune::MeshRenderSystem::render(class Scene* scene)
 		return;
 
 	vulkan::GraphicsPipeline* pipeline{};
+	vulkan::Buffer* vertBuffer{};
+	vulkan::Buffer* indxBuffer{};
 
 	const auto& eIds = scene->getComponentEntities<MeshComponent>();
 	for (uint64 eId : eIds)
@@ -159,7 +161,19 @@ void lune::MeshRenderSystem::render(class Scene* scene)
 					descSet->getPipeline()->cmdBind(commandBuffer);
 					pipeline = descSet->getPipeline().get();
 				}
-				primitive->cmdBind(commandBuffer);
+
+				if (auto v = primitive->getVertexBuffer(); vertBuffer != v.get())
+				{
+					commandBuffer.bindVertexBuffers(0, v->getBuffer(), primitive->getVertexOffsets());
+					vertBuffer = v.get();
+				}
+
+				if (auto i = primitive->getIndexBuffer(); indxBuffer != i.get())
+				{
+					commandBuffer.bindIndexBuffer(i->getBuffer(), 0, primitive->getIndexType());
+					indxBuffer = i.get();
+				}
+
 				primitive->cmdDraw(commandBuffer);
 			}
 		}

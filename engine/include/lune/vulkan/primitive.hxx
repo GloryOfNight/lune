@@ -7,6 +7,8 @@
 #include "buffer.hxx"
 
 #include <span>
+#include <vector>
+#include <vulkan/vulkan_core.h>
 
 namespace lune::vulkan
 {
@@ -42,17 +44,25 @@ namespace lune::vulkan
 
 		void cmdDraw(vk::CommandBuffer commandBuffer, uint32 instanceCount = 1, uint32 firstInstance = 0);
 
+		SharedBuffer getVertexBuffer() const { return mVertexBuffer; }
+		std::vector<VkDeviceSize> getVertexOffsets() { return std::vector<VkDeviceSize>{0}; }
+
+		SharedBuffer getIndexBuffer() const { return mIndexBuffer; }
+		vk::IndexType getIndexType() const { return mIndicesType; }
+
 	private:
 		void init(const void* vertData, uint32 vertDataSize, uint32 vertSizeof, const void* indexData, uint32 indexDataSize, uint32 indexSizeof);
 
 		uint32 mVerticiesSize{};
 		uint32 mVerticiesCount{};
 		uint32 mVerticiesOffset{};
+		uint32 mVerticiesSizeof{};
 		SharedBuffer mVertexBuffer{};
 
 		uint32 mIndicesSize{};
 		uint32 mIndicesCount{};
 		uint32 mIndicesOffset{};
+		uint32 mIndicesSizeof{};
 		vk::IndexType mIndicesType{};
 		SharedBuffer mIndexBuffer{};
 	};

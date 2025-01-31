@@ -13,6 +13,7 @@ void lune::vulkan::Primitive::init(const void* vertData, uint32 vertDataSize, ui
 {
 	mVerticiesSize = vertDataSize * vertSize;
 	mVerticiesCount = mVerticiesSize / vertSize;
+	mVerticiesSizeof = vertSize;
 
 	constexpr vk::BufferUsageFlags vertexBufferUsageBits = vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eTransferDst;
 	if (!mVertexBuffer)
@@ -24,6 +25,7 @@ void lune::vulkan::Primitive::init(const void* vertData, uint32 vertDataSize, ui
 	{
 		mIndicesCount = mIndicesSize / indexSize;
 		mIndicesType = indexSize == sizeof(uint32) ? vk::IndexType::eUint32 : vk::IndexType::eUint16;
+		mIndicesSizeof = indexSize;
 
 		constexpr vk::BufferUsageFlags indexBufferUsageBits = vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eTransferDst;
 		if (!mIndexBuffer)
@@ -34,12 +36,12 @@ void lune::vulkan::Primitive::init(const void* vertData, uint32 vertDataSize, ui
 
 void lune::vulkan::Primitive::cmdBind(vk::CommandBuffer commandBuffer)
 {
-	const std::array<vk::DeviceSize, 1> vertOffsets{mVerticiesOffset};
+	const std::array<vk::DeviceSize, 1> vertOffsets{0};
 	commandBuffer.bindVertexBuffers(0, mVertexBuffer->getBuffer(), vertOffsets);
 
 	if (mIndexBuffer)
 	{
-		commandBuffer.bindIndexBuffer(mIndexBuffer->getBuffer(), mIndicesOffset, mIndicesType);
+		commandBuffer.bindIndexBuffer(mIndexBuffer->getBuffer(), 0, mIndicesType);
 	}
 }
 
@@ -47,11 +49,10 @@ void lune::vulkan::Primitive::cmdDraw(vk::CommandBuffer commandBuffer, uint32 in
 {
 	if (mIndexBuffer)
 	{
-		uint32 indiciesSizeof = mIndicesType == vk::IndexType::eUint32 ? sizeof(uint32) : sizeof(uint16);
-		commandBuffer.drawIndexed(mIndicesCount, instanceCount, 0, 0, firstInstance);
+		commandBuffer.drawIndexed(mIndicesCount, instanceCount, mIndicesOffset / mIndicesSizeof, mVerticiesOffset / mVerticiesSizeof, firstInstance);
 	}
 	else
 	{
-		commandBuffer.draw(mVerticiesCount, instanceCount, 0, firstInstance);
+		commandBuffer.draw(mVerticiesCount, instanceCount, mVerticiesOffset / mVerticiesSizeof, firstInstance);
 	}
 }
