@@ -20,7 +20,6 @@ lune::vulkan::DepthImage::~DepthImage()
 }
 
 lune::vulkan::UniqueDepthImage lune::vulkan::DepthImage::create(vk::Extent2D extent)
-
 {
 	auto newDepthImage = std::make_unique<DepthImage>();
 	newDepthImage->init(extent);

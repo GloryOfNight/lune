@@ -21,6 +21,7 @@ namespace lune
 		using SharedPrimitive = std::shared_ptr<class Primitive>;
 		using SharedTextureImage = std::shared_ptr<class TextureImage>;
 		using SharedSampler = std::shared_ptr<class Sampler>;
+		using SharedBuffer = std::shared_ptr<class Buffer>;
 
 		extern "C++" vk::DispatchLoaderDynamic& getDynamicLoader() noexcept;
 		extern "C++" void loadVulkanDynamicFunctions();

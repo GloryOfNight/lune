@@ -61,9 +61,5 @@ namespace lune
 		lnm::vec4 color0{};
 	};
 
-	using Index16 = uint16;
-	using Index32 = uint32;
-
 	using Vertex = Vertex342;
-	using Index = Index32;
 } // namespace lune

@@ -432,7 +432,7 @@ void lune::VulkanSubsystem::loadDefaultAssets()
 			{{-1.0f, 1.0f, -1.0f}, {0.0f, 1.0f}}   // Top-left
 		};
 
-		std::vector<Index16> indices = {
+		std::vector<uint16> indices = {
 			0, 1, 2, 0, 2, 3, // Front face
 			4, 5, 6, 4, 6, 7, // Back face
 			4, 0, 3, 4, 3, 7, // Left face
@@ -440,7 +440,7 @@ void lune::VulkanSubsystem::loadDefaultAssets()
 			3, 2, 6, 3, 6, 7, // Top face
 			4, 5, 1, 4, 1, 0  // Bottom face
 		};
-		addPrimitive("lune::box", vulkan::Primitive::create<Vertex32, Index16>(vertices, indices));
+		addPrimitive("lune::box", vulkan::Primitive::create<Vertex32, uint16>(vertices, indices));
 	}
 
 	{

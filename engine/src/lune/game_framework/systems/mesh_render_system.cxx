@@ -19,7 +19,6 @@
 #include <vulkan/vulkan_enums.hpp>
 #include <vulkan/vulkan_handles.hpp>
 
-
 namespace lune
 {
 	lnm::mat4 findTransform(Scene* scene, EntityBase* entity)
@@ -130,6 +129,8 @@ void lune::MeshRenderSystem::render(class Scene* scene)
 	if (!cameraSystem)
 		return;
 
+	vulkan::GraphicsPipeline* pipeline{};
+
 	const auto& eIds = scene->getComponentEntities<MeshComponent>();
 	for (uint64 eId : eIds)
 	{
@@ -152,12 +153,12 @@ void lune::MeshRenderSystem::render(class Scene* scene)
 				auto& primitive = res.primitives[i];
 				auto& descSet = res.descSets[i];
 
-				descSet->getPipeline()->cmdBind(commandBuffer);
-
-				commandBuffer.setPrimitiveTopologyEXT(vk::PrimitiveTopology::eTriangleList, vulkan::getDynamicLoader());
-
 				descSet->cmdBind(commandBuffer, 0);
-
+				if (pipeline != descSet->getPipeline().get())
+				{
+					descSet->getPipeline()->cmdBind(commandBuffer);
+					pipeline = descSet->getPipeline().get();
+				}
 				primitive->cmdBind(commandBuffer);
 				primitive->cmdDraw(commandBuffer);
 			}

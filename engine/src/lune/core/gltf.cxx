@@ -31,6 +31,7 @@
 #include <span>
 #include <string>
 #include <tinygltf/tiny_gltf.h>
+#include <tuple>
 
 namespace lune::gltf
 {
@@ -53,6 +54,7 @@ namespace lune
 
 	std::vector<uint64> modelToScene(std::filesystem::path sceneRoot, const tinygltf::Model& tinyModel, std::string_view alias, int32 tinySceneIndex, Scene* luneScene);
 	uint64 processNode(const tinygltf::Model& tinyModel, std::string_view alias, uint32 nodeIndex, Scene* luneScene, EntityBase* parentEntity);
+	void loadMeshes(const tinygltf::Model& tinyModel, std::string_view alias);
 	void decomposeTRS(const lnm::mat4& matrix, lnm::vec3& translation, lnm::quat& rotation, lnm::vec3& scale);
 } // namespace lune
 
@@ -98,6 +100,8 @@ std::vector<uint64> lune::gltf::loadInScene(std::filesystem::path gltfScene, std
 std::vector<uint64> lune::modelToScene(std::filesystem::path sceneRoot, const tinygltf::Model& tinyModel, std::string_view alias, int32 tinySceneIndex, Scene* scene)
 {
 	std::vector<uint64> rootEntities{};
+
+	loadMeshes(tinyModel, alias);
 
 	auto& tinyScene = tinyModel.scenes[tinySceneIndex];
 	const size_t tinySceneNodeSize = tinyScene.nodes.size();
@@ -162,22 +166,154 @@ uint64 lune::processNode(const tinygltf::Model& tinyModel, std::string_view alia
 	if (node.mesh != -1 && tinyModel.meshes[node.mesh].primitives.size())
 	{
 		const auto& nodeMesh = tinyModel.meshes[node.mesh];
-
 		auto meshComp = newEntity->addComponent<MeshComponent>();
-
-		const std::string primitiveAlias = std::format("{}::node::{}::mesh::{}", alias, nodeIndex, node.mesh);
 		for (size_t i = 0; i < nodeMesh.primitives.size(); ++i)
 		{
 			const auto& primitive = nodeMesh.primitives[i];
-			const std::string primitiveName = std::format("{}::primitive::{}", primitiveAlias, i);
+			const std::string primitiveName = std::format("{}::mesh::{}::primitive::{}", alias, node.mesh, i);
+			;
 
 			auto& meshCompPrimitive = meshComp->primitives.emplace_back();
 			meshCompPrimitive.primitiveName = primitiveName;
 			if (primitive.material != -1)
 				meshCompPrimitive.materialName = std::format("{}::material::{}", alias, primitive.material);
 			meshCompPrimitive.topology = makeTopology(primitive.mode);
+		}
+	}
 
-			std::vector<Vertex343224> vertexBuffer{};
+	return newEntity->getId();
+}
+
+vk::PrimitiveTopology lune::makeTopology(int32 mode)
+{
+	switch (mode)
+	{
+	case TINYGLTF_MODE_POINTS:
+		return vk::PrimitiveTopology::ePointList;
+	case TINYGLTF_MODE_LINE:
+		return vk::PrimitiveTopology::eLineList;
+	case TINYGLTF_MODE_LINE_LOOP:
+		return vk::PrimitiveTopology::eLineList;
+	case TINYGLTF_MODE_LINE_STRIP:
+		return vk::PrimitiveTopology::eLineStrip;
+	case TINYGLTF_MODE_TRIANGLES:
+		return vk::PrimitiveTopology::eTriangleList;
+	case TINYGLTF_MODE_TRIANGLE_STRIP:
+		return vk::PrimitiveTopology::eTriangleStrip;
+	case TINYGLTF_MODE_TRIANGLE_FAN:
+		return vk::PrimitiveTopology::eTriangleFan;
+	}
+	return vk::PrimitiveTopology::eTriangleList;
+}
+
+vk::Filter lune::makeFilter(int32 tinyFilter)
+{
+	switch (tinyFilter)
+	{
+	case TINYGLTF_TEXTURE_FILTER_LINEAR:
+		return vk::Filter::eLinear;
+	case TINYGLTF_TEXTURE_FILTER_NEAREST:
+		return vk::Filter::eNearest;
+	}
+	return vk::Filter::eLinear;
+}
+
+struct ShaderMaterialData
+{
+	lnm::vec3 emissiveFactor{};
+	int32 padding0{};
+	lnm::vec4 baseColorFactor{};
+	float metallicFactor{};
+	float roughnessFactor{};
+	float normalScale{};
+
+	int32 baseColorTextureUVSet{-1};
+	int32 metallicRoughnessTextureUVSet{-1};
+	int32 normalTextureUVSet{-1};
+	int32 occlusioTextureUVSet{-1};
+	int32 emissiveTextureUVSet{-1};
+};
+
+void lune::gltf::Material::init(const tinygltf::Model* tinyModel, const tinygltf::Material* tinyMaterial, const std::string_view alias)
+{
+	auto vkSubsystem = Engine::get()->findSubsystem<VulkanSubsystem>();
+
+	auto shVert = vkSubsystem->loadShader(*EngineShaderPath("gltf/primitive.vert.spv"));
+	auto shFrag = vkSubsystem->loadShader(*EngineShaderPath("gltf/primitive.frag.spv"));
+
+	auto rasterizationState = vulkan::GraphicsPipeline::defaultRasterizationState();
+	rasterizationState.setCullMode(tinyMaterial->doubleSided ? vk::CullModeFlagBits::eNone : vk::CullModeFlagBits::eFront);
+
+	vulkan::GraphicsPipeline::StatesOverride statesOverride{};
+	statesOverride.rasterization = &rasterizationState;
+	statesOverride.dynamicStates = vulkan::GraphicsPipeline::defaultDynamicStates();
+
+	mPipeline = vulkan::GraphicsPipeline::create(shVert, shFrag, statesOverride);
+
+	ShaderMaterialData shaderMat{};
+	shaderMat.emissiveFactor = *reinterpret_cast<const lnm::dvec3*>(tinyMaterial->emissiveFactor.data());
+	shaderMat.baseColorFactor = *reinterpret_cast<const lnm::dvec4*>(tinyMaterial->pbrMetallicRoughness.baseColorFactor.data());
+	shaderMat.metallicFactor = tinyMaterial->pbrMetallicRoughness.metallicFactor;
+	shaderMat.roughnessFactor = tinyMaterial->pbrMetallicRoughness.roughnessFactor;
+	shaderMat.normalScale = tinyMaterial->normalTexture.scale;
+
+	uint8 texCounter = 0;
+
+	mTextures = std::vector<vulkan::SharedTextureImage>(5, vkSubsystem->findTextureImage("lune::default"));
+	mSamplers = std::vector<vulkan::SharedSampler>(5, vkSubsystem->findSampler("lune::default"));
+
+	if (tinyMaterial->pbrMetallicRoughness.baseColorTexture.index != -1)
+	{
+		shaderMat.baseColorTextureUVSet = tinyMaterial->pbrMetallicRoughness.baseColorTexture.texCoord;
+		mTextures[0] = (vkSubsystem->findTextureImage(std::format("{}::texture::{}", alias, tinyMaterial->pbrMetallicRoughness.baseColorTexture.index)));
+		mSamplers[0] = (vkSubsystem->findSampler(std::format("{}::sampler::{}", alias, tinyModel->textures[tinyMaterial->pbrMetallicRoughness.baseColorTexture.index].sampler)));
+	}
+
+	if (tinyMaterial->pbrMetallicRoughness.metallicRoughnessTexture.index != -1)
+	{
+		shaderMat.metallicRoughnessTextureUVSet = tinyMaterial->pbrMetallicRoughness.metallicRoughnessTexture.texCoord;
+		mTextures[1] = (vkSubsystem->findTextureImage(std::format("{}::texture::{}", alias, tinyMaterial->pbrMetallicRoughness.metallicRoughnessTexture.index)));
+		mSamplers[1] = (vkSubsystem->findSampler(std::format("{}::sampler::{}", alias, tinyModel->textures[tinyMaterial->pbrMetallicRoughness.metallicRoughnessTexture.index].sampler)));
+	}
+
+	if (tinyMaterial->normalTexture.index != -1)
+	{
+		shaderMat.normalTextureUVSet = tinyMaterial->normalTexture.texCoord;
+		mTextures[2] = (vkSubsystem->findTextureImage(std::format("{}::texture::{}", alias, tinyMaterial->normalTexture.index)));
+		mSamplers[2] = (vkSubsystem->findSampler(std::format("{}::sampler::{}", alias, tinyModel->textures[tinyMaterial->normalTexture.index].sampler)));
+	}
+
+	if (tinyMaterial->occlusionTexture.index != -1)
+	{
+		shaderMat.occlusioTextureUVSet = tinyMaterial->occlusionTexture.texCoord;
+		mTextures[3] = (vkSubsystem->findTextureImage(std::format("{}::texture::{}", alias, tinyMaterial->occlusionTexture.index)));
+		mSamplers[3] = (vkSubsystem->findSampler(std::format("{}::sampler::{}", alias, tinyModel->textures[tinyMaterial->occlusionTexture.index].sampler)));
+	}
+
+	if (tinyMaterial->emissiveTexture.index != -1)
+	{
+		shaderMat.emissiveTextureUVSet = tinyMaterial->emissiveTexture.texCoord;
+		mTextures[4] = (vkSubsystem->findTextureImage(std::format("{}::texture::{}", alias, tinyMaterial->emissiveTexture.index)));
+		mSamplers[4] = (vkSubsystem->findSampler(std::format("{}::sampler::{}", alias, tinyModel->textures[tinyMaterial->emissiveTexture.index].sampler)));
+	}
+
+	mBuffer = vulkan::Buffer::create(vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eTransferDst, sizeof(shaderMat), VMA_MEMORY_USAGE_AUTO, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT);
+	mBuffer->copyTransfer(&shaderMat, 0, sizeof(shaderMat));
+}
+
+void lune::loadMeshes(const tinygltf::Model& tinyModel, std::string_view alias)
+{
+	uint32 totalVertexCount{};
+	std::vector<std::vector<Vertex343224>> verticies{};
+
+	uint32 totalIndexSize{};
+	std::vector<std::tuple<const void* /*data*/, uint32 /*count*/, uint32 /*sizeof*/>> indices{};
+
+	for (const auto& tinyMesh : tinyModel.meshes)
+	{
+		for (const auto& tinyPrimitive : tinyMesh.primitives)
+		{
+			std::vector<Vertex343224>& vertexBuffer = verticies.emplace_back();
 
 			int32 positionAttrIndex{-1};
 			int32 tangentAttrIndex{-1};
@@ -185,7 +321,7 @@ uint64 lune::processNode(const tinygltf::Model& tinyModel, std::string_view alia
 			std::vector<int32> texCoordsAttrIndices{};
 			std::vector<int32> colorAttrIndices{};
 
-			for (const auto& [name, index] : primitive.attributes)
+			for (const auto& [name, index] : tinyPrimitive.attributes)
 			{
 				if (name == "POSITION")
 				{
@@ -266,22 +402,24 @@ uint64 lune::processNode(const tinygltf::Model& tinyModel, std::string_view alia
 					break; // not supported
 			}
 
-			const uint8* indicesData = nullptr;
-			size_t indiciesCount = 0;
-			int32 indiciesSizeof = 0;
-			if (primitive.indices != -1)
+			if (tinyPrimitive.indices != -1)
 			{
-				const auto& indicesAccessor = tinyModel.accessors[primitive.indices];
+				const auto& indicesAccessor = tinyModel.accessors[tinyPrimitive.indices];
 				const auto& indicesBufferView = tinyModel.bufferViews[indicesAccessor.bufferView];
-				indicesData = reinterpret_cast<const uint8*>(tinyModel.buffers[indicesBufferView.buffer].data.data() + indicesBufferView.byteOffset + indicesAccessor.byteOffset);
-				indiciesCount = indicesAccessor.count;
+				const uint8* indicesData = reinterpret_cast<const uint8*>(tinyModel.buffers[indicesBufferView.buffer].data.data() + indicesBufferView.byteOffset + indicesAccessor.byteOffset);
+				size_t indiciesCount = indicesAccessor.count;
+				int32 indiciesSizeof = 0;
 				if (indicesAccessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT)
 					indiciesSizeof = sizeof(uint16);
 				else if (indicesAccessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT)
 					indiciesSizeof = sizeof(uint32);
+
+				indices.emplace_back(indicesData, indiciesCount, indiciesSizeof);
+				totalIndexSize += indiciesCount * indiciesSizeof;
 			}
 
 			vertexBuffer.resize(positionBufferCount);
+			totalVertexCount += positionBufferCount;
 			for (size_t k = 0; k < positionBufferCount; ++k)
 			{
 				vertexBuffer[k].position = *(positionsData + k);
@@ -340,134 +478,64 @@ uint64 lune::processNode(const tinygltf::Model& tinyModel, std::string_view alia
 					vertexBuffer[k].color0 = lnm::vec4(1.f, 1.f, 1.f, 1.f);
 				}
 			}
-
-			auto vkSubsystem = Engine::get()->findSubsystem<VulkanSubsystem>();
-			vkSubsystem->addPrimitive(primitiveName, vulkan::Primitive::create(vertexBuffer.data(), vertexBuffer.size(), sizeof(Vertex343224), indicesData, indiciesCount, indiciesSizeof));
-
-			// load textures to gpu
-			// ??? save somewhere materials for reuse
 		}
 	}
 
-	return newEntity->getId();
-}
+	constexpr vk::BufferUsageFlags vertexBufferUsageBits = vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eTransferDst;
+	vulkan::SharedBuffer vertexBuffer = vulkan::Buffer::create(vertexBufferUsageBits, totalVertexCount * sizeof(Vertex343224), VmaMemoryUsage::VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE, {});
 
-vk::PrimitiveTopology lune::makeTopology(int32 mode)
-{
-	switch (mode)
+	vulkan::SharedBuffer indexBuffer = nullptr;
+	if (totalIndexSize)
 	{
-	case TINYGLTF_MODE_POINTS:
-		return vk::PrimitiveTopology::ePointList;
-	case TINYGLTF_MODE_LINE:
-		return vk::PrimitiveTopology::eLineList;
-	case TINYGLTF_MODE_LINE_LOOP:
-		return vk::PrimitiveTopology::eLineList;
-	case TINYGLTF_MODE_LINE_STRIP:
-		return vk::PrimitiveTopology::eLineStrip;
-	case TINYGLTF_MODE_TRIANGLES:
-		return vk::PrimitiveTopology::eTriangleList;
-	case TINYGLTF_MODE_TRIANGLE_STRIP:
-		return vk::PrimitiveTopology::eTriangleStrip;
-	case TINYGLTF_MODE_TRIANGLE_FAN:
-		return vk::PrimitiveTopology::eTriangleFan;
+		constexpr vk::BufferUsageFlags indexBufferUsageBits = vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eTransferDst;
+		indexBuffer = vulkan::Buffer::create(indexBufferUsageBits, totalIndexSize, VmaMemoryUsage::VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE, {});
 	}
-	return vk::PrimitiveTopology::eTriangleList;
-}
 
-vk::Filter lune::makeFilter(int32 tinyFilter)
-{
-	switch (tinyFilter)
-	{
-	case TINYGLTF_TEXTURE_FILTER_LINEAR:
-		return vk::Filter::eLinear;
-	case TINYGLTF_TEXTURE_FILTER_NEAREST:
-		return vk::Filter::eNearest;
-	}
-	return vk::Filter::eLinear;
-}
-
-struct ShaderMaterialData
-{
-	lnm::vec3 emissiveFactor{};
-	int32 padding0{};
-	lnm::vec4 baseColorFactor{};
-	float metallicFactor{};
-	float roughnessFactor{};
-	float normalScale{};
-
-	int32 baseColorTextureUVSet{-1};
-	int32 metallicRoughnessTextureUVSet{-1};
-	int32 normalTextureUVSet{-1};
-	int32 occlusioTextureUVSet{-1};
-	int32 emissiveTextureUVSet{-1};
-};
-
-void lune::gltf::Material::init(const tinygltf::Model* tinyModel, const tinygltf::Material* tinyMaterial, const std::string_view alias)
-{
 	auto vkSubsystem = Engine::get()->findSubsystem<VulkanSubsystem>();
 
-	auto shVert = vkSubsystem->loadShader(*EngineShaderPath("gltf/primitive.vert.spv"));
-	auto shFrag = vkSubsystem->loadShader(*EngineShaderPath("gltf/primitive.frag.spv"));
+	uint32 vertexOffset = 0;
+	uint32 vertexElem = 0;
+	uint32 indexOffset = 0;
+	size_t indexElem = 0;
 
-	auto rasterizationState = vulkan::GraphicsPipeline::defaultRasterizationState();
-	rasterizationState.setCullMode(tinyMaterial->doubleSided ? vk::CullModeFlagBits::eNone : vk::CullModeFlagBits::eFront);
-
-	vulkan::GraphicsPipeline::StatesOverride statesOverride{};
-	statesOverride.rasterization = &rasterizationState;
-	statesOverride.dynamicStates = vulkan::GraphicsPipeline::defaultDynamicStates();
-	statesOverride.dynamicStates.emplace_back(vk::DynamicState::ePrimitiveTopology);
-
-	mPipeline = vulkan::GraphicsPipeline::create(shVert, shFrag, statesOverride);
-
-	ShaderMaterialData shaderMat{};
-	shaderMat.emissiveFactor = *reinterpret_cast<const lnm::dvec3*>(tinyMaterial->emissiveFactor.data());
-	shaderMat.baseColorFactor = *reinterpret_cast<const lnm::dvec4*>(tinyMaterial->pbrMetallicRoughness.baseColorFactor.data());
-	shaderMat.metallicFactor = tinyMaterial->pbrMetallicRoughness.metallicFactor;
-	shaderMat.roughnessFactor = tinyMaterial->pbrMetallicRoughness.roughnessFactor;
-	shaderMat.normalScale = tinyMaterial->normalTexture.scale;
-
-	uint8 texCounter = 0;
-
-	mTextures = std::vector<vulkan::SharedTextureImage>(5, vkSubsystem->findTextureImage("lune::default"));
-	mSamplers = std::vector<vulkan::SharedSampler>(5, vkSubsystem->findSampler("lune::default"));
-
-	if (tinyMaterial->pbrMetallicRoughness.baseColorTexture.index != -1)
+	const size_t meshesSize = tinyModel.meshes.size();
+	for (size_t meshIndex = 0; meshIndex < meshesSize; ++meshIndex)
 	{
-		shaderMat.baseColorTextureUVSet = tinyMaterial->pbrMetallicRoughness.baseColorTexture.texCoord;
-		mTextures[0] = (vkSubsystem->findTextureImage(std::format("{}::texture::{}", alias, tinyMaterial->pbrMetallicRoughness.baseColorTexture.index)));
-		mSamplers[0] = (vkSubsystem->findSampler(std::format("{}::sampler::{}", alias, tinyModel->textures[tinyMaterial->pbrMetallicRoughness.baseColorTexture.index].sampler)));
-	}
+		const size_t primitivesSize = tinyModel.meshes[meshIndex].primitives.size();
+		for (size_t primitiveIndex = 0; primitiveIndex < primitivesSize; ++primitiveIndex)
+		{
+			const std::string primitiveName = std::format("{}::mesh::{}::primitive::{}", alias, meshIndex, primitiveIndex);
 
-	if (tinyMaterial->pbrMetallicRoughness.metallicRoughnessTexture.index != -1)
-	{
-		shaderMat.metallicRoughnessTextureUVSet = tinyMaterial->pbrMetallicRoughness.metallicRoughnessTexture.texCoord;
-		mTextures[1] = (vkSubsystem->findTextureImage(std::format("{}::texture::{}", alias, tinyMaterial->pbrMetallicRoughness.metallicRoughnessTexture.index)));
-		mSamplers[1] = (vkSubsystem->findSampler(std::format("{}::sampler::{}", alias, tinyModel->textures[tinyMaterial->pbrMetallicRoughness.metallicRoughnessTexture.index].sampler)));
-	}
+			vulkan::SharedPrimitive primitive = nullptr;
 
-	if (tinyMaterial->normalTexture.index != -1)
-	{
-		shaderMat.normalTextureUVSet = tinyMaterial->normalTexture.texCoord;
-		mTextures[2] = (vkSubsystem->findTextureImage(std::format("{}::texture::{}", alias, tinyMaterial->normalTexture.index)));
-		mSamplers[2] = (vkSubsystem->findSampler(std::format("{}::sampler::{}", alias, tinyModel->textures[tinyMaterial->normalTexture.index].sampler)));
-	}
+			const auto vertex = std::span<const Vertex343224>(verticies[vertexElem]);
 
-	if (tinyMaterial->occlusionTexture.index != -1)
-	{
-		shaderMat.occlusioTextureUVSet = tinyMaterial->occlusionTexture.texCoord;
-		mTextures[3] = (vkSubsystem->findTextureImage(std::format("{}::texture::{}", alias, tinyMaterial->occlusionTexture.index)));
-		mSamplers[3] = (vkSubsystem->findSampler(std::format("{}::sampler::{}", alias, tinyModel->textures[tinyMaterial->occlusionTexture.index].sampler)));
-	}
+			if (tinyModel.meshes[meshIndex].primitives[primitiveIndex].indices != -1)
+			{
+				const auto& [indxData, indxCount, indxSizeof] = indices[indexElem];
+				if (indxSizeof == sizeof(uint16))
+				{
+					const auto index = std::span<const uint16>(reinterpret_cast<const uint16*>(indxData), indxCount);
+					primitive = vulkan::Primitive::createFromBuffers<Vertex343224, uint16>(vertex, index, vertexBuffer, vertexOffset, indexBuffer, indexOffset);
+				}
+				else if (indxSizeof == sizeof(uint32))
+				{
+					const auto index = std::span<const uint32>(reinterpret_cast<const uint32*>(indxData), indxCount);
+					primitive = vulkan::Primitive::createFromBuffers<Vertex343224, uint32>(vertex, index, vertexBuffer, vertexOffset, indexBuffer, indexOffset);
+				}
 
-	if (tinyMaterial->emissiveTexture.index != -1)
-	{
-		shaderMat.emissiveTextureUVSet = tinyMaterial->emissiveTexture.texCoord;
-		mTextures[4] = (vkSubsystem->findTextureImage(std::format("{}::texture::{}", alias, tinyMaterial->emissiveTexture.index)));
-		mSamplers[4] = (vkSubsystem->findSampler(std::format("{}::sampler::{}", alias, tinyModel->textures[tinyMaterial->emissiveTexture.index].sampler)));
+				indexOffset += indxCount * indxSizeof;
+				indexElem++;
+			}
+			else
+			{
+				primitive = vulkan::Primitive::createFromBuffers<Vertex343224, uint16>(vertex, std::span<uint16>(), vertexBuffer, vertexOffset, nullptr, 0);
+			}
+			vertexOffset += verticies[vertexElem].size() * sizeof(Vertex343224);
+			vertexElem++;
+			vkSubsystem->addPrimitive(primitiveName, primitive);
+		}
 	}
-
-	mBuffer = vulkan::Buffer::create(vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eTransferDst, sizeof(shaderMat), VMA_MEMORY_USAGE_AUTO, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT);
-	mBuffer->copyTransfer(&shaderMat, 0, sizeof(shaderMat));
 }
 
 void lune::decomposeTRS(const lnm::mat4& matrix, lnm::vec3& translation, lnm::quat& rotation, lnm::vec3& scale)
