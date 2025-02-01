@@ -90,7 +90,7 @@ void lune::Engine::run()
 {
 	LN_LOG(Info, Engine, "Starting main loop");
 
-	constexpr int32 frameTimeMs = 1000 / 500;
+	constexpr int32 frameTimeMs = 1000 / 5000;
 
 	uint64 nowTicks = SDL_GetTicks();
 	uint64 nextTick = nowTicks;
