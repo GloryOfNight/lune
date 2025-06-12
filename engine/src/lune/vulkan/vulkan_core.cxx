@@ -8,9 +8,9 @@
 VULKAN_HPP_DEFAULT_DISPATCH_LOADER_DYNAMIC_STORAGE
 #endif
 
-vk::DispatchLoaderDynamic& lune::vulkan::getDynamicLoader() noexcept
+vk::detail::DispatchLoaderDynamic& lune::vulkan::getDynamicLoader() noexcept
 {
-	static vk::DispatchLoaderDynamic loader{};
+	static vk::detail::DispatchLoaderDynamic loader{};
 	return loader;
 }
 
