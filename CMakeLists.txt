@@ -1,13 +1,10 @@
-cmake_minimum_required(VERSION 3.21.0)
+cmake_minimum_required(VERSION 3.28.0)
 project(lune-project)
 
-# Setup global project options and variables
+include(cmake/ProjectDefaults.cmake)
 include(cmake/ProjectOptions.cmake)
-# Do not allow to build in root directory
 include(cmake/PreventInSourceBuilds.cmake)
-# Optional sanitizers
 include(cmake/Sanitizers.cmake)
 
 add_subdirectory(engine)
 add_subdirectory(game)
-

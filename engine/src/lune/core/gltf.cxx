@@ -414,7 +414,7 @@ void lune::loadMeshes(const tinygltf::Model& tinyModel, std::string_view alias)
 				else if (indicesAccessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT)
 					indiciesSizeof = sizeof(uint32);
 
-				indices.emplace_back(indicesData, indiciesCount, indiciesSizeof);
+				indices.emplace_back(indicesData, (uint32)indiciesCount, (uint32)indiciesSizeof);
 				totalIndexSize += indiciesCount * indiciesSizeof;
 			}
 

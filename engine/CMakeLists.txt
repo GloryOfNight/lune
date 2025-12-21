@@ -10,12 +10,6 @@ add_library(${PROJECT_NAME}-static STATIC ${LUNE_HEADER_FILES} ${LUNE_SOURCE_FIL
 
 target_include_directories(${PROJECT_NAME}-static PUBLIC        "include")
 
-set_target_properties(${PROJECT_NAME}-static PROPERTIES         C_STANDARD 17
-                                                                CXX_STANDARD 20
-                                                                CXX_STANDARD_REQUIRED ON
-                                                                EXPORT_COMPILE_COMMANDS ON
-                                                                POSITION_INDEPENDENT_CODE ON)
-
 # vulkan #
 find_package(Vulkan)
 find_package(VulkanMemoryAllocator CONFIG REQUIRED)
