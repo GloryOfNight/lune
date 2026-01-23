@@ -3,6 +3,7 @@
 #include <functional>
 #include <map>
 #include <set>
+#include <cstdint>
 
 namespace lune
 {

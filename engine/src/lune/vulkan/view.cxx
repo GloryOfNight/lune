@@ -13,6 +13,7 @@
 #include <thread>
 #include <vulkan/vulkan_enums.hpp>
 #include <vulkan/vulkan_handles.hpp>
+#include <algorithm>
 
 vk::SurfaceFormatKHR findSurfaceFormat(vk::PhysicalDevice physicalDevice, vk::SurfaceKHR surface, vk::Format format)
 {
@@ -253,7 +254,7 @@ void lune::vulkan::View::sumbit()
 	try
 	{
 		const vk::Result presentResult = getVulkanContext().graphicsQueue.presentKHR(presentInfo);
-
+		
 		if (vk::Result::eSuboptimalKHR == presentResult)
 		{
 			recreateSwapchain();
@@ -291,7 +292,7 @@ bool lune::vulkan::View::acquireNextImageIndex()
 void lune::vulkan::View::createSwapchain()
 {
 	const vk::SurfaceCapabilitiesKHR surfaceCapabilities = getVulkanContext().physicalDevice.getSurfaceCapabilitiesKHR(mSurface);
-	mCurrentExtent = surfaceCapabilities.currentExtent;
+	mCurrentExtent = vk::Extent2D(512, 512);
 
 	const auto surfaceFormat = findSurfaceFormat(getVulkanContext().physicalDevice, mSurface, getVulkanConfig().colorFormat);
 	if (surfaceFormat == vk::SurfaceFormatKHR())
