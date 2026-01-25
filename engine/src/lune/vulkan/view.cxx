@@ -284,6 +284,7 @@ void lune::vulkan::View::sumbit()
 	const vk::Result waitFencesResult = getVulkanContext().device.waitForFences(waitFences, true, UINT32_MAX);
 	getVulkanContext().device.resetFences(waitFences);
 
+	ImGui::EndFrame();
 	ImGui::SetCurrentContext(mImGuiContext);
 	ImGui_ImplVulkan_NewFrame();
 	ImGui::NewFrame();

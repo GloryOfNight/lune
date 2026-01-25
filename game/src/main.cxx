@@ -146,11 +146,11 @@ public:
 		scarlet7->findComponent<lune::TransformComponent>()->translate(lnm::vec3(-2, -2, -2));
 
 		registerSystem<lune::CameraSystem>();
-		registerSystem<lune::SkyboxSystem>();
 		registerSystem<lune::SpriteRenderSystem>();
 		registerSystem<DebugSystem>();
 		registerSystem<lune::GizmoSystem>();
 		registerSystem<lune::MeshRenderSystem>();
+		registerSystem<lune::SkyboxSystem>();
 
 		auto inputSystem = registerSystem<lune::InputSystem>();
 		inputSystem->setWindowId(ln::Engine::get()->getViewWindowId(0));
