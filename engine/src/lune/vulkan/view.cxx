@@ -127,6 +127,8 @@ void lune::vulkan::View::recreateSwapchain()
 		return;
 	}
 
+	LN_LOG(Info, Vulkan::View, "Recreating swapchain with new extent w: {}, h:{}", mCurrentExtent.width, mCurrentExtent.height);
+
 	createSwapchain();
 	createImageViews();
 

@@ -270,6 +270,8 @@ lune::vulkan::SharedMaterial lune::VulkanSubsystem::findMaterial(const std::stri
 
 bool lune::VulkanSubsystem::beginNextFrame(uint32 viewId)
 {
+	getVulkanDeleteQueue().cleanup();
+
 	if (const auto it = mViews.find(viewId); it != mViews.end()) [[likely]]
 	{
 		auto& [viewId, view] = *it;
@@ -516,6 +518,7 @@ void lune::vulkan::findPhysicalDevice(VulkanContext& context)
 		}
 
 		selectedDevice = physicalDevice;
+		break;
 		if (vk::PhysicalDeviceType::eDiscreteGpu == physicalDeviceProperties.deviceType)
 		{
 			break;
