@@ -49,6 +49,7 @@ namespace lune
 	private:
 		void onSdlQuitEvent(const SDL_Event& event);
 		void onSdlWindowCloseEvent(const SDL_Event& event);
+		void onSdlWindowPixelSizeChanged(const SDL_Event& event);
 
 		std::vector<std::pair<uint64, std::unique_ptr<Scene>>> mScenes{};
 

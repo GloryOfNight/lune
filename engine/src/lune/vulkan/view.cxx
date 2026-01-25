@@ -105,6 +105,7 @@ lune::vulkan::UniqueView lune::vulkan::View::create(SDL_Window* window)
 
 void lune::vulkan::View::init()
 {
+	updateExtent();
 	createSwapchain();
 	createImageViews();
 
@@ -143,10 +144,24 @@ void lune::vulkan::View::recreateSwapchain()
 
 bool lune::vulkan::View::updateExtent()
 {
-	const vk::Extent2D newExtent = getVulkanContext().physicalDevice.getSurfaceCapabilitiesKHR(mSurface).currentExtent;
+	const auto surfaceCapabilities =  getVulkanContext().physicalDevice.getSurfaceCapabilitiesKHR(mSurface);
+	
+	vk::Extent2D newExtent = getVulkanContext().physicalDevice.getSurfaceCapabilitiesKHR(mSurface).currentExtent;
 	if (mCurrentExtent != newExtent)
 	{
-		mCurrentExtent = newExtent;
+		int w, h;
+		SDL_GetWindowSizeInPixels(mWindow, &w, &h);
+
+		if (newExtent.width == UINT32_MAX || newExtent.height == UINT32_MAX)
+		{
+			int w, h;
+			SDL_GetWindowSizeInPixels(mWindow, &w, &h);
+			newExtent.width = w;
+			newExtent.height = h;
+		}
+
+		mCurrentExtent.width = std::clamp(newExtent.width, surfaceCapabilities.minImageExtent.width, surfaceCapabilities.maxImageExtent.width);
+		mCurrentExtent.height = std::clamp(newExtent.height, surfaceCapabilities.minImageExtent.height, surfaceCapabilities.maxImageExtent.height);
 		return true;
 	}
 	return false;
@@ -291,20 +306,18 @@ bool lune::vulkan::View::acquireNextImageIndex()
 
 void lune::vulkan::View::createSwapchain()
 {
-	const vk::SurfaceCapabilitiesKHR surfaceCapabilities = getVulkanContext().physicalDevice.getSurfaceCapabilitiesKHR(mSurface);
-	mCurrentExtent = vk::Extent2D(512, 512);
-
 	const auto surfaceFormat = findSurfaceFormat(getVulkanContext().physicalDevice, mSurface, getVulkanConfig().colorFormat);
 	if (surfaceFormat == vk::SurfaceFormatKHR())
 	{
 		LN_LOG(Fatal, Vulkan::View, "Failed to find preferred surface format!");
 		return;
 	}
-
+	
 	const auto presentMode = findPresentMode(getVulkanContext().physicalDevice, mSurface);
 	if (presentMode == vk::PresentModeKHR())
-		LN_LOG(Error, Vulkan::View, "Failed to to find preffered present mode!");
-
+	LN_LOG(Error, Vulkan::View, "Failed to to find preffered present mode!");
+	
+	const vk::SurfaceCapabilitiesKHR surfaceCapabilities = getVulkanContext().physicalDevice.getSurfaceCapabilitiesKHR(mSurface);
 	mMinImageCount = surfaceCapabilities.maxImageCount >= 3 ? 3 : surfaceCapabilities.minImageCount;
 
 	const vk::SwapchainCreateInfoKHR swapchainCreateInfo =
@@ -466,5 +479,13 @@ void lune::vulkan::View::shutdownImGui()
 		ImGui_ImplVulkan_Shutdown();
 		ImGui_ImplSDL3_Shutdown();
 		ImGui::DestroyContext(mImGuiContext);
+	}
+}
+
+void lune::vulkan::View::updateViewSize()
+{
+	if (updateExtent())
+	{
+		recreateSwapchain();
 	}
 }

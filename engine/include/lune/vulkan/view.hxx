@@ -43,9 +43,11 @@ namespace lune::vulkan
 		vk::CommandBuffer getCurrentImageCmdBuffer() const { return mImageCommandBuffer; }
 		vk::CommandBuffer getCurrentImageCopyCmdBuffer() const { return mCopyCommandBuffer; }
 
+		void updateViewSize();
+
 	private:
 		void init();
-
+		
 		void recreateSwapchain();
 
 		bool updateExtent();
