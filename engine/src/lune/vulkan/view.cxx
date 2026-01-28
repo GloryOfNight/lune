@@ -286,9 +286,10 @@ void lune::vulkan::View::sumbit()
 	const vk::Result waitFencesResult = getVulkanContext().device.waitForFences(waitFences, true, UINT32_MAX);
 	getVulkanContext().device.resetFences(waitFences);
 
-	ImGui::EndFrame();
 	ImGui::SetCurrentContext(mImGuiContext);
+	ImGui::EndFrame();
 	ImGui_ImplVulkan_NewFrame();
+	ImGui_ImplSDL3_NewFrame();
 	ImGui::NewFrame();
 }
 
@@ -451,9 +452,14 @@ void lune::vulkan::View::createImGui()
 	mImGuiContext = ImGui::CreateContext();
 	ImGui::SetCurrentContext(mImGuiContext);
 	ImGui::StyleColorsDark();
+
 	ImGui_ImplSDL3_InitForVulkan(mWindow);
 
+	auto& ImGuiIo = ImGui::GetIO();
+	ImGuiIo.ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange;
+
 	auto& context = getVulkanContext();
+
 	ImGui_ImplVulkan_InitInfo Info{};
 	Info.Instance = context.instance;
 	Info.PhysicalDevice = context.physicalDevice;
