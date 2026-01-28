@@ -73,7 +73,7 @@ namespace lune
 						{
 							ignoredTypes.emplace(dep);
 							bDepsSatisfied = false;
-                            LN_LOG(Fatal, SystemGraph, "Cycle dependecies!");
+							LN_LOG(Fatal, SystemGraph, "Cycle dependecies!");
 							break;
 						}
 						else if (!satisfiedTypes.contains(dep))

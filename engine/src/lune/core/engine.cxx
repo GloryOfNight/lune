@@ -221,7 +221,7 @@ void lune::Engine::onSdlWindowPixelSizeChanged(const SDL_Event& event)
 {
 	auto subsystem = findSubsystem<VulkanSubsystem>();
 	if (!subsystem)
-	return;
+		return;
 
 	for (auto viewId : mViews)
 	{

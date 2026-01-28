@@ -8,6 +8,6 @@ namespace lune
 {
 	struct SkyboxComponent : public ComponentBase
 	{
-        std::string imageName{};
+		std::string imageName{};
 	};
 } // namespace lune

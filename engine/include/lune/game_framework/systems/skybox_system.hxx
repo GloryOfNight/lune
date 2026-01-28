@@ -15,7 +15,7 @@ namespace lune
 	public:
 		SkyboxSystem();
 
-        virtual void update(class Scene* scene, double deltaTime) override{};
+		virtual void update(class Scene* scene, double deltaTime) override {};
 
 		virtual void prepareRender(class Scene* scene) override;
 
@@ -30,6 +30,6 @@ namespace lune
 			vulkan::SharedTextureImage mTextureImage{};
 			vulkan::UniqueDescriptorSets mDescriptorSets{};
 		};
-        std::map<uint64, SkyboxResources> mSkyboxes{};
+		std::map<uint64, SkyboxResources> mSkyboxes{};
 	};
 } // namespace lune

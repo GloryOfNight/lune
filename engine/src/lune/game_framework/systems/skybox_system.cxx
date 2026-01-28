@@ -10,6 +10,7 @@
 #include "lune/vulkan/texture_image.hxx"
 #include "lune/vulkan/vulkan_core.hxx"
 #include "lune/vulkan/vulkan_subsystem.hxx"
+
 #include <vulkan/vulkan_handles.hpp>
 
 lune::SkyboxSystem::SkyboxSystem()

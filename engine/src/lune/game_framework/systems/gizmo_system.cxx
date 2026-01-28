@@ -6,6 +6,7 @@
 #include "lune/vulkan/pipeline.hxx"
 #include "lune/vulkan/primitive.hxx"
 #include "lune/vulkan/vulkan_subsystem.hxx"
+
 #include <vulkan/vulkan_handles.hpp>
 
 lune::GizmoSystem::GizmoSystem()
@@ -34,7 +35,7 @@ void lune::GizmoSystem::render(Scene* scene)
 		mDescriptorSets->updateSets(0);
 	}
 
-    pipeline->cmdBind(commandBuffer);
+	pipeline->cmdBind(commandBuffer);
 
 	mDescriptorSets->cmdBind(commandBuffer, 0);
 

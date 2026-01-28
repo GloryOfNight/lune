@@ -47,7 +47,7 @@ namespace lune::vulkan
 
 	private:
 		void init();
-		
+
 		void recreateSwapchain();
 
 		bool updateExtent();

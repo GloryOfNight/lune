@@ -10,8 +10,8 @@ namespace lune
 {
 	struct SpriteComponent : public ComponentBase
 	{
-        std::string imageName{};
+		std::string imageName{};
 		lnm::vec3 position{};
-        lnm::vec2 srcRect{}, dstRect{};
+		lnm::vec2 srcRect{}, dstRect{};
 	};
 } // namespace lune

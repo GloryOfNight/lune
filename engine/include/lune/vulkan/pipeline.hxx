@@ -6,7 +6,6 @@
 #include <memory>
 #include <vulkan/vulkan_enums.hpp>
 
-
 namespace lune::vulkan
 {
 	using UniqueGraphicsPipeline = std::unique_ptr<class GraphicsPipeline>;

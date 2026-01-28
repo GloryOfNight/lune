@@ -10,10 +10,10 @@
 
 #include <SDL3/SDL_video.h>
 #include <SDL3/SDL_vulkan.h>
+#include <algorithm>
 #include <thread>
 #include <vulkan/vulkan_enums.hpp>
 #include <vulkan/vulkan_handles.hpp>
-#include <algorithm>
 
 vk::SurfaceFormatKHR findSurfaceFormat(vk::PhysicalDevice physicalDevice, vk::SurfaceKHR surface, vk::Format format)
 {
@@ -146,8 +146,8 @@ void lune::vulkan::View::recreateSwapchain()
 
 bool lune::vulkan::View::updateExtent()
 {
-	const auto surfaceCapabilities =  getVulkanContext().physicalDevice.getSurfaceCapabilitiesKHR(mSurface);
-	
+	const auto surfaceCapabilities = getVulkanContext().physicalDevice.getSurfaceCapabilitiesKHR(mSurface);
+
 	vk::Extent2D newExtent = getVulkanContext().physicalDevice.getSurfaceCapabilitiesKHR(mSurface).currentExtent;
 	if (mCurrentExtent != newExtent)
 	{
@@ -271,7 +271,7 @@ void lune::vulkan::View::sumbit()
 	try
 	{
 		const vk::Result presentResult = getVulkanContext().graphicsQueue.presentKHR(presentInfo);
-		
+
 		if (vk::Result::eSuboptimalKHR == presentResult)
 		{
 			recreateSwapchain();
@@ -315,11 +315,11 @@ void lune::vulkan::View::createSwapchain()
 		LN_LOG(Fatal, Vulkan::View, "Failed to find preferred surface format!");
 		return;
 	}
-	
+
 	const auto presentMode = findPresentMode(getVulkanContext().physicalDevice, mSurface);
 	if (presentMode == vk::PresentModeKHR())
-	LN_LOG(Error, Vulkan::View, "Failed to to find preffered present mode!");
-	
+		LN_LOG(Error, Vulkan::View, "Failed to to find preffered present mode!");
+
 	const vk::SurfaceCapabilitiesKHR surfaceCapabilities = getVulkanContext().physicalDevice.getSurfaceCapabilitiesKHR(mSurface);
 	mMinImageCount = surfaceCapabilities.maxImageCount >= 3 ? 3 : surfaceCapabilities.minImageCount;
 

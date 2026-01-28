@@ -19,7 +19,6 @@
 #include <vulkan/vulkan_core.h>
 #include <vulkan/vulkan_structs.hpp>
 
-
 #define LUNE_USE_VALIDATION
 
 vk::Format findSupportedDepthFormat(const vk::PhysicalDevice physicalDevice) noexcept
