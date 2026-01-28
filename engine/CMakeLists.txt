@@ -17,7 +17,7 @@ target_link_libraries(${PROJECT_NAME}-static PUBLIC spirv-reflect-static Vulkan:
 # vulkan end #
 
 # modules #
-add_subdirectory(modules)
+add_subdirectory(tools)
 target_link_libraries(${PROJECT_NAME}-static PUBLIC Lune::ShaderCompilerTool)
 # modules end#
 
