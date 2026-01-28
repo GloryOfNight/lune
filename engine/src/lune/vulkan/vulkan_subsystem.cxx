@@ -581,13 +581,10 @@ void lune::vulkan::createDevice(VulkanContext& context)
 		}
 	}
 
-	const std::vector<const char*> requiredLayers{};
-
 	const vk::DeviceCreateInfo deviceCreateInfo = vk::DeviceCreateInfo()
 													  .setPNext(&enabledFeatures)
 													  .setQueueCreateInfos(queueCreateInfoList)
-													  .setPEnabledExtensionNames(requiredExtensions)
-													  .setPEnabledLayerNames(requiredLayers);
+													  .setPEnabledExtensionNames(requiredExtensions);
 
 	context.device = context.physicalDevice.createDevice(deviceCreateInfo);
 }

@@ -70,11 +70,12 @@ lune::vulkan::View::~View()
 		return true;
 	};
 
-	const auto cleanOtherLam = [semaphore1 = mSemaphoreImageAvailable, semaphore2 = mSemaphoreCopyComplete, semaphore3 = mSemaphoreRenderFinished, fences = mSubmitQueueFences]() -> bool
+	const auto cleanOtherLam = [semaphore1 = mSemaphoreImageAvailable, semaphore2 = mSemaphoreCopyComplete, semaphores3 = mSemaphoresRenderFinished, fences = mSubmitQueueFences]() -> bool
 	{
 		getVulkanContext().device.destroySemaphore(semaphore1);
 		getVulkanContext().device.destroySemaphore(semaphore2);
-		getVulkanContext().device.destroySemaphore(semaphore3);
+		for (auto semaphore : semaphores3)
+			getVulkanContext().device.destroySemaphore(semaphore);
 		for (auto fence : fences)
 			getVulkanContext().device.destroyFence(fence);
 		return true;
@@ -255,7 +256,7 @@ void lune::vulkan::View::sumbit()
 	mImageCommandBuffer.end();
 
 	const std::array<vk::Semaphore, 1> submitWaitSemaphores = {mSemaphoreCopyComplete};
-	const std::array<vk::Semaphore, 1> submitSignalSemaphores = {mSemaphoreRenderFinished};
+	const std::array<vk::Semaphore, 1> submitSignalSemaphores = {mSemaphoresRenderFinished[mImageIndex]};
 	const std::array<vk::PipelineStageFlags, 1> submitWaitDstStages = {vk::PipelineStageFlagBits::eColorAttachmentOutput};
 	const std::array<vk::CommandBuffer, 1> submitCommandBuffers = {mImageCommandBuffer};
 
@@ -444,7 +445,8 @@ void lune::vulkan::View::createSemaphores()
 {
 	mSemaphoreImageAvailable = getVulkanContext().device.createSemaphore(vk::SemaphoreCreateInfo());
 	mSemaphoreCopyComplete = getVulkanContext().device.createSemaphore(vk::SemaphoreCreateInfo());
-	mSemaphoreRenderFinished = getVulkanContext().device.createSemaphore(vk::SemaphoreCreateInfo());
+	for (uint32 i = 0; i < getImageCount(); ++i)
+		mSemaphoresRenderFinished.push_back(getVulkanContext().device.createSemaphore(vk::SemaphoreCreateInfo()));
 }
 
 void lune::vulkan::View::createImGui()
@@ -457,7 +459,6 @@ void lune::vulkan::View::createImGui()
 
 	auto& io = ImGui::GetIO();
 	io.ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange;
-	// io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable; maybe later
 
 	auto& context = getVulkanContext();
 
