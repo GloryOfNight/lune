@@ -295,7 +295,7 @@ void lune::vulkan::View::sumbit()
 
 bool lune::vulkan::View::acquireNextImageIndex()
 {
-	constexpr uint64 timeout = 1 * 1000 * 1000; // ms to us to ns
+	constexpr uint64 timeout = std::chrono::nanoseconds(std::chrono::milliseconds(1)).count();
 	const VkResult aquireRes = vkAcquireNextImageKHR(getVulkanContext().device, mSwapchain, timeout, mSemaphoreImageAvailable, VK_NULL_HANDLE, &mImageIndex);
 
 	if (aquireRes == VK_SUCCESS || aquireRes == VK_SUBOPTIMAL_KHR) [[likely]]
