@@ -13,7 +13,7 @@ namespace lune
 		SystemBase(SystemBase&&) = default;
 		virtual ~SystemBase() = default;
 
-		virtual void update(class Scene* scene, double deltaTime) = 0;
+		virtual void update(class Scene* scene, double deltaTime) {};
 
 		const std::set<std::type_index>& getDependecies() const { return mDependecies; }
 
@@ -39,4 +39,11 @@ namespace lune
 	public:
 		virtual void render(class Scene* scene) = 0;
 	};
+
+	class ImGuiRenderSystemInterface
+	{
+	public:
+		virtual void imGuiRender(class Scene* scene) = 0;
+	};
+
 } // namespace lune

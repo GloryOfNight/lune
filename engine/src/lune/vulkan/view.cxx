@@ -175,7 +175,9 @@ bool lune::vulkan::View::beginNextFrame()
 		return false;
 
 	ImGui::SetCurrentContext(mImGuiContext);
-	ImGui::Render();
+	ImGui_ImplVulkan_NewFrame();
+	ImGui_ImplSDL3_NewFrame();
+	ImGui::NewFrame();
 
 	{
 		const vk::CommandBufferAllocateInfo commandBufferAllocateInfo =
@@ -225,6 +227,10 @@ void lune::vulkan::View::beginRenderPass()
 
 void lune::vulkan::View::sumbit()
 {
+	ImGui::SetCurrentContext(mImGuiContext);
+	ImGui::Render();
+	ImGui::EndFrame();
+
 	{ // submit copy command buffer
 		mCopyCommandBuffer.end();
 		const std::array<vk::Semaphore, 1> submitWaitSemaphores = {mSemaphoreImageAvailable};
@@ -285,12 +291,6 @@ void lune::vulkan::View::sumbit()
 	const std::array<vk::Fence, 1> waitFences{mSubmitQueueFences[mImageIndex]};
 	const vk::Result waitFencesResult = getVulkanContext().device.waitForFences(waitFences, true, UINT32_MAX);
 	getVulkanContext().device.resetFences(waitFences);
-
-	ImGui::SetCurrentContext(mImGuiContext);
-	ImGui::EndFrame();
-	ImGui_ImplVulkan_NewFrame();
-	ImGui_ImplSDL3_NewFrame();
-	ImGui::NewFrame();
 }
 
 bool lune::vulkan::View::acquireNextImageIndex()
@@ -455,8 +455,9 @@ void lune::vulkan::View::createImGui()
 
 	ImGui_ImplSDL3_InitForVulkan(mWindow);
 
-	auto& ImGuiIo = ImGui::GetIO();
-	ImGuiIo.ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange;
+	auto& io = ImGui::GetIO();
+	io.ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange;
+	// io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable; maybe later
 
 	auto& context = getVulkanContext();
 
@@ -474,10 +475,6 @@ void lune::vulkan::View::createImGui()
 	ImGui_ImplVulkan_Init(&Info);
 
 	ImGui_ImplVulkan_CreateFontsTexture();
-
-	ImGui_ImplVulkan_NewFrame();
-	ImGui_ImplSDL3_NewFrame();
-	ImGui::NewFrame();
 }
 
 void lune::vulkan::View::shutdownImGui()

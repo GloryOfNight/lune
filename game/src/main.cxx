@@ -22,10 +22,11 @@
 #include <string>
 #include <vector>
 
-class DebugSystem : public lune::SystemBase
+class DebugSystem : public lune::SystemBase,
+					public lune::ImGuiRenderSystemInterface
 {
 public:
-	virtual void update(lune::Scene* scene, double deltaTime) override
+	virtual void imGuiRender(lune::Scene* scene) override
 	{
 		auto eIds = scene->getComponentEntities<lune::SpriteComponent>();
 		for (auto eId : eIds)
@@ -33,18 +34,18 @@ public:
 			auto entity = scene->findEntity(eId);
 			auto transformComp = entity->findComponent<lune::TransformComponent>();
 
-			// if (ImGui::GetCurrentContext())
-			// {
-			// 	lnm::vec3 e = lnm::eulerAngles(transformComp->mOrientation);
-			// 	auto q = transformComp->mOrientation;
-			// 	ImGui::Begin("camera");
-			// 	ImGui::SliderFloat4("quat", &transformComp->mOrientation.x, -1.f, 1.f);
-			// 	ImGui::InputFloat3("euler", &e.x);
-			// 	ImGui::End();
+			if (ImGui::GetCurrentContext())
+			{
+				lnm::vec3 e = lnm::eulerAngles(transformComp->mOrientation);
+				auto q = transformComp->mOrientation;
+				ImGui::Begin("camera");
+				ImGui::SliderFloat4("quat", &transformComp->mOrientation.x, -1.f, 1.f);
+				ImGui::InputFloat3("euler", &e.x);
+				ImGui::End();
 
-			// 	transformComp->mOrientation = lnm::normalize(transformComp->mOrientation);
-			// 	return;
-			// }
+				transformComp->mOrientation = lnm::normalize(transformComp->mOrientation);
+				return;
+			}
 		}
 	}
 };
