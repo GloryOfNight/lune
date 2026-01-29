@@ -15,6 +15,11 @@ void lune::Scene::prepareRender()
 	const auto systems = mSystemGraph.getOrderedSystems();
 	for (auto system : systems)
 	{
+		if (auto renderSystem = dynamic_cast<ImGuiRenderSystemInterface*>(system); renderSystem)
+		{
+			renderSystem->imGuiRender(this);
+		}
+
 		if (auto renderSystem = dynamic_cast<PrepareRenderSystemInterface*>(system); renderSystem)
 		{
 			renderSystem->prepareRender(this);

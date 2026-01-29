@@ -11,6 +11,7 @@
 #include "lune/vulkan/sampler.hxx"
 #include "lune/vulkan/texture_image.hxx"
 #include "lune/vulkan/vulkan_subsystem.hxx"
+
 #include <vulkan/vulkan_handles.hpp>
 
 void lune::SpriteRenderSystem::update(Scene* scene, double deltaTime)

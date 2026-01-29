@@ -43,6 +43,8 @@ namespace lune::vulkan
 		vk::CommandBuffer getCurrentImageCmdBuffer() const { return mImageCommandBuffer; }
 		vk::CommandBuffer getCurrentImageCopyCmdBuffer() const { return mCopyCommandBuffer; }
 
+		void updateViewSize();
+
 	private:
 		void init();
 
@@ -95,6 +97,8 @@ namespace lune::vulkan
 
 		std::vector<vk::Fence> mSubmitQueueFences;
 
-		vk::Semaphore mSemaphoreImageAvailable, mSemaphoreCopyComplete, mSemaphoreRenderFinished;
+		vk::Semaphore mSemaphoreImageAvailable;
+		vk::Semaphore mSemaphoreCopyComplete;
+		std::vector<vk::Semaphore> mSemaphoresRenderFinished;
 	};
 } // namespace lune::vulkan

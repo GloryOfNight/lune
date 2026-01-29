@@ -13,7 +13,7 @@ namespace lune
 		{
 			addDependecy<InputSystem>();
 		}
-		
+
 		virtual void update(class Scene* scene, double deltaTime) override;
 	};
 } // namespace lune

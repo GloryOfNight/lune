@@ -8,7 +8,6 @@
 
 #include "system.hxx"
 
-
 namespace lune
 {
 	class MeshRenderSystem : public SystemBase, public PrepareRenderSystemInterface, public RenderSystemInterface

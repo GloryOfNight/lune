@@ -17,7 +17,7 @@ target_link_libraries(${PROJECT_NAME}-static PUBLIC spirv-reflect-static Vulkan:
 # vulkan end #
 
 # modules #
-add_subdirectory(modules)
+add_subdirectory(tools)
 target_link_libraries(${PROJECT_NAME}-static PUBLIC Lune::ShaderCompilerTool)
 # modules end#
 
@@ -26,8 +26,7 @@ find_package(SDL3 REQUIRED)
 find_package(SDL3_image REQUIRED)
 find_package(SDL3_ttf REQUIRED)
 find_package(glm REQUIRED)
-find_package(tinygltf REQUIRED)
-target_link_libraries(${PROJECT_NAME}-static PUBLIC TinyGltf::TinyGltf-static glm::glm SDL3::SDL3-static SDL3_image::SDL3_image-static SDL3_ttf::SDL3_ttf-static)
+target_link_libraries(${PROJECT_NAME}-static PUBLIC TinyGltf::TinyGltf-static glm::glm SDL3::SDL3 SDL3_image::SDL3_image SDL3_ttf::SDL3_ttf)
 # other packages end #
 
 # build-in thirdparty #

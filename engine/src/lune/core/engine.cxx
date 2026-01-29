@@ -58,6 +58,7 @@ bool lune::Engine::initialize(std::vector<std::string> args)
 	auto eventSubsystem = addSubsystem<EventSubsystem>();
 	eventSubsystem->addEventBindingMem(SDL_EVENT_QUIT, this, &Engine::onSdlQuitEvent);
 	eventSubsystem->addEventBindingMem(SDL_EVENT_WINDOW_CLOSE_REQUESTED, this, &Engine::onSdlWindowCloseEvent);
+	eventSubsystem->addEventBindingMem(SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED, this, &Engine::onSdlWindowPixelSizeChanged);
 
 	addSubsystem<TimerSubsystem>();
 	addSubsystem<VulkanSubsystem>();
@@ -211,6 +212,28 @@ void lune::Engine::onSdlWindowCloseEvent(const SDL_Event& event)
 		{
 			LN_LOG(Info, Engine, "Removing view \'{}\' (SDL_EVENT_WINDOW_CLOSE_REQUESTED)", viewId);
 			removeWindow(viewId);
+			break;
+		}
+	}
+}
+
+void lune::Engine::onSdlWindowPixelSizeChanged(const SDL_Event& event)
+{
+	auto subsystem = findSubsystem<VulkanSubsystem>();
+	if (!subsystem)
+		return;
+
+	for (auto viewId : mViews)
+	{
+		auto view = subsystem->findView(viewId);
+		if (!view)
+			break;
+
+		auto windowId = SDL_GetWindowID(view->getWindow());
+		if (event.window.windowID == windowId)
+		{
+			LN_LOG(Info, Engine, "View pixel size changed \'{}\' (SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED)", viewId);
+			view->updateViewSize();
 			break;
 		}
 	}

@@ -18,6 +18,8 @@ std::filesystem::path& lune::getEngineAssetsRootDir()
 			path = checkPath;
 		else if (fs::path checkPath{"../../engine/assets"}; fs::is_directory(checkPath))
 			path = checkPath;
+		else if (fs::path checkPath{"../../../engine/assets"}; fs::is_directory(checkPath))
+			path = checkPath;
 		else
 			LN_LOG(Fatal, Engine::Assets, "Failed to find engine assets root directory, cwd: {}", fs::current_path().generic_string());
 		path = fs::absolute(path);
@@ -38,6 +40,8 @@ std::filesystem::path& lune::getAppAssetsRootDir()
 		else if (fs::path checkPath = fs::path() / ".." / "assets" / appName; fs::is_directory(checkPath))
 			path = checkPath;
 		else if (fs::path checkPath = fs::path() / "../.." / "assets" / appName; fs::is_directory(checkPath))
+			path = checkPath;
+		else if (fs::path checkPath = fs::path() / "../../.." / "assets" / appName; fs::is_directory(checkPath))
 			path = checkPath;
 		else
 			LN_LOG(Fatal, Engine::Assets, "Failed to find engine assets root directory, cwd: {}", fs::current_path().generic_string());

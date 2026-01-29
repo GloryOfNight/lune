@@ -19,7 +19,6 @@
 #include <vulkan/vulkan_core.h>
 #include <vulkan/vulkan_structs.hpp>
 
-
 #define LUNE_USE_VALIDATION
 
 vk::Format findSupportedDepthFormat(const vk::PhysicalDevice physicalDevice) noexcept
@@ -270,6 +269,8 @@ lune::vulkan::SharedMaterial lune::VulkanSubsystem::findMaterial(const std::stri
 
 bool lune::VulkanSubsystem::beginNextFrame(uint32 viewId)
 {
+	getVulkanDeleteQueue().cleanup();
+
 	if (const auto it = mViews.find(viewId); it != mViews.end()) [[likely]]
 	{
 		auto& [viewId, view] = *it;
@@ -516,6 +517,7 @@ void lune::vulkan::findPhysicalDevice(VulkanContext& context)
 		}
 
 		selectedDevice = physicalDevice;
+		break;
 		if (vk::PhysicalDeviceType::eDiscreteGpu == physicalDeviceProperties.deviceType)
 		{
 			break;
@@ -579,13 +581,10 @@ void lune::vulkan::createDevice(VulkanContext& context)
 		}
 	}
 
-	const std::vector<const char*> requiredLayers{};
-
 	const vk::DeviceCreateInfo deviceCreateInfo = vk::DeviceCreateInfo()
 													  .setPNext(&enabledFeatures)
 													  .setQueueCreateInfos(queueCreateInfoList)
-													  .setPEnabledExtensionNames(requiredExtensions)
-													  .setPEnabledLayerNames(requiredLayers);
+													  .setPEnabledExtensionNames(requiredExtensions);
 
 	context.device = context.physicalDevice.createDevice(deviceCreateInfo);
 }

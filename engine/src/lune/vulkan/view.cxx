@@ -10,6 +10,7 @@
 
 #include <SDL3/SDL_video.h>
 #include <SDL3/SDL_vulkan.h>
+#include <algorithm>
 #include <thread>
 #include <vulkan/vulkan_enums.hpp>
 #include <vulkan/vulkan_handles.hpp>
@@ -69,11 +70,12 @@ lune::vulkan::View::~View()
 		return true;
 	};
 
-	const auto cleanOtherLam = [semaphore1 = mSemaphoreImageAvailable, semaphore2 = mSemaphoreCopyComplete, semaphore3 = mSemaphoreRenderFinished, fences = mSubmitQueueFences]() -> bool
+	const auto cleanOtherLam = [semaphore1 = mSemaphoreImageAvailable, semaphore2 = mSemaphoreCopyComplete, semaphores3 = mSemaphoresRenderFinished, fences = mSubmitQueueFences]() -> bool
 	{
 		getVulkanContext().device.destroySemaphore(semaphore1);
 		getVulkanContext().device.destroySemaphore(semaphore2);
-		getVulkanContext().device.destroySemaphore(semaphore3);
+		for (auto semaphore : semaphores3)
+			getVulkanContext().device.destroySemaphore(semaphore);
 		for (auto fence : fences)
 			getVulkanContext().device.destroyFence(fence);
 		return true;
@@ -104,6 +106,7 @@ lune::vulkan::UniqueView lune::vulkan::View::create(SDL_Window* window)
 
 void lune::vulkan::View::init()
 {
+	updateExtent();
 	createSwapchain();
 	createImageViews();
 
@@ -125,6 +128,8 @@ void lune::vulkan::View::recreateSwapchain()
 		return;
 	}
 
+	LN_LOG(Info, Vulkan::View, "Recreating swapchain with new extent w: {}, h:{}", mCurrentExtent.width, mCurrentExtent.height);
+
 	createSwapchain();
 	createImageViews();
 
@@ -142,10 +147,24 @@ void lune::vulkan::View::recreateSwapchain()
 
 bool lune::vulkan::View::updateExtent()
 {
-	const vk::Extent2D newExtent = getVulkanContext().physicalDevice.getSurfaceCapabilitiesKHR(mSurface).currentExtent;
+	const auto surfaceCapabilities = getVulkanContext().physicalDevice.getSurfaceCapabilitiesKHR(mSurface);
+
+	vk::Extent2D newExtent = getVulkanContext().physicalDevice.getSurfaceCapabilitiesKHR(mSurface).currentExtent;
 	if (mCurrentExtent != newExtent)
 	{
-		mCurrentExtent = newExtent;
+		int w, h;
+		SDL_GetWindowSizeInPixels(mWindow, &w, &h);
+
+		if (newExtent.width == UINT32_MAX || newExtent.height == UINT32_MAX)
+		{
+			int w, h;
+			SDL_GetWindowSizeInPixels(mWindow, &w, &h);
+			newExtent.width = w;
+			newExtent.height = h;
+		}
+
+		mCurrentExtent.width = std::clamp(newExtent.width, surfaceCapabilities.minImageExtent.width, surfaceCapabilities.maxImageExtent.width);
+		mCurrentExtent.height = std::clamp(newExtent.height, surfaceCapabilities.minImageExtent.height, surfaceCapabilities.maxImageExtent.height);
 		return true;
 	}
 	return false;
@@ -157,7 +176,9 @@ bool lune::vulkan::View::beginNextFrame()
 		return false;
 
 	ImGui::SetCurrentContext(mImGuiContext);
-	ImGui::Render();
+	ImGui_ImplVulkan_NewFrame();
+	ImGui_ImplSDL3_NewFrame();
+	ImGui::NewFrame();
 
 	{
 		const vk::CommandBufferAllocateInfo commandBufferAllocateInfo =
@@ -207,6 +228,10 @@ void lune::vulkan::View::beginRenderPass()
 
 void lune::vulkan::View::sumbit()
 {
+	ImGui::SetCurrentContext(mImGuiContext);
+	ImGui::Render();
+	ImGui::EndFrame();
+
 	{ // submit copy command buffer
 		mCopyCommandBuffer.end();
 		const std::array<vk::Semaphore, 1> submitWaitSemaphores = {mSemaphoreImageAvailable};
@@ -231,7 +256,7 @@ void lune::vulkan::View::sumbit()
 	mImageCommandBuffer.end();
 
 	const std::array<vk::Semaphore, 1> submitWaitSemaphores = {mSemaphoreCopyComplete};
-	const std::array<vk::Semaphore, 1> submitSignalSemaphores = {mSemaphoreRenderFinished};
+	const std::array<vk::Semaphore, 1> submitSignalSemaphores = {mSemaphoresRenderFinished[mImageIndex]};
 	const std::array<vk::PipelineStageFlags, 1> submitWaitDstStages = {vk::PipelineStageFlagBits::eColorAttachmentOutput};
 	const std::array<vk::CommandBuffer, 1> submitCommandBuffers = {mImageCommandBuffer};
 
@@ -267,15 +292,11 @@ void lune::vulkan::View::sumbit()
 	const std::array<vk::Fence, 1> waitFences{mSubmitQueueFences[mImageIndex]};
 	const vk::Result waitFencesResult = getVulkanContext().device.waitForFences(waitFences, true, UINT32_MAX);
 	getVulkanContext().device.resetFences(waitFences);
-
-	ImGui::SetCurrentContext(mImGuiContext);
-	ImGui_ImplVulkan_NewFrame();
-	ImGui::NewFrame();
 }
 
 bool lune::vulkan::View::acquireNextImageIndex()
 {
-	constexpr uint64 timeout = 1 * 1000 * 1000; // ms to us to ns
+	constexpr uint64 timeout = std::chrono::nanoseconds(std::chrono::milliseconds(1)).count();
 	const VkResult aquireRes = vkAcquireNextImageKHR(getVulkanContext().device, mSwapchain, timeout, mSemaphoreImageAvailable, VK_NULL_HANDLE, &mImageIndex);
 
 	if (aquireRes == VK_SUCCESS || aquireRes == VK_SUBOPTIMAL_KHR) [[likely]]
@@ -290,9 +311,6 @@ bool lune::vulkan::View::acquireNextImageIndex()
 
 void lune::vulkan::View::createSwapchain()
 {
-	const vk::SurfaceCapabilitiesKHR surfaceCapabilities = getVulkanContext().physicalDevice.getSurfaceCapabilitiesKHR(mSurface);
-	mCurrentExtent = surfaceCapabilities.currentExtent;
-
 	const auto surfaceFormat = findSurfaceFormat(getVulkanContext().physicalDevice, mSurface, getVulkanConfig().colorFormat);
 	if (surfaceFormat == vk::SurfaceFormatKHR())
 	{
@@ -304,6 +322,7 @@ void lune::vulkan::View::createSwapchain()
 	if (presentMode == vk::PresentModeKHR())
 		LN_LOG(Error, Vulkan::View, "Failed to to find preffered present mode!");
 
+	const vk::SurfaceCapabilitiesKHR surfaceCapabilities = getVulkanContext().physicalDevice.getSurfaceCapabilitiesKHR(mSurface);
 	mMinImageCount = surfaceCapabilities.maxImageCount >= 3 ? 3 : surfaceCapabilities.minImageCount;
 
 	const vk::SwapchainCreateInfoKHR swapchainCreateInfo =
@@ -426,7 +445,8 @@ void lune::vulkan::View::createSemaphores()
 {
 	mSemaphoreImageAvailable = getVulkanContext().device.createSemaphore(vk::SemaphoreCreateInfo());
 	mSemaphoreCopyComplete = getVulkanContext().device.createSemaphore(vk::SemaphoreCreateInfo());
-	mSemaphoreRenderFinished = getVulkanContext().device.createSemaphore(vk::SemaphoreCreateInfo());
+	for (uint32 i = 0; i < getImageCount(); ++i)
+		mSemaphoresRenderFinished.push_back(getVulkanContext().device.createSemaphore(vk::SemaphoreCreateInfo()));
 }
 
 void lune::vulkan::View::createImGui()
@@ -434,9 +454,14 @@ void lune::vulkan::View::createImGui()
 	mImGuiContext = ImGui::CreateContext();
 	ImGui::SetCurrentContext(mImGuiContext);
 	ImGui::StyleColorsDark();
+
 	ImGui_ImplSDL3_InitForVulkan(mWindow);
 
+	auto& io = ImGui::GetIO();
+	io.ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange;
+
 	auto& context = getVulkanContext();
+
 	ImGui_ImplVulkan_InitInfo Info{};
 	Info.Instance = context.instance;
 	Info.PhysicalDevice = context.physicalDevice;
@@ -451,10 +476,6 @@ void lune::vulkan::View::createImGui()
 	ImGui_ImplVulkan_Init(&Info);
 
 	ImGui_ImplVulkan_CreateFontsTexture();
-
-	ImGui_ImplVulkan_NewFrame();
-	ImGui_ImplSDL3_NewFrame();
-	ImGui::NewFrame();
 }
 
 void lune::vulkan::View::shutdownImGui()
@@ -465,5 +486,13 @@ void lune::vulkan::View::shutdownImGui()
 		ImGui_ImplVulkan_Shutdown();
 		ImGui_ImplSDL3_Shutdown();
 		ImGui::DestroyContext(mImGuiContext);
+	}
+}
+
+void lune::vulkan::View::updateViewSize()
+{
+	if (updateExtent())
+	{
+		recreateSwapchain();
 	}
 }
